@@ -1,0 +1,10 @@
+#ignore data folder (containing dataset)
+data/
+#ignore mlruns folder (containing executed runs)
+mlruns/
+#ignore output files (json, dot, svg)
+*.json
+*.dot
+*.svg
+
+*/__pycache__/
