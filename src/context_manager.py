@@ -1,10 +1,18 @@
 from contextlib import contextmanager
 import mlflow
+from mlflow.entities import Metric,RunTag
+from mlflow.utils.time import get_current_time_millis
 import prov.model as prov
 import prov.dot as dot
+
 from datetime import datetime
 import ast
 from typing import Optional,Dict,Tuple
+from enum import Enum
+
+class Context(Enum):
+    TRAINING='training'
+    EVALUATION='evaluation'
 
 def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [mlflow.entities.file_info.FileInfo]:
     #Traversal of the artifact tree of a run, stored as an acyclic graph
@@ -17,14 +25,23 @@ def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [
             artifact_paths.append(artifact)
     return artifact_paths
 
-def log_metrics(metrics:Dict[str,Tuple[float,str]],step: Optional[int] = None, synchronous: bool = True):
-    #adds context of the metric to the run tags, in order to distinguish between training and evaluation metrics
-    #original method uses log.batch, which is more efficient, but in this manner tags are added contextually to the metric
+# def log_metrics(metrics:Dict[str,Tuple[float,str]],step: Optional[int] = None, synchronous: bool = True):
+#     #adds context of the metric to the run tags, in order to distinguish between training and evaluation metrics
+#     #original method uses log.batch, which is more efficient, but in this manner tags are added contextually to the metric
     
+#     client= mlflow.MlflowClient()
+#     for name,(value,context) in metrics.items():
+#         client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{name}',context)
+#         client.log_metric(mlflow.active_run().info.run_id,name,value,step=step,synchronous=synchronous)
+def log_metrics(metrics:Dict[str,Tuple[float,Context]],step:Optional[int]=None,synchronous:bool=True):
+    #create two separate lists, one for metrics and one for tags, and log them together using native log.batch
     client= mlflow.MlflowClient()
-    for name,(value,context) in metrics.items():
-        client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{name}',context)
-        client.log_metric(mlflow.active_run().info.run_id,name,value,step=step,synchronous=synchronous)
+
+    timestamp=get_current_time_millis()
+    metrics_arr=[Metric(key,value,timestamp,step or 0) for key,(value,context) in metrics.items()]
+    tag_arr=[RunTag(f'metric.context.{key}',context.name) for key,(value,context) in metrics.items()]
+
+    return client.log_batch(mlflow.active_run().info.run_id,metrics=metrics_arr,tags=tag_arr,synchronous=synchronous)
 
     
 
@@ -101,7 +118,8 @@ def start_run(id:str=None,run_name:str=None) -> mlflow.ActiveRun:
             ent=doc.entity(f'ex:{name}_{metric.step}',{
                 'ex:value':metric.value,
                 'ex:epoch':metric.step,
-                'prov-ml:type':'ModelEvaluation'
+                'prov-ml:type':'ModelEvaluation',
+                'ex:context': act_run.data.tags[f'metric.context.{name}'] #context saved by log_metrics function
             })
             doc.wasGeneratedBy(ent,run_activity,datetime.fromtimestamp(metric.timestamp/1000))
 

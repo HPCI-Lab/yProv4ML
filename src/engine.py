@@ -1,6 +1,6 @@
 import torch
 import mlflow
-from context_manager import log_metrics
+from context_manager import log_metrics,Context
 
 def train_step(model: torch.nn.Module, 
                dataloader: torch.utils.data.DataLoader, 
@@ -99,10 +99,10 @@ def train(model: torch.nn.Module,
         #     "test_acc":test_acc
         # },step=epoch)
         log_metrics({
-            "train_loss":(train_loss,'training'),
-            "train_acc":(train_acc,'training'),
-            "test_loss":(test_loss,'evaluation'),
-            "test_acc":(test_acc,'evaluation')
+            "train_loss":(train_loss,Context.TRAINING),
+            "train_acc":(train_acc,Context.TRAINING),
+            "test_loss":(test_loss,Context.EVALUATION),
+            "test_acc":(test_acc,Context.EVALUATION)
         },step=epoch)
         print(
             f"Epoch: {epoch} | "
