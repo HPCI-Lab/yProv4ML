@@ -2,6 +2,7 @@ from contextlib import contextmanager
 import mlflow
 from mlflow.entities import Metric,RunTag
 from mlflow.utils.time import get_current_time_millis
+from mlflow.utils.async_logging.run_operations import RunOperations
 import prov.model as prov
 import prov.dot as dot
 
@@ -11,6 +12,7 @@ from typing import Optional,Dict,Tuple
 from enum import Enum
 
 class Context(Enum):
+    #enumerator used for defining the context of the metric when saved using log_metrics
     TRAINING='training'
     EVALUATION='evaluation'
 
@@ -33,7 +35,8 @@ def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [
 #     for name,(value,context) in metrics.items():
 #         client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{name}',context)
 #         client.log_metric(mlflow.active_run().info.run_id,name,value,step=step,synchronous=synchronous)
-def log_metrics(metrics:Dict[str,Tuple[float,Context]],step:Optional[int]=None,synchronous:bool=True):
+
+def log_metrics(metrics:Dict[str,Tuple[float,Context]],step:Optional[int]=None,synchronous:bool=True) -> Optional[RunOperations]:
     #create two separate lists, one for metrics and one for tags, and log them together using native log.batch
     client= mlflow.MlflowClient()
 
@@ -43,7 +46,13 @@ def log_metrics(metrics:Dict[str,Tuple[float,Context]],step:Optional[int]=None,s
 
     return client.log_batch(mlflow.active_run().info.run_id,metrics=metrics_arr,tags=tag_arr,synchronous=synchronous)
 
-    
+def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, synchronous: bool = True, timestamp: Optional[int] = None) -> Optional[RunOperations]:
+    #sets the additional context tag, otherwise same as mlflow.log_metric
+    client = mlflow.MlflowClient()
+
+    client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{key}',context.name)
+    return client.log_metric(mlflow.active_run().info.run_id,key,value,step=step or 0,synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
+
 
 @contextmanager
 def start_run(id:str=None,run_name:str=None) -> mlflow.ActiveRun:
@@ -70,7 +79,7 @@ def start_run(id:str=None,run_name:str=None) -> mlflow.ActiveRun:
     doc.add_namespace('mlflow', ' ') #TODO: find namespaces of mlflow and prov-ml ontologies
     doc.add_namespace('prov-ml', 'p')
 
-    doc.add_namespace('ex','http://www.example.org')
+    doc.add_namespace('ex','http://www.example.org/')
 
 
     run_activity = doc.activity(f'ex:{act_run.info.run_name}',
