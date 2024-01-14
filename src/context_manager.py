@@ -4,6 +4,7 @@ import prov.model as prov
 import prov.dot as dot
 from datetime import datetime
 import ast
+from typing import Optional,Dict,Tuple
 
 def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [mlflow.entities.file_info.FileInfo]:
     #Traversal of the artifact tree of a run, stored as an acyclic graph
@@ -16,8 +17,19 @@ def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [
             artifact_paths.append(artifact)
     return artifact_paths
 
+def log_metrics(metrics:Dict[str,Tuple[float,str]],step: Optional[int] = None, synchronous: bool = True):
+    #adds context of the metric to the run tags, in order to distinguish between training and evaluation metrics
+    #original method uses log.batch, which is more efficient, but in this manner tags are added contextually to the metric
+    
+    client= mlflow.MlflowClient()
+    for name,(value,context) in metrics.items():
+        client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{name}',context)
+        client.log_metric(mlflow.active_run().info.run_id,name,value,step=step,synchronous=synchronous)
+
+    
+
 @contextmanager
-def start_run(id=None,run_name=None):
+def start_run(id:str=None,run_name:str=None) -> mlflow.ActiveRun:
 
     act_run= mlflow.start_run(id,run_name=run_name) #start the run
     print('started run', act_run.info.run_id)
