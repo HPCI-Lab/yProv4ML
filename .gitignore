@@ -8,3 +8,4 @@ mlruns/
 *.svg
 
 */__pycache__/
+*/*/__pycache__/

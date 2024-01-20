@@ -1,6 +1,8 @@
 from contextlib import contextmanager
 import mlflow
+from mlflow import ActiveRun
 from mlflow.entities import Metric,RunTag
+from mlflow.entities.file_info import FileInfo
 from mlflow.utils.time import get_current_time_millis
 from mlflow.utils.async_logging.run_operations import RunOperations
 import prov.model as prov
@@ -8,7 +10,7 @@ import prov.dot as dot
 
 from datetime import datetime
 import ast
-from typing import Optional,Dict,Tuple
+from typing import Optional,Dict,Tuple,Any
 from enum import Enum
 
 class Context(Enum):
@@ -16,7 +18,7 @@ class Context(Enum):
     TRAINING='training'
     EVALUATION='evaluation'
 
-def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [mlflow.entities.file_info.FileInfo]:
+def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [FileInfo]:
     #Traversal of the artifact tree of a run, stored as an acyclic graph
     artifact_list=client.list_artifacts(run_id,path)
     artifact_paths=[]
@@ -55,21 +57,29 @@ def log_metric(key: str, value: float, context:Context, step: Optional[int] = No
 
 
 @contextmanager
-def start_run(id:str=None,run_name:str=None) -> mlflow.ActiveRun:
+def start_run(run_id: Optional[str] = None,
+    experiment_id: Optional[str] = None,
+    run_name: Optional[str] = None,
+    nested: bool = False,
+    tags: Optional[Dict[str, Any]] = None,
+    description: Optional[str] = None,
+    log_system_metrics: Optional[bool] = None,) -> ActiveRun:
 
-    act_run= mlflow.start_run(id,run_name=run_name) #start the run
-    print('started run', act_run.info.run_id)
-    yield act_run #return the mlflow context manager, same one as mlflow.start_run()
+    #wrapper for mlflow.start_run, with prov generation
+
+    active_run= mlflow.start_run(run_id,experiment_id,run_name,nested,tags,description,log_system_metrics) #start the run
+    print('started run', active_run.info.run_id)
+    yield active_run #return the mlflow context manager, same one as mlflow.start_run()
 
 
-    run_id=act_run.info.run_id
+    run_id=active_run.info.run_id
     
     mlflow.end_run() #end the run, as per mlflow documentation
     print('ended run')
 
     print('doc generation')
     client = mlflow.MlflowClient()
-    act_run=client.get_run(run_id)
+    active_run=client.get_run(run_id)
     doc = prov.ProvDocument()
 
     #set namespaces
@@ -82,21 +92,21 @@ def start_run(id:str=None,run_name:str=None) -> mlflow.ActiveRun:
     doc.add_namespace('ex','http://www.example.org/')
 
 
-    run_activity = doc.activity(f'ex:{act_run.info.run_name}',
-                                datetime.fromtimestamp(act_run.info.start_time/1000),datetime.fromtimestamp(act_run.info.end_time/1000),
+    run_activity = doc.activity(f'ex:{active_run.info.run_name}',
+                                datetime.fromtimestamp(active_run.info.start_time/1000),datetime.fromtimestamp(active_run.info.end_time/1000),
                                 other_attributes={
         'prov-ml:type':'LearningStageExecution',
-        "mlflow:experiment_id":str(act_run.info.experiment_id),
-        "mlflow:run_id": str(act_run.info.run_id),
-        "mlflow:artifact_uri":str(act_run.info.artifact_uri)
+        "mlflow:experiment_id":str(active_run.info.experiment_id),
+        "mlflow:run_id": str(active_run.info.run_id),
+        "mlflow:artifact_uri":str(active_run.info.artifact_uri)
     })
 
     #get dataset data
     ent_ds = doc.entity(f'ex:dataset')
-    for dataset_input in act_run.inputs.dataset_inputs:
+    for dataset_input in active_run.inputs.dataset_inputs:
 
         #dataset tracking is still experimental, tags are stored in a serialized dict
-        tags=ast.literal_eval(dataset_input.dataset.source)
+        ds_tags=ast.literal_eval(dataset_input.dataset.source)
         #source_commit=tags['tags']['mlflow.source.git.commit']
         attributes={
             'prov-ml:type':'FeatureSetData',
@@ -107,28 +117,28 @@ def start_run(id:str=None,run_name:str=None) -> mlflow.ActiveRun:
         #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
         for input_tag in dataset_input.tags:
             attributes[f'mlflow:{input_tag.key.strip("mlflow.")}']=str(input_tag.value)
-        for key,value in tags['tags'].items():
+        for key,value in ds_tags['tags'].items():
             attributes[f'mlflow:{str(key).strip("mlflow.")}']=str(value)
         
         ent= doc.entity(f'mlflow:{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
         doc.used(run_activity,ent)
         doc.wasDerivedFrom(ent,ent_ds)
     
-    for name,value in act_run.data.params.items():
+    for name,value in active_run.data.params.items():
         ent = doc.entity(f'ex:{name}',{
             'ex:value':value,
             'prov-ml:type':'LearningHyperparameterValue'
         })
         doc.used(run_activity,ent)
     
-    for name,value in act_run.data.metrics.items():
+    for name,value in active_run.data.metrics.items():
         #the Run object stores only the most recent metrics, to get all metrics lower level API is needed
-        for metric in client.get_metric_history(act_run.info.run_id,name):
+        for metric in client.get_metric_history(active_run.info.run_id,name):
             ent=doc.entity(f'ex:{name}_{metric.step}',{
                 'ex:value':metric.value,
                 'ex:epoch':metric.step,
                 'prov-ml:type':'ModelEvaluation',
-                'ex:context': act_run.data.tags[f'metric.context.{name}'] #context saved by log_metrics function
+                'ex:context': active_run.data.tags[f'metric.context.{name}'] #context saved by log_metrics function
             })
             doc.wasGeneratedBy(ent,run_activity,datetime.fromtimestamp(metric.timestamp/1000))
 

@@ -28,8 +28,8 @@ def load_dataset(data_dir:str, train_transform:transforms.Compose, test_transfor
     test_numpy = next(iter(test_dataloader))[0].numpy()
     labels_numpy = next(iter(train_dataloader))[1].numpy()
 
-    mlflow.log_input(mlflow.data.numpy_dataset.from_numpy(train_numpy),context="training",tags={'source_mirror':f'{train_data.mirrors[0]}','source_resources':f'{train_data.resources}'})
-    mlflow.log_input(mlflow.data.numpy_dataset.from_numpy(test_numpy), context="testing",tags={'source_mirror':f'{test_data.mirrors[0]}','source_resources':f'{test_data.resources}'})
+    mlflow.log_input(mlflow.data.numpy_dataset.from_numpy(train_numpy),context="training",tags={'source_mirror':f'{train_data.mirrors[0]}','source_resources':f'{train_data.resources}','transforms':str(train_transform.transforms)})
+    mlflow.log_input(mlflow.data.numpy_dataset.from_numpy(test_numpy), context="testing",tags={'source_mirror':f'{test_data.mirrors[0]}','source_resources':f'{test_data.resources}','transforms':str(test_transform.transforms)})
 
 
     return train_dataloader, test_dataloader, class_names
