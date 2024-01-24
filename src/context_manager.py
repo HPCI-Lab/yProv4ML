@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 import mlflow
 from mlflow import ActiveRun
-from mlflow.entities import Metric,RunTag
+from mlflow.entities import Metric,RunTag,Run
 from mlflow.entities.file_info import FileInfo
 from mlflow.utils.time import get_current_time_millis
 from mlflow.utils.async_logging.run_operations import RunOperations
@@ -88,6 +88,93 @@ def log_metric(key: str, value: float, context:Context, step: Optional[int] = No
     client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{key}',context.name)
     return client.log_metric(mlflow.active_run().info.run_id,key,value,step=step or 0,synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
 
+def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
+    """
+    Generates the first level of provenance for a given run.
+
+    Args:
+        run (Run): The run object.
+        doc (prov.ProvDocument): The provenance document.
+
+    Returns:
+        prov.ProvDocument: The provenance document.
+    """
+    client = mlflow.MlflowClient()
+    run_entity = doc.entity(f'ex:{run.info.run_name}',other_attributes={
+        "mlflow:run_id": str(run.info.run_id),
+        "mlflow:artifact_uri":str(run.info.artifact_uri)
+    })
+    run_activity = doc.activity(f'ex:{run.info.run_name}_execution',
+                                datetime.fromtimestamp(run.info.start_time/1000),
+                                datetime.fromtimestamp(run.info.end_time/1000),
+                                other_attributes={
+        'prov-ml:type':'LearningStageExecution',
+    })
+    experiment = doc.entity(f'ex:{client.get_experiment(run.info.experiment_id).name}',other_attributes={
+        "mlflow:experiment_id": str(run.info.experiment_id),
+    })
+
+    doc.hadMember(experiment,run_entity)
+    run_entity.wasGeneratedBy(run_activity)
+
+    for name,_ in run.data.metrics.items():
+        #the Run object stores only the most recent metrics, to get all metrics lower level API is needed
+        for metric in client.get_metric_history(run.info.run_id,name):
+            i=0
+            ent=doc.entity(f'ex:{name}_{metric.step or i}',{
+                'prov-ml:type':'ModelEvaluation',
+                'ex:value':metric.value,
+                'ex:step':metric.step or i,
+            })
+            doc.wasGeneratedBy(ent,run_activity,datetime.fromtimestamp(metric.timestamp/1000))
+            i+=1
+
+    for name,value in run.data.params.items():
+        ent = doc.entity(f'ex:{name}',{
+            'ex:value':value,
+            'prov-ml:type':'LearningHyperparameterValue'
+        })
+        doc.used(run_activity,ent)
+
+    ent_ds = doc.entity(f'ex:dataset')
+    for dataset_input in run.inputs.dataset_inputs:
+        attributes={
+            'prov-ml:type':'FeatureSetData',
+            'mlflow:digest':str(dataset_input.dataset.digest),   
+        }
+
+        ent= doc.entity(f'mlflow:{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
+        doc.used(run_activity,ent)
+        doc.wasDerivedFrom(ent,ent_ds)
+    
+    model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0] #only one model version per run (in this case)
+
+    modv_ent=doc.entity(f'ex:{model_version.name}_{model_version.version}',{
+        'mlflow:version':str(model_version.version),
+        'mlflow:artifact_uri':str(model_version.source),
+        'mlflow:creation_timestamp':str(datetime.fromtimestamp(model_version.creation_timestamp/1000)),
+        'mlflow:last_updated_timestamp':str(datetime.fromtimestamp(model_version.last_updated_timestamp/1000)),
+    })
+    
+    #get the model registered in the model registry of mlflow
+    model = client.get_registered_model(model_version.name)
+    mod_ent=doc.entity(f'ex:{model.name}',{
+        'mlflow:creation_timestamp':str(datetime.fromtimestamp(model.creation_timestamp/1000))
+    })
+    doc.specializationOf(modv_ent,mod_ent)
+
+    artifacts=traverse_artifact_tree(client,run.info.run_id)
+    for artifact in artifacts:
+        ent=doc.entity(f'ex:{artifact.path}',{
+            'mlflow:artifact_path':artifact.path,
+            #the FileInfo object stores only size and path of the artifact, specific connectors to the artifact store are needed to get other metadata
+        })
+        doc.wasGeneratedBy(ent,run_activity)
+    
+
+    return doc
+
+
 
 @contextmanager
 def start_run(run_id: Optional[str] = None,
@@ -145,83 +232,21 @@ def start_run(run_id: Optional[str] = None,
     doc.add_namespace('ex','http://www.example.org/')
 
 
-    run_activity = doc.activity(f'ex:{active_run.info.run_name}',
-                                datetime.fromtimestamp(active_run.info.start_time/1000),datetime.fromtimestamp(active_run.info.end_time/1000),
-                                other_attributes={
-        'prov-ml:type':'LearningStageExecution',
-        "mlflow:experiment_id":str(active_run.info.experiment_id),
-        "mlflow:run_id": str(active_run.info.run_id),
-        "mlflow:artifact_uri":str(active_run.info.artifact_uri)
-    })
+    doc = first_level_prov(active_run,doc)
+    
 
-    #get dataset data
-    ent_ds = doc.entity(f'ex:dataset')
-    for dataset_input in active_run.inputs.dataset_inputs:
-
-        #dataset tracking is still experimental, tags are stored in a serialized dict
-        ds_tags=ast.literal_eval(dataset_input.dataset.source)
-        #source_commit=tags['tags']['mlflow.source.git.commit']
-        attributes={
-            'prov-ml:type':'FeatureSetData',
-            'mlflow:digest':str(dataset_input.dataset.digest),
-            #'mlflow:source_commit':source_commit,   
-        }
-
-        #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
-        for input_tag in dataset_input.tags:
-            attributes[f'mlflow:{input_tag.key.strip("mlflow.")}']=str(input_tag.value)
-        for key,value in ds_tags['tags'].items():
-            attributes[f'mlflow:{str(key).strip("mlflow.")}']=str(value)
+    #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
+    # for input_tag in dataset_input.tags:
+    #     attributes[f'mlflow:{input_tag.key.strip("mlflow.")}']=str(input_tag.value)
+    # for key,value in ds_tags['tags'].items():
+    #     attributes[f'mlflow:{str(key).strip("mlflow.")}']=str(value)
         
-        ent= doc.entity(f'mlflow:{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
-        doc.used(run_activity,ent)
-        doc.wasDerivedFrom(ent,ent_ds)
-    
-    for name,value in active_run.data.params.items():
-        ent = doc.entity(f'ex:{name}',{
-            'ex:value':value,
-            'prov-ml:type':'LearningHyperparameterValue'
-        })
-        doc.used(run_activity,ent)
-    
-    for name,value in active_run.data.metrics.items():
-        #the Run object stores only the most recent metrics, to get all metrics lower level API is needed
-        for metric in client.get_metric_history(active_run.info.run_id,name):
-            ent=doc.entity(f'ex:{name}_{metric.step}',{
-                'ex:value':metric.value,
-                'ex:epoch':metric.step,
-                'prov-ml:type':'ModelEvaluation',
-                'ex:context': active_run.data.tags[f'metric.context.{name}'] #context saved by log_metrics function
-            })
-            doc.wasGeneratedBy(ent,run_activity,datetime.fromtimestamp(metric.timestamp/1000))
+        
 
-    model_version = client.search_model_versions(f'run_id="{run_id}"')[0] #only one model version per run (in this case)
-    mod_ser=doc.activity('mlflow:ModelSerialization')
-    modv_ent=doc.entity(f'ex:{model_version.name}_{model_version.version}',{
-        'mlflow:version':str(model_version.version),
-        'mlflow:artifact_uri':str(model_version.source),
-        'mlflow:creation_timestamp':str(datetime.fromtimestamp(model_version.creation_timestamp/1000)),
-        'mlflow:last_updated_timestamp':str(datetime.fromtimestamp(model_version.last_updated_timestamp/1000)),
-    })
     
-    #get the model registered in the model registry of mlflow
-    model = client.get_registered_model(model_version.name)
-    mod_ent=doc.entity(f'ex:{model.name}',{
-        'mlflow:creation_timestamp':str(datetime.fromtimestamp(model.creation_timestamp/1000))
-    })
-    
-    doc.wasGeneratedBy(modv_ent,mod_ser)
-    doc.wasStartedBy(mod_ser,run_activity)
-    doc.specializationOf(modv_ent,mod_ent)
 
+    
     #artifacts are stored in a directory tree, this function traverses the tree and returns a list of artifacts
-    artifacts=traverse_artifact_tree(client,run_id)
-    for artifact in artifacts:
-        ent=doc.entity(f'ex:{artifact.path}',{
-            'mlflow:artifact_path':artifact.path,
-            #the FileInfo object stores only size and path of the artifact, specific connectors to the artifact store are needed to get other metadata
-        })
-        doc.wasGeneratedBy(ent,run_activity)
 
     with open('prov_graph.json','w') as prov_graph:
         doc.serialize(prov_graph)
