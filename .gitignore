@@ -9,3 +9,6 @@ mlruns/
 
 */__pycache__/
 */*/__pycache__/
+
+custom_app_plugin/
+gh_context/

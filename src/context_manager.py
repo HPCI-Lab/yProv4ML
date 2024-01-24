@@ -13,13 +13,30 @@ import ast
 from typing import Optional,Dict,Tuple,Any
 from enum import Enum
 
+from enum import Enum
+
 class Context(Enum):
-    #enumerator used for defining the context of the metric when saved using log_metrics
-    TRAINING='training'
-    EVALUATION='evaluation'
+    """Enumeration class for defining the context of the metric when saved using log_metrics.
+
+    Attributes:
+        TRAINING (str): The context for training metrics.
+        EVALUATION (str): The context for evaluation metrics.
+    """
+    TRAINING = 'training'
+    EVALUATION = 'evaluation'
 
 def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [FileInfo]:
-    #Traversal of the artifact tree of a run, stored as an acyclic graph
+    """
+    Recursively traverses the artifact tree of a given run in MLflow and returns a list of FileInfo objects.
+
+    Args:
+        client (mlflow.MlflowClient): The MLflow client object.
+        run_id (str): The ID of the run.
+        path (str, optional): The path to start the traversal from. Defaults to None.
+
+    Returns:
+        List[FileInfo]: A list of FileInfo objects representing the artifacts in the tree.
+    """    
     artifact_list=client.list_artifacts(run_id,path)
     artifact_paths=[]
     for artifact in artifact_list:
@@ -29,16 +46,19 @@ def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [
             artifact_paths.append(artifact)
     return artifact_paths
 
-# def log_metrics(metrics:Dict[str,Tuple[float,str]],step: Optional[int] = None, synchronous: bool = True):
-#     #adds context of the metric to the run tags, in order to distinguish between training and evaluation metrics
-#     #original method uses log.batch, which is more efficient, but in this manner tags are added contextually to the metric
-    
-#     client= mlflow.MlflowClient()
-#     for name,(value,context) in metrics.items():
-#         client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{name}',context)
-#         client.log_metric(mlflow.active_run().info.run_id,name,value,step=step,synchronous=synchronous)
 
 def log_metrics(metrics:Dict[str,Tuple[float,Context]],step:Optional[int]=None,synchronous:bool=True) -> Optional[RunOperations]:
+    """
+    Logs the given metrics and their associated contexts to the active MLflow run.
+
+    Parameters:
+        metrics (Dict[str, Tuple[float, Context]]): A dictionary containing the metrics and their associated contexts.
+        step (Optional[int]): The step number for the metrics. Defaults to None.
+        synchronous (bool): Whether to log the metrics synchronously or asynchronously. Defaults to True.
+
+    Returns:
+        Optional[RunOperations]: The run operations object if logging is successful, None otherwise.
+    """
     #create two separate lists, one for metrics and one for tags, and log them together using native log.batch
     client= mlflow.MlflowClient()
 
@@ -49,9 +69,22 @@ def log_metrics(metrics:Dict[str,Tuple[float,Context]],step:Optional[int]=None,s
     return client.log_batch(mlflow.active_run().info.run_id,metrics=metrics_arr,tags=tag_arr,synchronous=synchronous)
 
 def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, synchronous: bool = True, timestamp: Optional[int] = None) -> Optional[RunOperations]:
-    #sets the additional context tag, otherwise same as mlflow.log_metric
-    client = mlflow.MlflowClient()
+    """
+    Logs a metric with the specified key, value, and context.
 
+    Args:
+        key (str): The key of the metric.
+        value (float): The value of the metric.
+        context (Context): The context of the metric.
+        step (Optional[int], optional): The step of the metric. Defaults to None.
+        synchronous (bool, optional): Whether to log the metric synchronously. Defaults to True.
+        timestamp (Optional[int], optional): The timestamp of the metric. Defaults to None.
+
+    Returns:
+        Optional[RunOperations]: The run operations object.
+
+    """
+    client = mlflow.MlflowClient()
     client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{key}',context.name)
     return client.log_metric(mlflow.active_run().info.run_id,key,value,step=step or 0,synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
 
@@ -64,9 +97,27 @@ def start_run(run_id: Optional[str] = None,
     tags: Optional[Dict[str, Any]] = None,
     description: Optional[str] = None,
     log_system_metrics: Optional[bool] = None,) -> ActiveRun:
+    """
+    Starts an MLflow run and generates provenance information.
 
+    Args:
+        run_id (Optional[str]): The ID of the run to start. If not provided, a new run ID will be generated.
+        experiment_id (Optional[str]): The ID of the experiment to associate the run with. If not provided, the default experiment will be used.
+        run_name (Optional[str]): The name of the run. If not provided, a default name will be assigned.
+        nested (bool): Whether the run is nested within another run. Defaults to False.
+        tags (Optional[Dict[str, Any]]): Additional tags to associate with the run. Defaults to None.
+        description (Optional[str]): A description of the run. Defaults to None.
+        log_system_metrics (Optional[bool]): Whether to log system metrics. Defaults to None.
+
+    Returns:
+        ActiveRun: The active run object.
+
+    Raises:
+        None
+
+    """
     #wrapper for mlflow.start_run, with prov generation
-
+    
     active_run= mlflow.start_run(run_id,experiment_id,run_name,nested,tags,description,log_system_metrics) #start the run
     print('started run', active_run.info.run_id)
     yield active_run #return the mlflow context manager, same one as mlflow.start_run()
@@ -78,8 +129,10 @@ def start_run(run_id: Optional[str] = None,
     print('ended run')
 
     print('doc generation')
+
     client = mlflow.MlflowClient()
     active_run=client.get_run(run_id)
+
     doc = prov.ProvDocument()
 
     #set namespaces
