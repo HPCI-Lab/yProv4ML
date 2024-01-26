@@ -169,7 +169,7 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
         'mlflow:creation_timestamp':str(datetime.fromtimestamp(model_version.creation_timestamp/1000)),
         'mlflow:last_updated_timestamp':str(datetime.fromtimestamp(model_version.last_updated_timestamp/1000)),
     })
-    doc.wasGeneratedBy(modv_ent,run_activity)
+    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'ex:{model_version.name}_{model_version.version}_gen')
     
     
     #get the model registered in the model registry of mlflow
@@ -188,7 +188,7 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
             'mlflow:artifact_path':artifact.path,
             #the FileInfo object stores only size and path of the artifact, specific connectors to the artifact store are needed to get other metadata
         })
-        doc.wasGeneratedBy(ent,run_activity)
+        doc.wasGeneratedBy(ent,run_activity,identifier=f'"ex:{artifact.path}_gen')
     
 
     return doc
@@ -243,7 +243,20 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
                 doc.wasGeneratedBy(f'ex:{metric.key}_{metric.step}',f'ex:test_step_{metric.step}')
             else:
                 raise ValueError(f'Invalid metric key: {metric.key}')
+    
+    
+    model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0]
+    if doc.get_record(f'ex:{model_version.name}_{model_version.version}_gen')[0]:
+        doc._records.remove(doc.get_record(f'ex:{model_version.name}_{model_version.version}_gen')[0])
 
+    model_ser = doc.activity(f'mlflow:ModelRegistration')
+    doc.wasInformedBy(model_ser,run_activity)
+    doc.wasGeneratedBy(f'ex:{model_version.name}_{model_version.version}',model_ser)
+    
+    for artifact in traverse_artifact_tree(client,run.info.run_id,model_version.name): #get artifacts whose path starts with TinyVGG: these are model serialization and metadata files
+        if doc.get_record(f"ex:{artifact.path}_gen"):
+            doc._records.remove(doc.get_record(f"ex:{artifact.path}_gen"))
+        doc.hadMember(f'ex:{model_version.name}_{model_version.version}',f"ex:{artifact.path}")
     return doc
 
 
