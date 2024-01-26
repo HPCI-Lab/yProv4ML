@@ -154,9 +154,9 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
             'mlflow:digest':str(dataset_input.dataset.digest),   
         }
 
-        ent= doc.entity(f'mlflow:{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
+        ent= doc.entity(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
         doc.used(run_activity,ent)
-        doc.wasDerivedFrom(ent,ent_ds)
+        doc.wasDerivedFrom(ent,ent_ds,identifier=f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')
     
 
     #model version entities generation
@@ -244,6 +244,30 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
             else:
                 raise ValueError(f'Invalid metric key: {metric.key}')
     
+    #data transformation activity
+    doc.activity("ex:data_preparation",other_attributes={
+        "prov-ml:type":"FeatureExtractionExecution",
+    })
+    #add attributes to dataset entities
+    for dataset_input in run.inputs.dataset_inputs:
+        attributes={
+            'mlflow:profile':str(dataset_input.dataset.profile),
+            'mlflow:schema':str(dataset_input.dataset.schema),   
+        }
+        ent= doc.get_record(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}')[0]
+        ent.add_attributes(attributes)
+
+        #remove old generation relationship
+        if doc.get_record(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0]:
+            doc._records.remove(doc.get_record(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0])
+        doc.wasDerivedFrom(ent,'ex:dataset','ex:data_preparation')  #use new transform activity for derivation
+    # doc.get_record('ex:dataset')[0].add_attributes({
+    #     'ex:source_mirror':str(run.inputs.dataset_inputs[0].tags[1]),
+    # })
+
+
+
+        
     
     model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0]
     if doc.get_record(f'ex:{model_version.name}_{model_version.version}_gen')[0]:
@@ -326,12 +350,6 @@ def start_run(run_id: Optional[str] = None,
     # for key,value in ds_tags['tags'].items():
     #     attributes[f'mlflow:{str(key).strip("mlflow.")}']=str(value)
         
-        
-
-    
-
-    
-    #artifacts are stored in a directory tree, this function traverses the tree and returns a list of artifacts
 
     with open('prov_graph.json','w') as prov_graph:
         doc.serialize(prov_graph)
