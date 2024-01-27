@@ -9,11 +9,14 @@ import prov.model as prov
 import prov.dot as dot
 
 from datetime import datetime
-import ast
 from typing import Optional,Dict,Tuple,Any
 from enum import Enum
 
-from enum import Enum
+from collections import namedtuple
+
+lv_attr = namedtuple('lv_attr', ['level', 'value'])
+LVL_1 = 1
+LVL_2 = 2
 
 class Context(Enum):
     """Enumeration class for defining the context of the metric when saved using log_metrics.
@@ -106,24 +109,32 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
     #run entity and activity generation
 
     run_entity = doc.entity(f'ex:{run.info.run_name}',other_attributes={
-        "mlflow:run_id": str(run.info.run_id),
-        "mlflow:artifact_uri":str(run.info.artifact_uri),
-        "prov-ml:type":"LearningStage"
+        "mlflow:run_id": lv_attr(LVL_1,str(run.info.run_id)),
+        "mlflow:artifact_uri":lv_attr(LVL_1,str(run.info.artifact_uri)),
+        "prov-ml:type":lv_attr(LVL_1,"LearningStage"),
+        "prov:level":LVL_1
     })
+
     run_activity = doc.activity(f'ex:{run.info.run_name}_execution',
                                 datetime.fromtimestamp(run.info.start_time/1000),
                                 datetime.fromtimestamp(run.info.end_time/1000),
                                 other_attributes={
-        'prov-ml:type':'LearningStageExecution',
+        'prov-ml:type':lv_attr(LVL_1,'LearningStageExecution'),
+        "prov:level":LVL_1
     })
     #experiment entity generation
     experiment = doc.entity(f'ex:{client.get_experiment(run.info.experiment_id).name}',other_attributes={
-        "prov-ml:type":"LearningExperiment",
-        "mlflow:experiment_id": str(run.info.experiment_id),
+        "prov-ml:type":lv_attr(LVL_1,"LearningExperiment"),
+        "mlflow:experiment_id": lv_attr(LVL_1,str(run.info.experiment_id)),
+        "prov:level":LVL_1
     })
 
-    doc.hadMember(experiment,run_entity)
-    run_entity.wasGeneratedBy(run_activity)
+    doc.hadMember(experiment,run_entity).add_attributes({
+        'prov:level':LVL_1
+    })
+    doc.wasGeneratedBy(run_entity,run_activity,other_attributes={
+        'prov:level':LVL_1
+    })
 
 
     #metrics and params generation
@@ -202,11 +213,15 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
     
     run_activity= doc.get_record(f'ex:{run.info.run_name}_execution')[0]
     run_activity.add_attributes({
-        "mlflow:status":run.info.status,
-        "mlflow:lifecycle_stage":run.info.lifecycle_stage,
+        "mlflow:status":lv_attr(LVL_2,run.info.status),
+        "mlflow:lifecycle_stage":lv_attr(LVL_2,run.info.lifecycle_stage),
     })
-    user_ag = doc.agent(f'ex:{run.info.user_id}')
-    doc.wasAssociatedWith(f'ex:{run.info.run_name}_execution',user_ag)
+    user_ag = doc.agent(f'ex:{run.info.user_id}',other_attributes={
+        "prov:level":LVL_2,
+    })
+    doc.wasAssociatedWith(f'ex:{run.info.run_name}_execution',user_ag,other_attributes={
+        "prov:level":LVL_2,
+    })
 
     doc.entity('ex:source_code',{
         "mlflow:source_name":run.data.tags['mlflow.source.name'],
