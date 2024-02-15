@@ -110,8 +110,6 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
 
     run_entity = doc.entity(f'{run.info.run_name}',other_attributes={
         "mlflow:run_id": str(lv_attr(LVL_1,str(run.info.run_id))),
-        #"mlflow:run_id": lv_attr(LVL_1,str(run.info.run_id)),
-    
         "mlflow:artifact_uri":str(lv_attr(LVL_1,str(run.info.artifact_uri))),
         "prov-ml:type":str(lv_attr(LVL_1,"LearningStage")),
         "mlflow:user_id":str(lv_attr(LVL_1,str(run.info.user_id))),
@@ -149,30 +147,36 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
                 'prov-ml:type':'ModelEvaluation',
                 'mlflow:value':str(lv_attr(LVL_1,metric.value)),
                 'mlflow:step':str(lv_attr(LVL_1,metric.step or i)),
+                'prov:level':LVL_1,
             })
             doc.wasGeneratedBy(ent,run_activity,
                                #datetime.fromtimestamp(metric.timestamp/1000),
-                               identifier=f'{name}_{metric.step}_gen')
+                               identifier=f'{name}_{metric.step}_gen',
+                               other_attributes={
+                                    'prov:level':LVL_1
+                               })
             i+=1
 
     for name,value in run.data.params.items():
         ent = doc.entity(f'{name}',{
             'mlflow:value':str(lv_attr(LVL_1,value)),
-            'prov-ml:type':str(lv_attr(LVL_1,'LearningHyperparameterValue'))
+            'prov-ml:type':str(lv_attr(LVL_1,'LearningHyperparameterValue')),
+            'prov:level':LVL_1,
         })
-        doc.used(run_activity,ent)
+        doc.used(run_activity,ent,other_attributes={'prov:level':LVL_1})
 
     #dataset entities generation
-    ent_ds = doc.entity(f'dataset')
+    ent_ds = doc.entity(f'dataset',other_attributes={'prov:level':LVL_1})
     for dataset_input in run.inputs.dataset_inputs:
         attributes={
-            'prov-ml:type':lv_attr(LVL_1,'FeatureSetData'),
-            'mlflow:digest':lv_attr(LVL_1,str(dataset_input.dataset.digest))   
+            'prov-ml:type':str(lv_attr(LVL_1,'FeatureSetData')),
+            'mlflow:digest':str(lv_attr(LVL_1,str(dataset_input.dataset.digest))),
+            'prov:level':LVL_1,
         }
 
         ent= doc.entity(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
-        doc.used(run_activity,ent)
-        doc.wasDerivedFrom(ent,ent_ds,identifier=f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')
+        doc.used(run_activity,ent, other_attributes={'prov:level':LVL_1})
+        doc.wasDerivedFrom(ent,ent_ds,identifier=f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der',other_attributes={'prov:level':LVL_1})
     
 
     #model version entities generation
@@ -184,8 +188,9 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
         'mlflow:artifact_uri':str(lv_attr(LVL_1,model_version.source)),
         'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.creation_timestamp/1000))),
         'mlflow:last_updated_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.last_updated_timestamp/1000))),
+        'prov:level':LVL_1
     })
-    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_version.name}_{model_version.version}_gen')
+    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_version.name}_{model_version.version}_gen',other_attributes={'prov:level':LVL_1})
     
     
     #get the model registered in the model registry of mlflow
@@ -193,8 +198,10 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
     mod_ent=doc.entity(f'{model.name}',{
         "prov-ml:type":str(lv_attr(LVL_1,"Model")),
         'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model.creation_timestamp/1000))),
+        'prov:level':LVL_1,
     })
-    doc.specializationOf(modv_ent,mod_ent)
+    spec=doc.specializationOf(modv_ent,mod_ent)
+    spec.add_attributes({'prov:level':LVL_1})   #specilizationOf doesn't accept other_attributes, but its cast as record does
 
 
     #artifact entities generation
@@ -202,9 +209,10 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
     for artifact in artifacts:
         ent=doc.entity(f'{artifact.path}',{
             'mlflow:artifact_path':str(lv_attr(LVL_1,artifact.path)),
+            'prov:level':LVL_1,
             #the FileInfo object stores only size and path of the artifact, specific connectors to the artifact store are needed to get other metadata
         })
-        doc.wasGeneratedBy(ent,run_activity,identifier=f'{artifact.path}_gen')
+        doc.wasGeneratedBy(ent,run_activity,identifier=f'{artifact.path}_gen',other_attributes={'prov:level':LVL_1})
     
 
     return doc
@@ -229,13 +237,15 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
 
     doc.entity('source_code',{
         "mlflow:source_name":str(lv_attr(LVL_2,run.data.tags['mlflow.source.name'])),
-        "mlflow:source_type":str(lv_attr(LVL_2,run.data.tags['mlflow.source.type'])),     
+        "mlflow:source_type":str(lv_attr(LVL_2,run.data.tags['mlflow.source.type'])),  
+        'prov:level':LVL_2,   
     })
     doc.activity('commit',other_attributes={
         "mlflow:source_git_commit":str(lv_attr(LVL_2,run.data.tags['mlflow.source.git.commit'])),
+        'prov:level':LVL_2,
     })
-    doc.wasGeneratedBy('source_code','commit')
-    doc.wasInformedBy(run_activity,'commit')
+    doc.wasGeneratedBy('source_code','commit',other_attributes={'prov:level':LVL_2})
+    doc.wasInformedBy(run_activity,'commit',other_attributes={'prov:level':LVL_2})
 
     #remove relations between metrics and run
 
@@ -247,25 +257,28 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
             if not doc.get_record(f'train_step_{metric.step}'):
                 train_activity=doc.activity(f'train_step_{metric.step}',other_attributes={
                 "prov-ml:type":str(lv_attr(LVL_2,"TrainingExecution")),
+                'prov:level':LVL_2,
                 })
                 test_activity=doc.activity(f'test_step_{metric.step}',other_attributes={
                     "prov-ml:type":str(lv_attr(LVL_2,"EvaluationExecution")),
+                    'prov:level':LVL_2,
                 })
-                doc.wasStartedBy(train_activity,run_activity)
-                doc.wasStartedBy(test_activity,run_activity)
+                doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':LVL_2})
+                doc.wasStartedBy(test_activity,run_activity,other_attributes={'prov:level':LVL_2})
 
-            if doc.get_record(f'{name}_{metric.step}_gen')[0]:
-                doc._records.remove(doc.get_record(f'{name}_{metric.step}_gen')[0]) #accessing private attribute, propriety doesn't allow to remove records, but we need to remove the lv1 generation
+            # if doc.get_record(f'{name}_{metric.step}_gen')[0]:
+            #     doc._records.remove(doc.get_record(f'{name}_{metric.step}_gen')[0]) #accessing private attribute, propriety doesn't allow to remove records, but we need to remove the lv1 generation
             if run.data.tags[f'metric.context.{metric.key}']==Context.TRAINING.name:
-                doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'train_step_{metric.step}')    
+                doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'train_step_{metric.step}',other_attributes={'prov:level':LVL_2})    
             elif run.data.tags[f'metric.context.{metric.key}']==Context.EVALUATION.name:
-                doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'test_step_{metric.step}')
+                doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'test_step_{metric.step}',other_attributes={'prov:level':LVL_2})
             else:
                 raise ValueError(f'Invalid metric key: {metric.key}')
     
     #data transformation activity
     doc.activity("data_preparation",other_attributes={
         "prov-ml:type":"FeatureExtractionExecution",
+        'prov:level':LVL_2,
     })
     #add attributes to dataset entities
     for dataset_input in run.inputs.dataset_inputs:
@@ -277,9 +290,11 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
         ent.add_attributes(attributes)
 
         #remove old generation relationship
-        if doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0]:
-            doc._records.remove(doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0])
-        doc.wasDerivedFrom(ent,'dataset','data_preparation')  #use new transform activity for derivation
+        # if doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0]:
+        #     doc._records.remove(doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0])
+        #doc.wasDerivedFrom(ent,'dataset','data_preparation',other_attributes={'prov:level':LVL_2})  #use new transform activity for derivation
+        doc.wasGeneratedBy(ent,'data_preparation',other_attributes={'prov:level':LVL_2})        #use two binary relation for yProv
+    doc.used('data_preparation','dataset',other_attributes={'prov:level':LVL_2})
     # doc.get_record('dataset')[0].add_attributes({
     #     'source_mirror':str(run.inputs.dataset_inputs[0].tags[1]),
     # })
@@ -289,17 +304,18 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
         
     
     model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0]
-    if doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0]:
-        doc._records.remove(doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0])
+    # if doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0]:
+    #     doc._records.remove(doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0])
 
-    model_ser = doc.activity(f'mlflow:ModelRegistration')
-    doc.wasInformedBy(model_ser,run_activity)
-    doc.wasGeneratedBy(f'{model_version.name}_{model_version.version}',model_ser)
+    model_ser = doc.activity(f'mlflow:ModelRegistration',other_attributes={'prov:level':LVL_2})
+    doc.wasInformedBy(model_ser,run_activity,other_attributes={'prov:level':LVL_2})
+    doc.wasGeneratedBy(f'{model_version.name}_{model_version.version}',model_ser,other_attributes={'prov:level':LVL_2})
     
     for artifact in traverse_artifact_tree(client,run.info.run_id,model_version.name): #get artifacts whose path starts with TinyVGG: these are model serialization and metadata files
-        if doc.get_record(f'{artifact.path}_gen'):
-            doc._records.remove(doc.get_record(f'{artifact.path}_gen')[0])
-        doc.hadMember(f'{model_version.name}_{model_version.version}',f"{artifact.path}")
+        # if doc.get_record(f'{artifact.path}_gen'):
+        #     doc._records.remove(doc.get_record(f'{artifact.path}_gen')[0])
+        memb=doc.hadMember(f'{model_version.name}_{model_version.version}',f"{artifact.path}")
+        memb.add_attributes({'prov:level':LVL_2})
     return doc
 
 
@@ -363,7 +379,7 @@ def start_run(
 
 
     doc = first_level_prov(active_run,doc)
-    doc=second_level_prov(active_run,doc)
+    doc = second_level_prov(active_run,doc)
     
 
     #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
