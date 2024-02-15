@@ -36,7 +36,7 @@ def main():
 
     mlflow.set_experiment(experiment_name=EXPERIMENT_NAME)
     
-    with start_run(run_name=RUN_NAME):
+    with start_run(prov_user_namespace="www.example.org",run_name=RUN_NAME):
         
         train_transform = transforms.Compose([transforms.Resize(size=(28,28)),transforms.TrivialAugmentWide(num_magnitude_bins=31),transforms.ToTensor()])
         test_transform = transforms.Compose([transforms.Resize((28,28)),transforms.ToTensor()])

@@ -9,14 +9,14 @@ import prov.model as prov
 import prov.dot as dot
 
 from datetime import datetime
-from typing import Optional,Dict,Tuple,Any
+from typing import Optional,Dict,Tuple,Any,List
 from enum import Enum
 
 from collections import namedtuple
 
 lv_attr = namedtuple('lv_attr', ['level', 'value'])
-LVL_1 = 1
-LVL_2 = 2
+LVL_1 = "1"
+LVL_2 = "2"
 
 class Context(Enum):
     """Enumeration class for defining the context of the metric when saved using log_metrics.
@@ -28,7 +28,7 @@ class Context(Enum):
     TRAINING = 'training'
     EVALUATION = 'evaluation'
 
-def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> [FileInfo]:
+def traverse_artifact_tree(client:mlflow.MlflowClient,run_id:str,path=None) -> List[FileInfo]:
     """
     Recursively traverses the artifact tree of a given run in MLflow and returns a list of FileInfo objects.
 
@@ -108,24 +108,27 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
 
     #run entity and activity generation
 
-    run_entity = doc.entity(f'ex:{run.info.run_name}',other_attributes={
-        "mlflow:run_id": lv_attr(LVL_1,str(run.info.run_id)),
-        "mlflow:artifact_uri":lv_attr(LVL_1,str(run.info.artifact_uri)),
-        "prov-ml:type":lv_attr(LVL_1,"LearningStage"),
+    run_entity = doc.entity(f'{run.info.run_name}',other_attributes={
+        "mlflow:run_id": str(lv_attr(LVL_1,str(run.info.run_id))),
+        #"mlflow:run_id": lv_attr(LVL_1,str(run.info.run_id)),
+    
+        "mlflow:artifact_uri":str(lv_attr(LVL_1,str(run.info.artifact_uri))),
+        "prov-ml:type":str(lv_attr(LVL_1,"LearningStage")),
+        "mlflow:user_id":str(lv_attr(LVL_1,str(run.info.user_id))),
         "prov:level":LVL_1
     })
 
-    run_activity = doc.activity(f'ex:{run.info.run_name}_execution',
-                                datetime.fromtimestamp(run.info.start_time/1000),
-                                datetime.fromtimestamp(run.info.end_time/1000),
+    run_activity = doc.activity(f'{run.info.run_name}_execution',
+                                #datetime.fromtimestamp(run.info.start_time/1000),
+                                #datetime.fromtimestamp(run.info.end_time/1000),
                                 other_attributes={
-        'prov-ml:type':lv_attr(LVL_1,'LearningStageExecution'),
+        'prov-ml:type':str(lv_attr(LVL_1,'LearningStageExecution')),
         "prov:level":LVL_1
     })
     #experiment entity generation
-    experiment = doc.entity(f'ex:{client.get_experiment(run.info.experiment_id).name}',other_attributes={
-        "prov-ml:type":lv_attr(LVL_1,"LearningExperiment"),
-        "mlflow:experiment_id": lv_attr(LVL_1,str(run.info.experiment_id)),
+    experiment = doc.entity(f'{client.get_experiment(run.info.experiment_id).name}',other_attributes={
+        "prov-ml:type":str(lv_attr(LVL_1,"LearningExperiment")),
+        "mlflow:experiment_id": str(lv_attr(LVL_1,str(run.info.experiment_id))),
         "prov:level":LVL_1
     })
 
@@ -142,52 +145,54 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
         #the Run object stores only the most recent metrics, to get all metrics lower level API is needed
         for metric in client.get_metric_history(run.info.run_id,name):
             i=0
-            ent=doc.entity(f'ex:{name}_{metric.step or i}',{
+            ent=doc.entity(f'{name}_{metric.step or i}',{
                 'prov-ml:type':'ModelEvaluation',
-                'ex:value':metric.value,
-                'ex:step':metric.step or i,
+                'mlflow:value':str(lv_attr(LVL_1,metric.value)),
+                'mlflow:step':str(lv_attr(LVL_1,metric.step or i)),
             })
-            doc.wasGeneratedBy(ent,run_activity,datetime.fromtimestamp(metric.timestamp/1000),identifier=f'ex:{name}_{metric.step}_gen')
+            doc.wasGeneratedBy(ent,run_activity,
+                               #datetime.fromtimestamp(metric.timestamp/1000),
+                               identifier=f'{name}_{metric.step}_gen')
             i+=1
 
     for name,value in run.data.params.items():
-        ent = doc.entity(f'ex:{name}',{
-            'ex:value':value,
-            'prov-ml:type':'LearningHyperparameterValue'
+        ent = doc.entity(f'{name}',{
+            'mlflow:value':str(lv_attr(LVL_1,value)),
+            'prov-ml:type':str(lv_attr(LVL_1,'LearningHyperparameterValue'))
         })
         doc.used(run_activity,ent)
 
     #dataset entities generation
-    ent_ds = doc.entity(f'ex:dataset')
+    ent_ds = doc.entity(f'dataset')
     for dataset_input in run.inputs.dataset_inputs:
         attributes={
-            'prov-ml:type':'FeatureSetData',
-            'mlflow:digest':str(dataset_input.dataset.digest),   
+            'prov-ml:type':lv_attr(LVL_1,'FeatureSetData'),
+            'mlflow:digest':lv_attr(LVL_1,str(dataset_input.dataset.digest))   
         }
 
-        ent= doc.entity(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
+        ent= doc.entity(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
         doc.used(run_activity,ent)
-        doc.wasDerivedFrom(ent,ent_ds,identifier=f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')
+        doc.wasDerivedFrom(ent,ent_ds,identifier=f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')
     
 
     #model version entities generation
     model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0] #only one model version per run (in this case)
 
-    modv_ent=doc.entity(f'ex:{model_version.name}_{model_version.version}',{
-        "prov-ml:type":"Model",
-        'mlflow:version':str(model_version.version),
-        'mlflow:artifact_uri':str(model_version.source),
-        'mlflow:creation_timestamp':str(datetime.fromtimestamp(model_version.creation_timestamp/1000)),
-        'mlflow:last_updated_timestamp':str(datetime.fromtimestamp(model_version.last_updated_timestamp/1000)),
+    modv_ent=doc.entity(f'{model_version.name}_{model_version.version}',{
+        "prov-ml:type":str(lv_attr(LVL_1,"Model")),
+        'mlflow:version':str(lv_attr(LVL_1,model_version.version)),
+        'mlflow:artifact_uri':str(lv_attr(LVL_1,model_version.source)),
+        'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.creation_timestamp/1000))),
+        'mlflow:last_updated_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.last_updated_timestamp/1000))),
     })
-    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'ex:{model_version.name}_{model_version.version}_gen')
+    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_version.name}_{model_version.version}_gen')
     
     
     #get the model registered in the model registry of mlflow
     model = client.get_registered_model(model_version.name)
-    mod_ent=doc.entity(f'ex:{model.name}',{
-        "prov-ml:type":"Model",
-        'mlflow:creation_timestamp':str(datetime.fromtimestamp(model.creation_timestamp/1000))
+    mod_ent=doc.entity(f'{model.name}',{
+        "prov-ml:type":str(lv_attr(LVL_1,"Model")),
+        'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model.creation_timestamp/1000))),
     })
     doc.specializationOf(modv_ent,mod_ent)
 
@@ -195,11 +200,11 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
     #artifact entities generation
     artifacts=traverse_artifact_tree(client,run.info.run_id)
     for artifact in artifacts:
-        ent=doc.entity(f'ex:{artifact.path}',{
-            'mlflow:artifact_path':artifact.path,
+        ent=doc.entity(f'{artifact.path}',{
+            'mlflow:artifact_path':str(lv_attr(LVL_1,artifact.path)),
             #the FileInfo object stores only size and path of the artifact, specific connectors to the artifact store are needed to get other metadata
         })
-        doc.wasGeneratedBy(ent,run_activity,identifier=f'"ex:{artifact.path}_gen')
+        doc.wasGeneratedBy(ent,run_activity,identifier=f'{artifact.path}_gen')
     
 
     return doc
@@ -209,29 +214,28 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
 def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
 
     client = mlflow.MlflowClient()
-
-    
-    run_activity= doc.get_record(f'ex:{run.info.run_name}_execution')[0]
+        
+    run_activity= doc.get_record(f'{run.info.run_name}_execution')[0]
     run_activity.add_attributes({
-        "mlflow:status":lv_attr(LVL_2,run.info.status),
-        "mlflow:lifecycle_stage":lv_attr(LVL_2,run.info.lifecycle_stage),
+        "mlflow:status":str(lv_attr(LVL_2,run.info.status)),
+        "mlflow:lifecycle_stage":str(lv_attr(LVL_2,run.info.lifecycle_stage)),
     })
-    user_ag = doc.agent(f'ex:{run.info.user_id}',other_attributes={
+    user_ag = doc.agent(f'{run.info.user_id}',other_attributes={
         "prov:level":LVL_2,
     })
-    doc.wasAssociatedWith(f'ex:{run.info.run_name}_execution',user_ag,other_attributes={
+    doc.wasAssociatedWith(f'{run.info.run_name}_execution',user_ag,other_attributes={
         "prov:level":LVL_2,
     })
 
-    doc.entity('ex:source_code',{
-        "mlflow:source_name":run.data.tags['mlflow.source.name'],
-        "mlflow:source_type":run.data.tags['mlflow.source.type'],     
+    doc.entity('source_code',{
+        "mlflow:source_name":str(lv_attr(LVL_2,run.data.tags['mlflow.source.name'])),
+        "mlflow:source_type":str(lv_attr(LVL_2,run.data.tags['mlflow.source.type'])),     
     })
-    doc.activity('ex:commit',other_attributes={
-        "mlflow:source_git_commit":run.data.tags['mlflow.source.git.commit'],
+    doc.activity('commit',other_attributes={
+        "mlflow:source_git_commit":str(lv_attr(LVL_2,run.data.tags['mlflow.source.git.commit'])),
     })
-    doc.wasGeneratedBy('ex:source_code','ex:commit')
-    doc.wasInformedBy(run_activity,'ex:commit')
+    doc.wasGeneratedBy('source_code','commit')
+    doc.wasInformedBy(run_activity,'commit')
 
     #remove relations between metrics and run
 
@@ -240,44 +244,44 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
 
     for name,_ in run.data.metrics.items():
         for metric in client.get_metric_history(run.info.run_id,name):
-            if not doc.get_record(f'ex:train_step_{metric.step}'):
-                train_activity=doc.activity(f'ex:train_step_{metric.step}',other_attributes={
-                "prov-ml:type":"TrainingExecution",
+            if not doc.get_record(f'train_step_{metric.step}'):
+                train_activity=doc.activity(f'train_step_{metric.step}',other_attributes={
+                "prov-ml:type":str(lv_attr(LVL_2,"TrainingExecution")),
                 })
-                test_activity=doc.activity(f'ex:test_step_{metric.step}',other_attributes={
-                    "prov-ml:type":"EvaluationExecution",
+                test_activity=doc.activity(f'test_step_{metric.step}',other_attributes={
+                    "prov-ml:type":str(lv_attr(LVL_2,"EvaluationExecution")),
                 })
                 doc.wasStartedBy(train_activity,run_activity)
                 doc.wasStartedBy(test_activity,run_activity)
 
-            if doc.get_record(f'ex:{name}_{metric.step}_gen')[0]:
-                doc._records.remove(doc.get_record(f'ex:{name}_{metric.step}_gen')[0]) #accessing private attribute, propriety doesn't allow to remove records, but we need to remove the lv1 generation
+            if doc.get_record(f'{name}_{metric.step}_gen')[0]:
+                doc._records.remove(doc.get_record(f'{name}_{metric.step}_gen')[0]) #accessing private attribute, propriety doesn't allow to remove records, but we need to remove the lv1 generation
             if run.data.tags[f'metric.context.{metric.key}']==Context.TRAINING.name:
-                doc.wasGeneratedBy(f'ex:{metric.key}_{metric.step}',f'ex:train_step_{metric.step}')    
+                doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'train_step_{metric.step}')    
             elif run.data.tags[f'metric.context.{metric.key}']==Context.EVALUATION.name:
-                doc.wasGeneratedBy(f'ex:{metric.key}_{metric.step}',f'ex:test_step_{metric.step}')
+                doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'test_step_{metric.step}')
             else:
                 raise ValueError(f'Invalid metric key: {metric.key}')
     
     #data transformation activity
-    doc.activity("ex:data_preparation",other_attributes={
+    doc.activity("data_preparation",other_attributes={
         "prov-ml:type":"FeatureExtractionExecution",
     })
     #add attributes to dataset entities
     for dataset_input in run.inputs.dataset_inputs:
         attributes={
-            'mlflow:profile':str(dataset_input.dataset.profile),
-            'mlflow:schema':str(dataset_input.dataset.schema),   
+            'mlflow:profile':str(lv_attr(LVL_2,dataset_input.dataset.profile)),
+            'mlflow:schema':str(lv_attr(LVL_2,dataset_input.dataset.schema)),   
         }
-        ent= doc.get_record(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}')[0]
+        ent= doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}')[0]
         ent.add_attributes(attributes)
 
         #remove old generation relationship
-        if doc.get_record(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0]:
-            doc._records.remove(doc.get_record(f'ex:{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0])
-        doc.wasDerivedFrom(ent,'ex:dataset','ex:data_preparation')  #use new transform activity for derivation
-    # doc.get_record('ex:dataset')[0].add_attributes({
-    #     'ex:source_mirror':str(run.inputs.dataset_inputs[0].tags[1]),
+        if doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0]:
+            doc._records.remove(doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der')[0])
+        doc.wasDerivedFrom(ent,'dataset','data_preparation')  #use new transform activity for derivation
+    # doc.get_record('dataset')[0].add_attributes({
+    #     'source_mirror':str(run.inputs.dataset_inputs[0].tags[1]),
     # })
 
 
@@ -285,22 +289,24 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
         
     
     model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0]
-    if doc.get_record(f'ex:{model_version.name}_{model_version.version}_gen')[0]:
-        doc._records.remove(doc.get_record(f'ex:{model_version.name}_{model_version.version}_gen')[0])
+    if doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0]:
+        doc._records.remove(doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0])
 
     model_ser = doc.activity(f'mlflow:ModelRegistration')
     doc.wasInformedBy(model_ser,run_activity)
-    doc.wasGeneratedBy(f'ex:{model_version.name}_{model_version.version}',model_ser)
+    doc.wasGeneratedBy(f'{model_version.name}_{model_version.version}',model_ser)
     
     for artifact in traverse_artifact_tree(client,run.info.run_id,model_version.name): #get artifacts whose path starts with TinyVGG: these are model serialization and metadata files
-        if doc.get_record(f"ex:{artifact.path}_gen"):
-            doc._records.remove(doc.get_record(f"ex:{artifact.path}_gen"))
-        doc.hadMember(f'ex:{model_version.name}_{model_version.version}',f"ex:{artifact.path}")
+        if doc.get_record(f'{artifact.path}_gen'):
+            doc._records.remove(doc.get_record(f'{artifact.path}_gen')[0])
+        doc.hadMember(f'{model_version.name}_{model_version.version}',f"{artifact.path}")
     return doc
 
 
 @contextmanager
-def start_run(run_id: Optional[str] = None,
+def start_run(
+    prov_user_namespace:str,
+    run_id: Optional[str] = None,
     experiment_id: Optional[str] = None,
     run_name: Optional[str] = None,
     nested: bool = False,
@@ -311,6 +317,7 @@ def start_run(run_id: Optional[str] = None,
     Starts an MLflow run and generates provenance information.
 
     Args:
+        prov_user_namespace (str): The namespace of the user, this will be used as the default namespace.
         run_id (Optional[str]): The ID of the run to start. If not provided, a new run ID will be generated.
         experiment_id (Optional[str]): The ID of the experiment to associate the run with. If not provided, the default experiment will be used.
         run_name (Optional[str]): The name of the run. If not provided, a default name will be assigned.
@@ -346,13 +353,13 @@ def start_run(run_id: Optional[str] = None,
     doc = prov.ProvDocument()
 
     #set namespaces
+    doc.set_default_namespace(prov_user_namespace)
     doc.add_namespace('prov','http://www.w3.org/ns/prov#')
     doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
     
-    doc.add_namespace('mlflow', ' ') #TODO: find namespaces of mlflow and prov-ml ontologies
-    doc.add_namespace('prov-ml', 'p')
+    doc.add_namespace('mlflow', 'mlflow') #TODO: find namespaces of mlflow and prov-ml ontologies
+    doc.add_namespace('prov-ml', 'prov-ml')
 
-    doc.add_namespace('ex','http://www.example.org/')
 
 
     doc = first_level_prov(active_run,doc)
