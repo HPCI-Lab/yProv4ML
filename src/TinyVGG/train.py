@@ -13,8 +13,8 @@ import os
 from data_setup import load_dataset
 from model_builder import TinyVGG
 from engine import train
-from context_manager import start_run
-
+#from context_manager import start_run
+import prov4ml.prov4ml as prov4ml
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-E","--experiment_name",help="Name to be assigned to the experiment")
@@ -36,7 +36,7 @@ def main():
 
     mlflow.set_experiment(experiment_name=EXPERIMENT_NAME)
     
-    with start_run(prov_user_namespace="www.example.org",run_name=RUN_NAME):
+    with prov4ml.start_run(prov_user_namespace="www.example.org",run_name=RUN_NAME):
         
         train_transform = transforms.Compose([transforms.Resize(size=(28,28)),transforms.TrivialAugmentWide(num_magnitude_bins=31),transforms.ToTensor()])
         test_transform = transforms.Compose([transforms.Resize((28,28)),transforms.ToTensor()])

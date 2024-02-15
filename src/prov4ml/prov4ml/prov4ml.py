@@ -220,7 +220,14 @@ def first_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
 
 
 def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
-
+    """
+    Generates the second level of provenance for a given run.
+    Args:
+        run (Run): The run object.
+        doc (prov.ProvDocument): The provenance document.
+    Returns:
+        prov.ProvDocument: The provenance document.
+    """
     client = mlflow.MlflowClient()
         
     run_activity= doc.get_record(f'{run.info.run_name}_execution')[0]
@@ -272,8 +279,6 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
                 doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'train_step_{metric.step}',other_attributes={'prov:level':LVL_2})    
             elif run.data.tags[f'metric.context.{metric.key}']==Context.EVALUATION.name:
                 doc.wasGeneratedBy(f'{metric.key}_{metric.step}',f'test_step_{metric.step}',other_attributes={'prov:level':LVL_2})
-            else:
-                raise ValueError(f'Invalid metric key: {metric.key}')
     
     #data transformation activity
     doc.activity("data_preparation",other_attributes={

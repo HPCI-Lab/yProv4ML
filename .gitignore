@@ -10,6 +10,9 @@ mlruns/
 */__pycache__/
 */*/__pycache__/
 
+build/
+dist/
+*.egg*
 custom_app_plugin/
 gh_context/
 yProv_client.py

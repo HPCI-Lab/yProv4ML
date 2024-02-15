@@ -1,6 +1,7 @@
 import torch
 import mlflow
-from context_manager import log_metrics,Context
+#from context_manager import log_metrics,Context
+import prov4ml.prov4ml as prov4ml
 
 def train_step(model: torch.nn.Module, 
                dataloader: torch.utils.data.DataLoader, 
@@ -98,11 +99,11 @@ def train(model: torch.nn.Module,
         #     "test_loss":test_loss,
         #     "test_acc":test_acc
         # },step=epoch)
-        log_metrics({
-            "train_loss":(train_loss,Context.TRAINING),
-            "train_acc":(train_acc,Context.TRAINING),
-            "test_loss":(test_loss,Context.EVALUATION),
-            "test_acc":(test_acc,Context.EVALUATION)
+        prov4ml.log_metrics({
+            "train_loss":(train_loss,prov4ml.Context.TRAINING),
+            "train_acc":(train_acc,prov4ml.Context.TRAINING),
+            "test_loss":(test_loss,prov4ml.Context.EVALUATION),
+            "test_acc":(test_acc,prov4ml.Context.EVALUATION)
         },step=epoch)
         print(
             f"Epoch: {epoch} | "
