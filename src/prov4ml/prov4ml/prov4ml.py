@@ -247,12 +247,16 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
         "mlflow:source_type":str(lv_attr(LVL_2,run.data.tags['mlflow.source.type'])),  
         'prov:level':LVL_2,   
     })
-    doc.activity('commit',other_attributes={
-        "mlflow:source_git_commit":str(lv_attr(LVL_2,run.data.tags['mlflow.source.git.commit'])),
-        'prov:level':LVL_2,
-    })
-    doc.wasGeneratedBy('source_code','commit',other_attributes={'prov:level':LVL_2})
-    doc.wasInformedBy(run_activity,'commit',other_attributes={'prov:level':LVL_2})
+
+    if 'mlflow.source.git.commit' in run.data.tags.keys():
+        doc.activity('commit',other_attributes={
+            "mlflow:source_git_commit":str(lv_attr(LVL_2,run.data.tags['mlflow.source.git.commit'])),
+            'prov:level':LVL_2,
+        })
+        doc.wasGeneratedBy('source_code','commit',other_attributes={'prov:level':LVL_2})
+        doc.wasInformedBy(run_activity,'commit',other_attributes={'prov:level':LVL_2})
+    else:
+        doc.used(run_activity,'source_code',other_attributes={'prov:level':LVL_2})
 
     #remove relations between metrics and run
 
