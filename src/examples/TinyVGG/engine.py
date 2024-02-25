@@ -1,5 +1,6 @@
 import torch
 import mlflow
+from timeit import default_timer as timer
 #from context_manager import log_metrics,Context
 import prov4ml.prov4ml as prov4ml
 
@@ -43,11 +44,12 @@ def test_step(model: torch.nn.Module,
         dataloader: a torch.utils.data.DataLoader of the data used for validation
         loss_fn: a torch.nn.Module loss function used to calculate loss
     Returns:
-        A tuple (test_loss,test_acc) representing loss and accuracy measures on the whole dataset
+        A tuple (test_loss,test_acc) representing loss and accuracy measures on the whole dataset. It also returns the last prediction logits
     """
     model.eval() 
     running_loss, running_corrects, running_total = 0.0, 0, 0
     with torch.inference_mode():
+        test_pred_logits= 0
         for batch, (X, y) in enumerate(dataloader):
             test_pred_logits = model(X)
             loss = loss_fn(test_pred_logits, y)
@@ -58,7 +60,7 @@ def test_step(model: torch.nn.Module,
             running_loss += loss.item()*y.size(0)
     test_loss= running_loss/ len(dataloader.dataset)
     test_acc = running_corrects/running_total
-    return test_loss, test_acc
+    return test_loss, test_acc, test_pred_logits
 
 def train(model: torch.nn.Module, 
           train_dataloader: torch.utils.data.DataLoader, 
@@ -90,9 +92,11 @@ def train(model: torch.nn.Module,
     }
     
     for epoch in range(epochs):
+        train_start=timer()
         train_loss, train_acc = train_step(model=model,dataloader=train_dataloader,loss_fn=loss_fn,optimizer=optimizer)
-        test_loss, test_acc = test_step(model=model,dataloader=test_dataloader,loss_fn=loss_fn)
-        
+        train_end=timer()
+        test_loss, test_acc, pred_logits = test_step(model=model,dataloader=test_dataloader,loss_fn=loss_fn)
+        test_end=timer()
         # mlflow.log_metrics({
         #     "train_loss":train_loss,
         #     "train_acc":train_acc,
@@ -103,7 +107,9 @@ def train(model: torch.nn.Module,
             "train_loss":(train_loss,prov4ml.Context.TRAINING),
             "train_acc":(train_acc,prov4ml.Context.TRAINING),
             "test_loss":(test_loss,prov4ml.Context.EVALUATION),
-            "test_acc":(test_acc,prov4ml.Context.EVALUATION)
+            "test_acc":(test_acc,prov4ml.Context.EVALUATION),
+            "train_time":(train_end-train_start,prov4ml.Context.TRAINING),
+            "test_time":(test_end-train_end,prov4ml.Context.EVALUATION)
         },step=epoch)
         print(
             f"Epoch: {epoch} | "
@@ -121,7 +127,7 @@ def train(model: torch.nn.Module,
         }
         
         mlflow.pytorch.log_state_dict(state_dict,artifact_path=f"checkpoint/{epoch}")
-
+        mlflow.log_text(str(pred_logits),f"pred_logits/{epoch}.txt")
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
         results["test_loss"].append(test_loss)

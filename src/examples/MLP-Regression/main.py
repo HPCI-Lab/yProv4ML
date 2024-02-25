@@ -55,7 +55,7 @@ with prov4ml.start_run(prov_user_namespace="www.example.org",run_name="run"):
     loss_fn = nn.MSELoss()  # mean square error
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
-    n_epochs = 5   # number of epochs to run
+    n_epochs = 10   # number of epochs to run
     batch_size = 10  # size of each batch
     batch_start = torch.arange(0, len(X_train), batch_size)
     mlflow.log_params({
@@ -72,6 +72,7 @@ with prov4ml.start_run(prov_user_namespace="www.example.org",run_name="run"):
 
     for epoch in range(n_epochs):
         model.train()
+        loss=0
         with tqdm.tqdm(batch_start, unit="batch", mininterval=0, disable=True) as bar:
             bar.set_description(f"Epoch {epoch}")
             for start in bar:
@@ -88,6 +89,7 @@ with prov4ml.start_run(prov_user_namespace="www.example.org",run_name="run"):
                 optimizer.step()
                 # print progress
                 bar.set_postfix(mse=float(loss))
+        prov4ml.log_metric("MSE_train",float(loss),prov4ml.Context.TRAINING,step=epoch)
         # evaluate accuracy at end of each epoch
         model.eval()
         y_pred = model(X_test)
@@ -96,7 +98,7 @@ with prov4ml.start_run(prov_user_namespace="www.example.org",run_name="run"):
         history.append(mse)
         print(f"Epoch {epoch}: MSE = {mse:.2f}")
 
-        prov4ml.log_metric("MSE",mse,prov4ml.Context.TRAINING,step=epoch)
+        prov4ml.log_metric("MSE_eval",mse,prov4ml.Context.EVALUATION,step=epoch)
         
         if mse < best_mse:
             best_mse = mse
