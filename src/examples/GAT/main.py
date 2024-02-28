@@ -15,6 +15,7 @@ from torch.optim import Adam
 import mlflow
 import prov4ml.prov4ml as prov4ml
 
+from codecarbon import EmissionsTracker
 ################################
 ###  GAT LAYER DEFINITION    ###
 ################################
@@ -295,8 +296,7 @@ def test(model, criterion, input, target, mask):
     return loss.item(), acc.item()
 
 
-if __name__ == '__main__':
-
+def main():
     # Training settings
     # All defalut values are the same as in the config used in the main paper
 
@@ -353,6 +353,9 @@ if __name__ == '__main__':
                 tgz_object.extractall()
 
     mlflow.set_experiment(experiment_name="GAT")
+
+    tracker = EmissionsTracker('GAT',save_to_file=False,save_to_api=False,save_to_logger=False) #carbon emission tracker, don't save anywhere, just get the emissions value to log with prov4ml
+
     with prov4ml.start_run(prov_user_namespace="www.example.org",run_name="run"):
         print('Loading dataset...')
         # Load the dataset
@@ -391,9 +394,15 @@ if __name__ == '__main__':
         })
         # Train and evaluate the model
         for epoch in range(args.epochs):
+            tracker.start()
             train_iter(epoch + 1, gat_net, optimizer, criterion, (features, adj_mat), labels, idx_train, idx_val, args.val_every)
             if args.dry_run:
                 break
+            emissions= tracker.stop()   #register co2 emissions for each epoch
+            prov4ml.log_metric("emissions",emissions,context=prov4ml.Context.TRAINING,step=epoch)#log emission to corresponding epoch
         loss_test, acc_test = test(gat_net, criterion, (features, adj_mat), labels, idx_test)
         print(f'Test set results: loss {loss_test:.4f} accuracy {acc_test:.4f}')
         mlflow.pytorch.log_model(pytorch_model=gat_net,artifact_path="gat_model",registered_model_name="gat_model")
+
+if __name__ == '__main__':
+    main()
