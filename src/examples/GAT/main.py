@@ -398,8 +398,15 @@ def main():
             train_iter(epoch + 1, gat_net, optimizer, criterion, (features, adj_mat), labels, idx_train, idx_val, args.val_every)
             if args.dry_run:
                 break
+
             emissions= tracker.stop()   #register co2 emissions for each epoch
-            prov4ml.log_metric("emissions",emissions,context=prov4ml.Context.TRAINING,step=epoch)#log emission to corresponding epoch
+            prov4ml.log_metrics(
+                {
+                    "emissions":(emissions,prov4ml.Context.TRAINING),
+                    "energy_consumption":(tracker.final_emissions_data.energy_consumed,prov4ml.Context.TRAINING),
+                }
+            )
+
         loss_test, acc_test = test(gat_net, criterion, (features, adj_mat), labels, idx_test)
         print(f'Test set results: loss {loss_test:.4f} accuracy {acc_test:.4f}')
         mlflow.pytorch.log_model(pytorch_model=gat_net,artifact_path="gat_model",registered_model_name="gat_model")
