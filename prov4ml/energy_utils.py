@@ -10,7 +10,12 @@ def carbon_tracked_function(f, *args, **kwargs):
 
 def _carbon_init():
     global TRACKER
-    TRACKER = EmissionsTracker(save_to_file=False,save_to_api=False,save_to_logger=False) #carbon emission tracker, don't save anywhere, just get the emissions value to log with prov4ml
+    TRACKER = EmissionsTracker(
+        save_to_file=False,
+        save_to_api=False,
+        save_to_logger=False, 
+        log_level="error",
+    ) #carbon emission tracker, don't save anywhere, just get the emissions value to log with prov4ml
     TRACKER.start()
 
 def stop_carbon_tracked_block():

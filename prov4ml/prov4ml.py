@@ -507,7 +507,7 @@ def start_run(
         experiment_id = exp.experiment_id
 
     mlflow.set_experiment(experiment_name)
-    mlflow.pytorch.autolog()
+    mlflow.pytorch.autolog(silent=True)
 
     mlflow.start_run(
         experiment_id=experiment_id,
