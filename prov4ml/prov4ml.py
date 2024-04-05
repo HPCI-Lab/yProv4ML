@@ -15,10 +15,10 @@ from enum import Enum
 from contextlib import contextmanager
 from collections import namedtuple
 
-from prov4ml import system_utils
-from prov4ml import time_utils
-from prov4ml import energy_utils
-from prov4ml import flops_utils
+from prov4ml.utils import system_utils
+from prov4ml.utils import time_utils
+from prov4ml.utils import energy_utils
+from prov4ml.utils import flops_utils
 
 lv_attr = namedtuple('lv_attr', ['level', 'value'])
 LVL_1 = "1"
