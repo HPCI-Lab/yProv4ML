@@ -18,6 +18,7 @@ from collections import namedtuple
 from prov4ml import system_utils
 from prov4ml import time_utils
 from prov4ml import energy_utils
+from prov4ml import flops_utils
 
 lv_attr = namedtuple('lv_attr', ['level', 'value'])
 LVL_1 = "1"
@@ -118,6 +119,13 @@ def log_model(model, model_name="default") -> None:
         artifact_path=mlflow.active_run().info.run_name,
         registered_model_name=model_name
         )
+
+def log_flops_per_epoch(label: str, model, dataset, context: Context, step: Optional[int] = None) -> None:
+    return log_metric(label, flops_utils.get_flops_per_epoch(model, dataset), context, step=step)
+
+def log_flops_per_batch(label: str, model, batch, context: Context, step: Optional[int] = None) -> None:
+    return log_metric(label, flops_utils.get_flops_per_batch(model, batch), context, step=step)
+
 
 def log_system_metrics(
         context : Context, 
@@ -519,7 +527,7 @@ def start_run(
     )
 
     energy_utils._carbon_init()
-    # start_carbon_logging()
+    flops_utils._init_flops_counters()
 
     USER_NAMESPACE = prov_user_namespace
     PROV_SAVE_PATH = provenance_save_dir

@@ -35,12 +35,14 @@ class MNISTModel(L.LightningModule):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
         prov4ml.log_metric("MSE_train",float(loss),prov4ml.Context.TRAINING,step=self.current_epoch)
+        prov4ml.log_flops_per_batch("train_flops", self, batch, prov4ml.Context.TRAINING,step=self.current_epoch)
         return loss
     
     def test_step(self, batch, batch_nb):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        prov4ml.log_metric("MSE_eval",loss,prov4ml.Context.VALIDATION,step=self.current_epoch)
+        prov4ml.log_metric("MSE_eval",loss,prov4ml.Context.EVALUATION,step=self.current_epoch)
+        prov4ml.log_flops_per_batch("test_flops", self, batch, prov4ml.Context.EVALUATION,step=self.current_epoch)
         return loss
     
     def on_train_epoch_end(self) -> None:
@@ -49,9 +51,9 @@ class MNISTModel(L.LightningModule):
         prov4ml.log_current_execution_time("train_step", prov4ml.Context.TRAINING, self.current_epoch)
 
     def on_test_epoch_end(self) -> None:
-        prov4ml.log_system_metrics(prov4ml.Context.VALIDATION,step=self.current_epoch)
-        prov4ml.log_carbon_metrics(prov4ml.Context.VALIDATION,step=self.current_epoch)
-        prov4ml.log_current_execution_time("test_step", prov4ml.Context.VALIDATION, self.current_epoch)
+        prov4ml.log_system_metrics(prov4ml.Context.EVALUATION,step=self.current_epoch)
+        prov4ml.log_carbon_metrics(prov4ml.Context.EVALUATION,step=self.current_epoch)
+        prov4ml.log_current_execution_time("test_step", prov4ml.Context.EVALUATION, self.current_epoch)
 
 
     def configure_optimizers(self):
