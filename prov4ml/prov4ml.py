@@ -116,7 +116,7 @@ def log_params(params: Dict[str, Any]) -> None:
 def log_model(model, model_name="default") -> None:
     return mlflow.pytorch.log_model(
         pytorch_model=model,
-        artifact_path=mlflow.active_run().info.run_name,
+        artifact_path=mlflow.active_run().info.run_name.split("/")[-1],
         registered_model_name=model_name
         )
 
