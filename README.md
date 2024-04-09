@@ -4,6 +4,14 @@ This library is a wrapper around MLFlow to provide a unified interface for loggi
 
 It allows users to create provenance graphs from the logged information.
 
+## Experiments and Runs
+
+An experiment is a collection of runs. Each run is a single execution of a machine learning model. 
+By changing the ```experiment_name``` parameter in the ```start_run``` function, the user can create a new experiment. 
+All artifacts and metrics logged during the execution of the experiment will be saved in the directory specified by the experiment ID. 
+
+Several runs can be executed in the same experiment. All runs will be saved in the same directory (according to the specific experiment name and ID).
+
 ## Available Commands
 
 ### Setup

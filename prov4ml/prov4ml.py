@@ -24,6 +24,10 @@ lv_attr = namedtuple('lv_attr', ['level', 'value'])
 LVL_1 = "1"
 LVL_2 = "2"
 
+MLFLOW_SUBDIR = "mlflow"
+ARTIFACTS_SUBDIR = "artifacts"
+LIGHTNING_SUBDIR = "lightning"
+
 class Context(Enum):
     """Enumeration class for defining the context of the metric when saved using log_metrics.
 
@@ -497,29 +501,33 @@ def start_run(
     log_system_metrics: Optional[bool] = None
     ):
 
-    global USER_NAMESPACE, PROV_SAVE_PATH, MLFLOW_SAVE_PATH
+    global USER_NAMESPACE, PROV_SAVE_PATH, MLFLOW_SAVE_PATH, EXPERIMENT_NAME
 
-    if mlflow_save_dir:
-        mlflow.set_tracking_uri(mlflow_save_dir)
+    USER_NAMESPACE = prov_user_namespace
+    PROV_SAVE_PATH = provenance_save_dir
+    MLFLOW_SAVE_PATH = mlflow_save_dir
+    EXPERIMENT_NAME = experiment_name
 
-    exp = mlflow.get_experiment_by_name(name=experiment_name)
+    if MLFLOW_SAVE_PATH:
+        mlflow.set_tracking_uri(os.path.join(MLFLOW_SAVE_PATH, MLFLOW_SUBDIR))
+
+    exp = mlflow.get_experiment_by_name(name=EXPERIMENT_NAME)
     if not exp:
-        if mlflow_save_dir: 
+        if MLFLOW_SAVE_PATH: 
             experiment_id = mlflow.create_experiment(
-                name=experiment_name,
-                artifact_location=mlflow_save_dir 
+                name=EXPERIMENT_NAME,
+                artifact_location=os.path.join(MLFLOW_SAVE_PATH, ARTIFACTS_SUBDIR)
             )
         else: 
-            experiment_id = mlflow.create_experiment(name=experiment_name)
+            experiment_id = mlflow.create_experiment(name=EXPERIMENT_NAME)
     else:
         experiment_id = exp.experiment_id
 
-    mlflow.set_experiment(experiment_name)
+    mlflow.set_experiment(EXPERIMENT_NAME)
     mlflow.pytorch.autolog(silent=True)
 
     mlflow.start_run(
         experiment_id=experiment_id,
-        run_name=mlflow_save_dir,
         nested=nested,
         tags=tags,
         description=description,
@@ -528,10 +536,6 @@ def start_run(
 
     energy_utils._carbon_init()
     flops_utils._init_flops_counters()
-
-    USER_NAMESPACE = prov_user_namespace
-    PROV_SAVE_PATH = provenance_save_dir
-    MLFLOW_SAVE_PATH = mlflow_save_dir
 
 def end_run(): 
 
@@ -575,12 +579,10 @@ def end_run():
 
 def get_mlflow_logger(): 
     mlf_logger = MLFlowLogger(
-        experiment_name=mlflow.get_experiment(
-            mlflow.active_run().info.experiment_id
-        ).name,
-        artifact_location=mlflow.get_artifact_uri(), 
-        run_id=mlflow.active_run().info.run_id,
-        save_dir=MLFLOW_SAVE_PATH, 
+        experiment_name=EXPERIMENT_NAME,
+        artifact_location=os.path.join(MLFLOW_SAVE_PATH, LIGHTNING_SUBDIR),
+        tracking_uri=mlflow.get_tracking_uri(),
+        run_id=get_run_id(),
         log_model="all",
     )
 
