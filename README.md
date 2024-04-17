@@ -1,5 +1,7 @@
 # Prov4ML
 
+[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+
 This library is a wrapper around MLFlow to provide a unified interface for logging and tracking provenance information in machine learning experiments. 
 
 It allows users to create provenance graphs from the logged information.
@@ -27,6 +29,19 @@ prov4ml.start_run(
 )
 ```
 
+The parameters are as follows:
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `prov_user_namespace` | `string` | **Required**. User namespace for the provenance graph |
+| `experiment_name` | `string` | **Required**. Name of the experiment |
+| `provenance_save_dir` | `string` | **Required**. Directory to save the provenance graph |
+| `mlflow_save_dir` | `string` | **Required**. Directory to save the mlflow logs |
+| `nested` | `bool` | **Optional**. Whether to create a nested directory for the experiment |
+| `tags` | `dict` | **Optional**. Tags to add to the experiment |
+| `description` | `string` | **Optional**. Description of the experiment |
+| `log_system_metrics` | `bool` | **Optional**. Whether to log system metrics |
+
 At the end of the experiment, the user must end the run:
 
 ```python
@@ -41,10 +56,15 @@ The final necessary call to save the graph is the following:
 prov4ml.log_model(model, "model_name")
 ```
 
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `model` | `torch.nn.Module` | **Required**. Model to log |
+| `model_name` | `string` | **Required**. Name of the model |
+| `log_model_info` | `bool` | **Optional**. Whether to log model statistics |
+
 It sets the model for the current experiment. It can be called anywhere before the end of the experiment. 
 The same call also logs some model information, such as the number of parameters and the model architecture memory footprint. 
 The saving of these information can be toggled with the ```log_model_info = False``` parameter.
-
 
 ### General Logging
 
@@ -66,6 +86,18 @@ To specify metrics, which can be tracked during the execution of the experiment,
 prov4ml.log_metric("metric_name",metric_value,prov4ml.Context.TRAINING, step=current_epoch)
 ```
 
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `key` | `string` | **Required**. Name of the metric |
+| `value` | `float` | **Required**. Value of the metric |
+| `context` | `prov4ml.Context` | **Required**. Context of the metric |
+| `step` | `int` | **Optional**. Step of the metric |
+| `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
+| `timestamp` | `int` | **Optional**. Timestamp of the metric |
+| :-------- | :------- | :------------------------- |
+| `RunOperations` | `Optional` | **Optional**. Run operations |
+
+
 The *step* parameter is optional and can be used to specify the current time step of the experiment, for example the current epoch.
 
 ### Utility Logging
@@ -76,32 +108,58 @@ The *step* parameter is optional and can be used to specify the current time ste
 prov4ml.log_system_metrics(prov4ml.Context.TRAINING,step=current_epoch)
 ```
 
-System metrics include: 
- - Memory usage
- - Disk usage
- - Gpu memory usage
- - Gpu usage
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `context` | `prov4ml.Context` | **Required**. Context of the metric |
+| `step` | `int` | **Optional**. Step of the metric |
+| `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
+| `timestamp` | `int` | **Optional**. Timestamp of the metric |
+
+
+| Parameter | Description                | Unit |
+| :-------- | :-------------------------: | :---: |
+| `Memory usage` | Memory usage of the system | % |
+| `Disk usage` | Disk usage of the system | % |
+| `Gpu memory usage` | Memory usage of the GPU | % |
+| `Gpu usage` | Usage of the GPU | % |
 
 
 ```python
 prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING,step=current_epoch)
 ```
 
-Carbon metrics include:
- - emissions
- - emissions_rate
- - cpu_power
- - gpu_power
- - ram_power
- - cpu_energy
- - gpu_energy
- - ram_energy
- - energy_consumed
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `context` | `prov4ml.Context` | **Required**. Context of the metric |
+| `step` | `int` | **Optional**. Step of the metric |
+| `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
+| `timestamp` | `int` | **Optional**. Timestamp of the metric |
+
+
+| Parameter | Description                | Unit |
+| :-------- | :-------------------------: | :---: |
+| `Emissions` | Emissions of the system | gCO2eq |
+| `Emissions rate` | Emissions rate of the system | gCO2eq/s |
+| `CPU power` | Power usage of the CPU | W |
+| `GPU power` | Power usage of the GPU | W |
+| `RAM power` | Power usage of the RAM | W |
+| `CPU energy` | Energy usage of the CPU | J |
+| `GPU energy` | Energy usage of the GPU | J |
+| `RAM energy` | Energy usage of the RAM | J |
+| `Energy consumed` | Energy consumed by the system | J |
 
 
 ```python
 prov4ml.log_current_execution_time("code_portion_label", prov4ml.Context.TRAINING, step=current_epoch)
 ```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `label` | `string` | **Required**. Label of the code portion |
+| `context` | `prov4ml.Context` | **Required**. Context of the metric |
+| `step` | `int` | **Optional**. Step of the metric |
+| `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
+| `timestamp` | `int` | **Optional**. Timestamp of the metric |
 
 The *log_current_execution_time* function logs the current execution time of the code portion specified by the label.
 
