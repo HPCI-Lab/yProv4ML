@@ -113,7 +113,7 @@ mlflow server
 Or: 
 
 ```bash
-mlflmlflow ui --backend-store-uri ./path_to_mlflow_logs --port free_port
+mlflow ui --backend-store-uri ./path_to_mlflow_logs --port free_port
 ```
 
 To generate the graph svg image: 
