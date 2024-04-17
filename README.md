@@ -6,6 +6,10 @@ This library is a wrapper around MLFlow to provide a unified interface for loggi
 
 It allows users to create provenance graphs from the logged information.
 
+## Example
+
+![Example](./assets/example.svg)
+
 ## Experiments and Runs
 
 An experiment is a collection of runs. Each run is a single execution of a machine learning model. 
@@ -70,15 +74,19 @@ The saving of these information can be toggled with the ```log_model_info = Fals
 
 When logging parameters and metrics, the user must specify the context of the information. 
 The available contexts are: 
- - TRAINING
- - VALIDATION
- - TESTING
+ - `TRAINING`: adds the information to the training context  
+ - `VALIDATION`: adds the information to the validation context
+ - `TESTING`: adds the information to the testing context
+
+##### Log Parameters
 
 To specify arbitrary training parameters used during the execution of the experiment, the user can call the following function. 
     
 ```python
 prov4ml.log_param("param_name", "param_value")
 ```
+
+##### Log Metrics
 
 To specify metrics, which can be tracked during the execution of the experiment, the user can call the following function.
 
@@ -94,15 +102,14 @@ prov4ml.log_metric("metric_name",metric_value,prov4ml.Context.TRAINING, step=cur
 | `step` | `int` | **Optional**. Step of the metric |
 | `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
 | `timestamp` | `int` | **Optional**. Timestamp of the metric |
-| :-------- | :------- | :------------------------- |
-| `RunOperations` | `Optional` | **Optional**. Run operations |
-
 
 The *step* parameter is optional and can be used to specify the current time step of the experiment, for example the current epoch.
 
 ### Utility Logging
 
 **Prov4ml** also provides utility functions to log system metrics, carbon metrics, and execution time.
+
+##### System Metrics
 
 ```python
 prov4ml.log_system_metrics(prov4ml.Context.TRAINING,step=current_epoch)
@@ -115,6 +122,7 @@ prov4ml.log_system_metrics(prov4ml.Context.TRAINING,step=current_epoch)
 | `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
 | `timestamp` | `int` | **Optional**. Timestamp of the metric |
 
+This function logs the following system metrics:
 
 | Parameter | Description                | Unit |
 | :-------- | :-------------------------: | :---: |
@@ -123,6 +131,8 @@ prov4ml.log_system_metrics(prov4ml.Context.TRAINING,step=current_epoch)
 | `Gpu memory usage` | Memory usage of the GPU | % |
 | `Gpu usage` | Usage of the GPU | % |
 
+
+##### Carbon Metrics
 
 ```python
 prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING,step=current_epoch)
@@ -135,6 +145,7 @@ prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING,step=current_epoch)
 | `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
 | `timestamp` | `int` | **Optional**. Timestamp of the metric |
 
+This function logs the following system metrics:
 
 | Parameter | Description                | Unit |
 | :-------- | :-------------------------: | :---: |
@@ -148,6 +159,7 @@ prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING,step=current_epoch)
 | `RAM energy` | Energy usage of the RAM | J |
 | `Energy consumed` | Energy consumed by the system | J |
 
+##### Execution Time
 
 ```python
 prov4ml.log_current_execution_time("code_portion_label", prov4ml.Context.TRAINING, step=current_epoch)
@@ -182,7 +194,3 @@ To generate the graph svg image:
 ```bash
 dot -Tsvg -O prov_graph.dot
 ```
-
-## Example
-
-![Example](./assets/example.svg)
