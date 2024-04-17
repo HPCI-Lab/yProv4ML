@@ -33,6 +33,7 @@ class Context(Enum):
 
     Attributes:
         TRAINING (str): The context for training metrics.
+        VALIDATION (str): The context for validation metrics.
         EVALUATION (str): The context for evaluation metrics.
     """
     TRAINING = 'training'
@@ -117,7 +118,26 @@ def log_param(key: str, value: Any) -> None:
 def log_params(params: Dict[str, Any]) -> None:
     return mlflow.log_params(params)
 
+def log_model_memory_footprint(model, model_name="default") -> None:
+    log_param("model_name", model_name)
+    total_params = sum(p.numel() for p in model.parameters())
+    log_param("total_params", total_params)
+
+    precision_to_bits = {"64": 64, "32": 32, "16": 16, "bf16": 16}
+    precision = precision_to_bits.get(model.trainer.precision, 32) if model._trainer else 32
+    precision_megabytes = (precision / 8.0) * 1e-6
+
+    memory_per_model = total_params * precision_megabytes
+    print(f"Memory per model: {memory_per_model} MB")
+    memory_per_grad = total_params * 4 * 1e-6
+    print(f"Memory per grad: {memory_per_grad} MB")
+    memory_per_optim = total_params * 4 * 1e-6
+    log_param("memory_of_model", memory_per_model)
+    log_param("total_memory_load_of_model", memory_per_model + memory_per_grad + memory_per_optim)
+
 def log_model(model, model_name="default") -> None:
+
+    log_model_memory_footprint(model, model_name)
     return mlflow.pytorch.log_model(
         pytorch_model=model,
         artifact_path=mlflow.active_run().info.run_name.split("/")[-1],
