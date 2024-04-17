@@ -41,7 +41,10 @@ The final necessary call to save the graph is the following:
 prov4ml.log_model(model, "model_name")
 ```
 
-It sets the model for the current experiment. It can be called anywhere before the end of the experiment.
+It sets the model for the current experiment. It can be called anywhere before the end of the experiment. 
+The same call also logs some model information, such as the number of parameters and the model architecture memory footprint. 
+The saving of these information can be toggled with the ```log_model_info = False``` parameter.
+
 
 ### General Logging
 

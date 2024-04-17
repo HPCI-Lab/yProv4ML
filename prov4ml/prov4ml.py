@@ -5,6 +5,7 @@ from mlflow.entities import Metric,RunTag,Run
 from mlflow.entities.file_info import FileInfo
 from mlflow.utils.time import get_current_time_millis
 from mlflow.utils.async_logging.run_operations import RunOperations
+import torch
 from lightning.pytorch.loggers import MLFlowLogger
 import prov.model as prov
 import prov.dot as dot
@@ -14,6 +15,7 @@ from typing import Optional,Dict,Tuple,Any,List
 from enum import Enum
 from contextlib import contextmanager
 from collections import namedtuple
+from typing import Union
 
 from prov4ml.utils import system_utils
 from prov4ml.utils import time_utils
@@ -109,62 +111,117 @@ def log_metric(key: str, value: float, context:Context, step: Optional[int] = No
     client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{key}',context.name)
     return client.log_metric(mlflow.active_run().info.run_id,key,value,step=step or 0,synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
 
-def log_current_execution_time(label: str, context : Context, step:Optional[int]=None) -> None:
+def log_execution_start_time() -> None:
+    """Logs the start time of the current execution to the MLflow tracking context."""
+    return log_param("execution_start_time", time_utils.get_time())
+
+def log_execution_end_time() -> None:
+    """Logs the end time of the current execution to the MLflow tracking context."""
+    return log_param("execution_end_time", time_utils.get_time())
+
+def log_current_execution_time(label: str, context: Context, step: Optional[int] = None) -> None:
+    """Logs the current execution time under the given label in the MLflow tracking context.
+    
+    Args:
+        label (str): The label to associate with the logged execution time.
+        context (mlflow.tracking.Context): The MLflow tracking context.
+        step (Optional[int], optional): The step number for the logged execution time. Defaults to None.
+    """
     return log_metric(label, time_utils.get_time(), context, step=step)
 
 def log_param(key: str, value: Any) -> None:
+    """Logs a single parameter key-value pair to the MLflow tracking context.
+    
+    Args:
+        key (str): The key of the parameter.
+        value (Any): The value of the parameter.
+    """
     return mlflow.log_param(key, value)
 
 def log_params(params: Dict[str, Any]) -> None:
+    """Logs multiple parameter key-value pairs to the MLflow tracking context.
+    
+    Args:
+        params (Dict[str, Any]): A dictionary containing parameter key-value pairs.
+    """
     return mlflow.log_params(params)
 
-def log_model_memory_footprint(model, model_name="default") -> None:
+def log_model_memory_footprint(model: Union[torch.nn.Module, Any], model_name: str = "default") -> None:
+    """Logs memory footprint of the provided model to the MLflow tracking context.
+    
+    Args:
+        model (Union[torch.nn.Module, Any]): The model whose memory footprint is to be logged.
+        model_name (str, optional): Name of the model. Defaults to "default".
+    """
     log_param("model_name", model_name)
-    total_params = sum(p.numel() for p in model.parameters())
-    log_param("total_params", total_params)
 
+    total_params = sum(p.numel() for p in model.parameters())
     precision_to_bits = {"64": 64, "32": 32, "16": 16, "bf16": 16}
-    precision = precision_to_bits.get(model.trainer.precision, 32) if model._trainer else 32
+    precision = precision_to_bits.get(model.trainer.precision, 32) if hasattr(model, "trainer") else 32
     precision_megabytes = (precision / 8.0) * 1e-6
 
     memory_per_model = total_params * precision_megabytes
-    print(f"Memory per model: {memory_per_model} MB")
     memory_per_grad = total_params * 4 * 1e-6
-    print(f"Memory per grad: {memory_per_grad} MB")
     memory_per_optim = total_params * 4 * 1e-6
+    
+    log_param("total_params", total_params)
     log_param("memory_of_model", memory_per_model)
     log_param("total_memory_load_of_model", memory_per_model + memory_per_grad + memory_per_optim)
 
-def log_model(model, model_name="default") -> None:
+def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", log_model_info: bool = True) -> None:
+    """Logs the provided model to the MLflow tracking context.
+    
+    Args:
+        model (Union[torch.nn.Module, Any]): The model to be logged.
+        model_name (str, optional): Name of the model. Defaults to "default".
+        log_model_info (bool, optional): Whether to log model memory footprint. Defaults to True.
+    """
+    if log_model_info:
+        log_model_memory_footprint(model, model_name)
 
-    log_model_memory_footprint(model, model_name)
     return mlflow.pytorch.log_model(
         pytorch_model=model,
         artifact_path=mlflow.active_run().info.run_name.split("/")[-1],
         registered_model_name=model_name
-        )
+    )
 
-def log_flops_per_epoch(label: str, model, dataset, context: Context, step: Optional[int] = None) -> None:
+def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Context, step: Optional[int] = None) -> None:
+    """Logs the number of FLOPs (floating point operations) per epoch for the given model and dataset.
+    
+    Args:
+        label (str): The label to associate with the logged FLOPs per epoch.
+        model (Any): The model for which FLOPs per epoch are to be logged.
+        dataset (Any): The dataset used for training the model.
+        context (mlflow.tracking.Context): The MLflow tracking context.
+        step (Optional[int], optional): The step number for the logged FLOPs per epoch. Defaults to None.
+    """
     return log_metric(label, flops_utils.get_flops_per_epoch(model, dataset), context, step=step)
 
-def log_flops_per_batch(label: str, model, batch, context: Context, step: Optional[int] = None) -> None:
+def log_flops_per_batch(label: str, model: Any, batch: Any, context: Context, step: Optional[int] = None) -> None:
+    """Logs the number of FLOPs (floating point operations) per batch for the given model and batch of data.
+    
+    Args:
+        label (str): The label to associate with the logged FLOPs per batch.
+        model (Any): The model for which FLOPs per batch are to be logged.
+        batch (Any): A batch of data used for inference with the model.
+        context (mlflow.tracking.Context): The MLflow tracking context.
+        step (Optional[int], optional): The step number for the logged FLOPs per batch. Defaults to None.
+    """
     return log_metric(label, flops_utils.get_flops_per_batch(model, batch), context, step=step)
 
-
 def log_system_metrics(
-        context : Context, 
-        step: Optional[int] = None, 
-        synchronous: bool = True, 
-        timestamp: Optional[int] = None
-        ) -> None:
-    """
-    Logs system metrics to the active MLflow run.
-
-    Args:
-        step (Optional[int], optional): The step of the metrics. Defaults to None.
+    context: Context,
+    step: Optional[int] = None,
+    synchronous: bool = True,
+    timestamp: Optional[int] = None
+    ) -> None:
+    """Logs system metrics to the MLflow tracking context.
     
-    Returns:
-        None
+    Args:
+        context (mlflow.tracking.Context): The MLflow tracking context.
+        step (Optional[int], optional): The step number for the logged metrics. Defaults to None.
+        synchronous (bool, optional): If True, performs synchronous logging. Defaults to True.
+        timestamp (Optional[int], optional): The timestamp for the logged metrics. Defaults to None.
     """
     client = mlflow.MlflowClient()
     client.set_tag(mlflow.active_run().info.run_id,'metric.context.cpu_usage',context.name)
@@ -179,12 +236,22 @@ def log_system_metrics(
     client.log_metric(mlflow.active_run().info.run_id, "gpu_usage", system_utils.get_gpu_usage(), step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
 
 def log_carbon_metrics(
-    context : Context, 
-    step: Optional[int] = None, 
-    synchronous: bool = True, 
+    context: Context,
+    step: Optional[int] = None,
+    synchronous: bool = True,
     timestamp: Optional[int] = None
     ) -> Tuple[float, float]:
+    """Logs carbon emissions metrics to the MLflow tracking context.
     
+    Args:
+        context (mlflow.tracking.Context): The MLflow tracking context.
+        step (Optional[int], optional): The step number for the logged metrics. Defaults to None.
+        synchronous (bool, optional): If True, performs synchronous logging. Defaults to True.
+        timestamp (Optional[int], optional): The timestamp for the logged metrics. Defaults to None.
+    
+    Returns:
+        Tuple[float, float]: A tuple containing energy consumed and emissions rate.
+    """    
     emissions = energy_utils.stop_carbon_tracked_block()
    
     client = mlflow.MlflowClient()
@@ -511,7 +578,7 @@ def start_run_ctx(
         prov_dot.write(dot.prov_to_dot(doc).to_string())
 
 def start_run(
-    prov_user_namespace:str,
+    prov_user_namespace: str,
     experiment_name: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
     mlflow_save_dir: Optional[str] = None,
@@ -519,8 +586,19 @@ def start_run(
     tags: Optional[Dict[str, Any]] = None,
     description: Optional[str] = None,
     log_system_metrics: Optional[bool] = None
-    ):
-
+    ) -> None:
+    """Starts an MLflow run with the specified configurations and options.
+    
+    Args:
+        prov_user_namespace (str): The user namespace for provenance tracking.
+        experiment_name (Optional[str], optional): The name of the experiment to associate the run with. Defaults to None.
+        provenance_save_dir (Optional[str], optional): The directory to save provenance data. Defaults to None.
+        mlflow_save_dir (Optional[str], optional): The directory to save MLflow artifacts. Defaults to None.
+        nested (bool, optional): If True, starts a nested run. Defaults to False.
+        tags (Optional[Dict[str, Any]], optional): Dictionary of tags to associate with the run. Defaults to None.
+        description (Optional[str], optional): Description of the run. Defaults to None.
+        log_system_metrics (Optional[bool], optional): If True, logs system metrics during the run. Defaults to None.
+    """
     global USER_NAMESPACE, PROV_SAVE_PATH, MLFLOW_SAVE_PATH, EXPERIMENT_NAME
 
     USER_NAMESPACE = prov_user_namespace
@@ -557,7 +635,12 @@ def start_run(
     energy_utils._carbon_init()
     flops_utils._init_flops_counters()
 
+    log_execution_start_time()
+
 def end_run(): 
+    """Ends the active MLflow run, generates provenance graph, and saves it."""
+    
+    log_execution_end_time()
 
     run_id=mlflow.active_run().info.run_id
     
@@ -597,7 +680,12 @@ def end_run():
     with open(path_dot, 'w') as prov_dot:
         prov_dot.write(dot.prov_to_dot(doc).to_string())
 
-def get_mlflow_logger(): 
+def get_mlflow_logger():
+    """Returns an MLFlowLogger instance configured with the specified parameters.
+
+    Returns:
+        MLFlowLogger: An MLFlowLogger instance.
+    """ 
     mlf_logger = MLFlowLogger(
         experiment_name=EXPERIMENT_NAME,
         artifact_location=os.path.join(MLFLOW_SAVE_PATH, LIGHTNING_SUBDIR),
@@ -609,4 +697,9 @@ def get_mlflow_logger():
     return mlf_logger
 
 def get_run_id(): 
+    """Returns the ID of the currently active MLflow run.
+
+    Returns:
+        str: The ID of the currently active MLflow run.
+    """
     return mlflow.active_run().info.run_id
