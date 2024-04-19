@@ -6,9 +6,19 @@ This library is a wrapper around MLFlow to provide a unified interface for loggi
 
 It allows users to create provenance graphs from the logged information.
 
+## Installation
+
+To install the library, run the following command:
+
+```bash
+pip install prov4ml
+```
+
 ## Example
 
 ![Example](./assets/example.svg)
+
+The image shown above has been generated from the [example](./examples/mlflow_lightning.py) program provided in the ```example``` directory.
 
 ## Experiments and Runs
 
