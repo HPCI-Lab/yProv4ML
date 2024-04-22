@@ -157,8 +157,8 @@ def log_model_memory_footprint(model: Union[torch.nn.Module, Any], model_name: s
 
     total_params = sum(p.numel() for p in model.parameters())
     precision_to_bits = {"64": 64, "32": 32, "16": 16, "bf16": 16}
-    precision = precision_to_bits.get(model.trainer.precision, 32) if hasattr(model, "trainer") else 32
-    precision_megabytes = (precision / 8.0) * 1e-6
+    # precision = precision_to_bits.get(model.trainer.precision, 32) if hasattr(model, "trainer") else 32
+    precision_megabytes = (4.0) * 1e-6
 
     memory_per_model = total_params * precision_megabytes
     memory_per_grad = total_params * 4 * 1e-6
