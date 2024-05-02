@@ -56,7 +56,10 @@ def get_gpu_usage() -> float:
     """
     if sys.platform != 'darwin':
         GPUs = GPUtil.getGPUs()
-        gpu_load = GPUs[0].load
+        if len(GPUs) == 0:
+            gpu_load = 0.0
+        else: 
+            gpu_load = GPUs[0].load
     else:
         statistics = apple_gpu.accelerator_performance_statistics()
         if 'Device Utilization' in statistics.keys():

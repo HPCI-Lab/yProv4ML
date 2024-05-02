@@ -19,15 +19,15 @@ LIGHTNING_SUBDIR = "lightning"
 
 @contextmanager
 def start_run_ctx(
-    prov_user_namespace:str,
-    path: Optional[str] = None,
-    run_id: Optional[str] = None,
-    experiment_id: Optional[str] = None,
-    run_name: Optional[str] = None,
+    prov_user_namespace: str,
+    experiment_name: Optional[str] = None,
+    provenance_save_dir: Optional[str] = None,
+    mlflow_save_dir: Optional[str] = None,
     nested: bool = False,
     tags: Optional[Dict[str, Any]] = None,
     description: Optional[str] = None,
-    log_system_metrics: Optional[bool] = None,) -> ActiveRun: # type: ignore
+    log_system_metrics: Optional[bool] = None
+    ) -> ActiveRun: # type: ignore
     """
     Starts an MLflow run and generates provenance information.
 
@@ -48,17 +48,51 @@ def start_run_ctx(
         None
 
     """
-    #wrapper for mlflow.start_run, with prov generation
+    global USER_NAMESPACE, PROV_SAVE_PATH, MLFLOW_SAVE_PATH, EXPERIMENT_NAME
+
+    USER_NAMESPACE = prov_user_namespace
+    PROV_SAVE_PATH = provenance_save_dir
+    MLFLOW_SAVE_PATH = mlflow_save_dir
+    EXPERIMENT_NAME = experiment_name
+
+    if MLFLOW_SAVE_PATH:
+        mlflow.set_tracking_uri(os.path.join(MLFLOW_SAVE_PATH, MLFLOW_SUBDIR))
+
+    exp = mlflow.get_experiment_by_name(name=EXPERIMENT_NAME)
+    if not exp:
+        if MLFLOW_SAVE_PATH: 
+            experiment_id = mlflow.create_experiment(
+                name=EXPERIMENT_NAME,
+                artifact_location=os.path.join(MLFLOW_SAVE_PATH, ARTIFACTS_SUBDIR)
+            )
+        else: 
+            experiment_id = mlflow.create_experiment(name=EXPERIMENT_NAME)
+    else:
+        experiment_id = exp.experiment_id
+
+    mlflow.set_experiment(EXPERIMENT_NAME)
+    mlflow.pytorch.autolog(silent=True)
+
+    current_run = mlflow.start_run(
+        experiment_id=experiment_id,
+        nested=nested,
+        tags=tags,
+        description=description,
+        log_system_metrics=log_system_metrics, 
+    )
+
+    energy_utils._carbon_init()
+    flops_utils._init_flops_counters()
+
+    log_execution_start_time()
+
+    yield current_run #return the mlflow context manager, same one as mlflow.start_run()
+
+    log_execution_end_time()
+
+    run_id=mlflow.active_run().info.run_id
     
-    active_run= mlflow.start_run(run_id,experiment_id,run_name,nested,tags,description,log_system_metrics)
-    print('started run', active_run.info.run_id)
-    yield active_run #return the mlflow context manager, same one as mlflow.start_run()
-
-    run_id=active_run.info.run_id
     mlflow.end_run() #end the run, as per mlflow documentation
-    print('ended run')
-
-    print('doc generation')
 
     client = mlflow.MlflowClient()
     active_run=client.get_run(run_id)
@@ -66,14 +100,17 @@ def start_run_ctx(
     doc = prov.ProvDocument()
 
     #set namespaces
-    doc.set_default_namespace(prov_user_namespace)
+    doc.set_default_namespace(USER_NAMESPACE)
     doc.add_namespace('prov','http://www.w3.org/ns/prov#')
     doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
-    
     doc.add_namespace('mlflow', 'mlflow') #TODO: find namespaces of mlflow and prov-ml ontologies
     doc.add_namespace('prov-ml', 'prov-ml')
 
-    doc = first_level_prov(active_run,doc)
+    local_rank = os.getenv("SLURM_LOCALID", None)
+    global_rank = os.getenv("SLURM_PROCID", None)
+    node_id = os.getenv("SLURM_NODEID", None)
+
+    doc = first_level_prov(active_run,doc, local_rank, global_rank, node_id)
     doc = second_level_prov(active_run,doc)    
 
     #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
@@ -84,8 +121,11 @@ def start_run_ctx(
 
     graph_filename = f'provgraph_{run_id}.json'
     dot_filename = f'provgraph_{run_id}.dot'
-    path_graph = "/".join([path, graph_filename]) if path else graph_filename
-    path_dot = "/".join([path, dot_filename]) if path else dot_filename
+    path_graph = "/".join([PROV_SAVE_PATH, graph_filename]) if PROV_SAVE_PATH else graph_filename
+    path_dot = "/".join([PROV_SAVE_PATH, dot_filename]) if PROV_SAVE_PATH else dot_filename
+
+    if PROV_SAVE_PATH and not os.path.exists(PROV_SAVE_PATH):
+        os.makedirs(PROV_SAVE_PATH)
 
     with open(path_graph,'w') as prov_graph:
         doc.serialize(prov_graph)

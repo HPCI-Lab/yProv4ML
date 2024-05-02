@@ -1,5 +1,6 @@
 
 import torch
+import warnings
 import mlflow
 from mlflow.entities import Metric, RunTag
 from mlflow.tracking.fluent import log_metric, log_param
@@ -100,9 +101,17 @@ def log_model_memory_footprint(model: Union[torch.nn.Module, Any], model_name: s
     log_param("model_name", model_name)
 
     total_params = sum(p.numel() for p in model.parameters())
-    precision_to_bits = {"64": 64, "32": 32, "16": 16, "bf16": 16}
-    # precision = precision_to_bits.get(model.trainer.precision, 32) if hasattr(model, "trainer") else 32
-    precision_megabytes = (4.0) * 1e-6
+    try: 
+        if hasattr(model, "trainer"): 
+            precision_to_bits = {"64": 64, "32": 32, "16": 16, "bf16": 16}
+            precision = precision_to_bits.get(model.trainer.precision, 32)  
+        else: 
+            precision = 32
+    except RuntimeError: 
+        warnings.warn("Could not determine precision, defaulting to 32 bits. Please make sure to provide a model with a trainer attached, this is often due to calling this before the trainer.fit() method")
+        precision = 32
+    
+    precision_megabytes = precision / 8 / 1e6
 
     memory_per_model = total_params * precision_megabytes
     memory_per_grad = total_params * 4 * 1e-6

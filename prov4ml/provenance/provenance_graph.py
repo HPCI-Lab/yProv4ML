@@ -1,4 +1,5 @@
 
+import warnings
 import mlflow
 import prov
 import prov.model as prov
@@ -142,29 +143,30 @@ def first_level_prov(
     
 
     #model version entities generation
-    model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0] #only one model version per run (in this case)
-
-    modv_ent=doc.entity(f'{model_version.name}_{model_version.version}',{
-        "prov-ml:type":str(lv_attr(LVL_1,"Model")),
-        'mlflow:version':str(lv_attr(LVL_1,model_version.version)),
-        'mlflow:artifact_uri':str(lv_attr(LVL_1,model_version.source)),
-        'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.creation_timestamp/1000))),
-        'mlflow:last_updated_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.last_updated_timestamp/1000))),
-        'prov:level':LVL_1
-    })
-    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_version.name}_{model_version.version}_gen',other_attributes={'prov:level':LVL_1})
+    models_saved = client.search_model_versions(f'run_id="{run.info.run_id}"')
+    if len(models_saved) > 0:
+        model_version = models_saved[0] #only one model version per run (in this case)
     
-    
-    #get the model registered in the model registry of mlflow
-    model = client.get_registered_model(model_version.name)
-    mod_ent=doc.entity(f'{model.name}',{
-        "prov-ml:type":str(lv_attr(LVL_1,"Model")),
-        'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model.creation_timestamp/1000))),
-        'prov:level':LVL_1,
-    })
-    spec=doc.specializationOf(modv_ent,mod_ent)
-    spec.add_attributes({'prov:level':LVL_1})   #specilizationOf doesn't accept other_attributes, but its cast as record does
-
+        modv_ent=doc.entity(f'{model_version.name}_{model_version.version}',{
+            "prov-ml:type":str(lv_attr(LVL_1,"Model")),
+            'mlflow:version':str(lv_attr(LVL_1,model_version.version)),
+            'mlflow:artifact_uri':str(lv_attr(LVL_1,model_version.source)),
+            'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.creation_timestamp/1000))),
+            'mlflow:last_updated_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model_version.last_updated_timestamp/1000))),
+            'prov:level':LVL_1
+        })
+        doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_version.name}_{model_version.version}_gen',other_attributes={'prov:level':LVL_1})
+        
+        model = client.get_registered_model(model_version.name)
+        mod_ent=doc.entity(f'{model.name}',{
+            "prov-ml:type":str(lv_attr(LVL_1,"Model")),
+            'mlflow:creation_timestamp':str(lv_attr(LVL_1,datetime.fromtimestamp(model.creation_timestamp/1000))),
+            'prov:level':LVL_1,
+        })
+        spec=doc.specializationOf(modv_ent,mod_ent)
+        spec.add_attributes({'prov:level':LVL_1})   #specilizationOf doesn't accept other_attributes, but its cast as record does
+    else:
+        warnings.warn(f"No model version found for run {run.info.run_id}. Did you remember to call prov4ml.log_model()?")
 
     #artifact entities generation
     artifacts=traverse_artifact_tree(client,run.info.run_id)
@@ -268,17 +270,21 @@ def second_level_prov(run:Run, doc: prov.ProvDocument) -> prov.ProvDocument:
     #     'source_mirror':str(run.inputs.dataset_inputs[0].tags[1]),
     # })
     
-    model_version = client.search_model_versions(f'run_id="{run.info.run_id}"')[0]
-    # if doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0]:
-    #     doc._records.remove(doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0])
+    model_versions = client.search_model_versions(f'run_id="{run.info.run_id}"')
+    if len(model_versions) > 0:
+        model_version = model_versions[0]
+        # if doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0]:
+        #     doc._records.remove(doc.get_record(f'{model_version.name}_{model_version.version}_gen')[0])
 
-    model_ser = doc.activity(f'mlflow:ModelRegistration',other_attributes={'prov:level':LVL_2})
-    doc.wasInformedBy(model_ser,run_activity,other_attributes={'prov:level':LVL_2})
-    doc.wasGeneratedBy(f'{model_version.name}_{model_version.version}',model_ser,other_attributes={'prov:level':LVL_2})
-    
-    for artifact in traverse_artifact_tree(client,run.info.run_id,model_version.name): #get artifacts whose path starts with TinyVGG: these are model serialization and metadata files
-        # if doc.get_record(f'{artifact.path}_gen'):
-        #     doc._records.remove(doc.get_record(f'{artifact.path}_gen')[0])
-        memb=doc.hadMember(f'{model_version.name}_{model_version.version}',f"{artifact.path}")
-        memb.add_attributes({'prov:level':LVL_2})
+        model_ser = doc.activity(f'mlflow:ModelRegistration',other_attributes={'prov:level':LVL_2})
+        doc.wasInformedBy(model_ser,run_activity,other_attributes={'prov:level':LVL_2})
+        doc.wasGeneratedBy(f'{model_version.name}_{model_version.version}',model_ser,other_attributes={'prov:level':LVL_2})
+        
+        for artifact in traverse_artifact_tree(client,run.info.run_id,model_version.name): #get artifacts whose path starts with TinyVGG: these are model serialization and metadata files
+            # if doc.get_record(f'{artifact.path}_gen'):
+            #     doc._records.remove(doc.get_record(f'{artifact.path}_gen')[0])
+            memb=doc.hadMember(f'{model_version.name}_{model_version.version}',f"{artifact.path}")
+            memb.add_attributes({'prov:level':LVL_2})
+    else: 
+        warnings.warn(f"No model version found for run {run.info.run_id}. Did you remember to call prov4ml.log_model()?")
     return doc
