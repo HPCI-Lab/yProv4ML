@@ -32,20 +32,17 @@ def start_run_ctx(
     Starts an MLflow run and generates provenance information.
 
     Args:
-        prov_user_namespace (str): The namespace of the user, this will be used as the default namespace.
-        run_id (Optional[str]): The ID of the run to start. If not provided, a new run ID will be generated.
-        experiment_id (Optional[str]): The ID of the experiment to associate the run with. If not provided, the default experiment will be used.
-        run_name (Optional[str]): The name of the run. If not provided, a default name will be assigned.
-        nested (bool): Whether the run is nested within another run. Defaults to False.
-        tags (Optional[Dict[str, Any]]): Additional tags to associate with the run. Defaults to None.
-        description (Optional[str]): A description of the run. Defaults to None.
-        log_system_metrics (Optional[bool]): Whether to log system metrics. Defaults to None.
+        prov_user_namespace (str): The user namespace for provenance tracking.
+        experiment_name (Optional[str], optional): The name of the experiment to associate the run with. Defaults to None.
+        provenance_save_dir (Optional[str], optional): The directory to save provenance data. Defaults to None.
+        mlflow_save_dir (Optional[str], optional): The directory to save MLflow artifacts. Defaults to None.
+        nested (bool, optional): If True, starts a nested run. Defaults to False.
+        tags (Optional[Dict[str, Any]], optional): Dictionary of tags to associate with the run. Defaults to None.
+        description (Optional[str], optional): Description of the run. Defaults to None.
+        log_system_metrics (Optional[bool], optional): If True, logs system metrics during the run. Defaults to None.
 
     Returns:
         ActiveRun: The active run object.
-
-    Raises:
-        None
 
     """
     global USER_NAMESPACE, PROV_SAVE_PATH, MLFLOW_SAVE_PATH, EXPERIMENT_NAME
@@ -245,15 +242,22 @@ def get_mlflow_logger():
     Returns:
         MLFlowLogger: An MLFlowLogger instance.
     """ 
-    mlf_logger = MLFlowLogger(
-        experiment_name=EXPERIMENT_NAME,
-        artifact_location=os.path.join(MLFLOW_SAVE_PATH, LIGHTNING_SUBDIR),
-        tracking_uri=mlflow.get_tracking_uri(),
-        run_id=get_run_id(),
-        log_model="all",
-    )
 
-    return mlf_logger
+    if MLFLOW_SAVE_PATH is not None: 
+        return MLFlowLogger(
+            experiment_name=EXPERIMENT_NAME,
+            artifact_location=os.path.join(MLFLOW_SAVE_PATH, LIGHTNING_SUBDIR),
+            tracking_uri=mlflow.get_tracking_uri(),
+            run_id=get_run_id(),
+            log_model="all",
+        )
+    else:
+        return MLFlowLogger(
+            experiment_name=EXPERIMENT_NAME,
+            tracking_uri=mlflow.get_tracking_uri(),
+            run_id=get_run_id(),
+            log_model="all",
+        )
 
 def get_run_id(): 
     """Returns the ID of the currently active MLflow run.

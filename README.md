@@ -199,6 +199,8 @@ Or:
 mlflow ui --backend-store-uri ./path_to_mlflow_logs --port free_port
 ```
 
+Where `--backend-store-uri` has to point to the subdirectory containing the `models` folder.
+
 To generate the graph svg image: 
 
 ```bash

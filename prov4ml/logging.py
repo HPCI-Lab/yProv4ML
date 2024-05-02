@@ -138,6 +138,20 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
         registered_model_name=model_name
     )
 
+def log_optimizer(optimizer: torch.optim.Optimizer) -> None:
+    """Logs the provided optimizer to the MLflow tracking context.
+    
+    Args:
+        optimizer (torch.optim.Optimizer): The optimizer to be logged.
+    """
+    opt_name = optimizer.__class__.__name__
+    log_param("optimizer_name", opt_name)
+    log_param("optimizer_state_dict", optimizer.state_dict())
+    # lr
+    for param_group in optimizer.param_groups:
+        log_param("lr", param_group["lr"])
+        break
+
 def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Context, step: Optional[int] = None) -> None:
     """Logs the number of FLOPs (floating point operations) per epoch for the given model and dataset.
     
