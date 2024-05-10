@@ -26,7 +26,8 @@ def start_run_ctx(
     nested: bool = False,
     tags: Optional[Dict[str, Any]] = None,
     description: Optional[str] = None,
-    log_system_metrics: Optional[bool] = None
+    log_system_metrics: Optional[bool] = None, 
+    create_graph: Optional[bool] = True
     ) -> ActiveRun: # type: ignore
     """
     Starts an MLflow run and generates provenance information.
@@ -119,15 +120,17 @@ def start_run_ctx(
     graph_filename = f'provgraph_{run_id}.json'
     dot_filename = f'provgraph_{run_id}.dot'
     path_graph = "/".join([PROV_SAVE_PATH, graph_filename]) if PROV_SAVE_PATH else graph_filename
-    path_dot = "/".join([PROV_SAVE_PATH, dot_filename]) if PROV_SAVE_PATH else dot_filename
 
     if PROV_SAVE_PATH and not os.path.exists(PROV_SAVE_PATH):
         os.makedirs(PROV_SAVE_PATH)
 
     with open(path_graph,'w') as prov_graph:
         doc.serialize(prov_graph)
-    with open(path_dot, 'w') as prov_dot:
-        prov_dot.write(dot.prov_to_dot(doc).to_string())
+
+    if create_graph:
+        path_dot = "/".join([PROV_SAVE_PATH, dot_filename]) if PROV_SAVE_PATH else dot_filename
+        with open(path_dot, 'w') as prov_dot:
+            prov_dot.write(dot.prov_to_dot(doc).to_string())
 
 def start_run(
     prov_user_namespace: str,
@@ -189,7 +192,7 @@ def start_run(
 
     log_execution_start_time()
 
-def end_run(): 
+def end_run(create_graph: Optional[bool] = True): 
     """Ends the active MLflow run, generates provenance graph, and saves it."""
     
     log_execution_end_time()
@@ -226,15 +229,17 @@ def end_run():
     graph_filename = f'provgraph_{run_id}.json'
     dot_filename = f'provgraph_{run_id}.dot'
     path_graph = "/".join([PROV_SAVE_PATH, graph_filename]) if PROV_SAVE_PATH else graph_filename
-    path_dot = "/".join([PROV_SAVE_PATH, dot_filename]) if PROV_SAVE_PATH else dot_filename
 
     if PROV_SAVE_PATH and not os.path.exists(PROV_SAVE_PATH):
         os.makedirs(PROV_SAVE_PATH)
 
     with open(path_graph,'w') as prov_graph:
         doc.serialize(prov_graph)
-    with open(path_dot, 'w') as prov_dot:
-        prov_dot.write(dot.prov_to_dot(doc).to_string())
+
+    if create_graph:
+        path_dot = "/".join([PROV_SAVE_PATH, dot_filename]) if PROV_SAVE_PATH else dot_filename
+        with open(path_dot, 'w') as prov_dot:
+            prov_dot.write(dot.prov_to_dot(doc).to_string())
 
 def get_mlflow_logger():
     """Returns an MLFlowLogger instance configured with the specified parameters.
