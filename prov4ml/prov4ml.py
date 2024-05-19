@@ -12,10 +12,7 @@ from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
 from .provenance.provenance_graph import first_level_prov, second_level_prov
-
-MLFLOW_SUBDIR = "mlflow"
-ARTIFACTS_SUBDIR = "artifacts"
-LIGHTNING_SUBDIR = "lightning"
+from .constants import MLFLOW_SUBDIR, ARTIFACTS_SUBDIR, LIGHTNING_SUBDIR
 
 @contextmanager
 def start_run_ctx(
@@ -104,11 +101,7 @@ def start_run_ctx(
     doc.add_namespace('mlflow', 'mlflow') #TODO: find namespaces of mlflow and prov-ml ontologies
     doc.add_namespace('prov-ml', 'prov-ml')
 
-    local_rank = os.getenv("SLURM_LOCALID", None)
-    global_rank = os.getenv("SLURM_PROCID", None)
-    node_id = os.getenv("SLURM_NODEID", None)
-
-    doc = first_level_prov(active_run,doc, local_rank, global_rank, node_id)
+    doc = first_level_prov(active_run,doc)
     doc = second_level_prov(active_run,doc)    
 
     #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself

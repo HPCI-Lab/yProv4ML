@@ -1,4 +1,4 @@
-
+import os
 import torch
 import warnings
 import mlflow
@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 from .utils import energy_utils, flops_utils, system_utils, time_utils
 from .provenance.context import Context
+from .constants import ARTIFACTS_SUBDIR
 
 def log_metrics(
         metrics:Dict[str,Tuple[float,Context]],
@@ -121,7 +122,7 @@ def log_model_memory_footprint(model: Union[torch.nn.Module, Any], model_name: s
     log_param("memory_of_model", memory_per_model)
     log_param("total_memory_load_of_model", memory_per_model + memory_per_grad + memory_per_optim)
 
-def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", log_model_info: bool = True) -> None:
+def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", log_model_info: bool = True, log_as_artifact=True) -> None:
     """Logs the provided model to the MLflow tracking context.
     
     Args:
@@ -131,6 +132,9 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
     """
     if log_model_info:
         log_model_memory_footprint(model, model_name)
+
+    if log_as_artifact:
+        save_model_version(model, model_name)
 
     return mlflow.pytorch.log_model(
         pytorch_model=model,
@@ -240,3 +244,34 @@ def log_carbon_metrics(
     client.log_metric(mlflow.active_run().info.run_id, "ram_energy", emissions.ram_energy, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
     client.set_tag(mlflow.active_run().info.run_id,'metric.context.energy_consumed',context.name)
     client.log_metric(mlflow.active_run().info.run_id, "energy_consumed", emissions.energy_consumed, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
+
+def log_optimizer(optimizer: torch.optim.Optimizer) -> None:
+    """Logs the provided optimizer to the MLflow tracking context.
+    
+    Args:
+        optimizer (torch.optim.Optimizer): The optimizer to be logged.
+    """
+    opt_name = optimizer.__class__.__name__
+    log_param("optimizer_name", opt_name)
+    # log_param("optimizer_state_dict", optimizer.state_dict())
+
+    if len(optimizer.param_groups) > 0:
+        log_param("lr", optimizer.param_groups[0]["lr"])
+
+def log_artifact(artifact_path : str) -> None:
+    # TODO: add separation for steps and contexts
+    mlflow.log_artifact(artifact_path, run_id=mlflow.active_run().info.run_id)
+
+def save_model_version(
+        model: torch.nn.Module, 
+        model_name: str, 
+        context:Context = Context.EVALUATION, 
+        step: Optional[int] = None
+    ) -> None:
+
+    path = os.path.join(ARTIFACTS_SUBDIR, model_name)
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    torch.save(model.state_dict(), f"{path}/{model_name}.pth")
+    log_artifact(f"{path}/{model_name}.pth", context=context, step=step)

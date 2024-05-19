@@ -1,6 +1,7 @@
 
 import warnings
 import mlflow
+import os
 import prov
 import prov.model as prov
 from datetime import datetime
@@ -14,7 +15,6 @@ from ..logging import Context
 lv_attr = namedtuple('lv_attr', ['level', 'value'])
 LVL_1 = "1"
 LVL_2 = "2"
-
 
 def traverse_artifact_tree(
         client:mlflow.MlflowClient,
@@ -43,9 +43,6 @@ def traverse_artifact_tree(
 def first_level_prov(
         run:Run, 
         doc: prov.ProvDocument,
-        global_rank: Optional[str] = None,
-        local_rank: Optional[str] = None,
-        node_rank: Optional[str] = None,
     ) -> prov.ProvDocument:
     """
     Generates the first level of provenance for a given run.
@@ -59,6 +56,7 @@ def first_level_prov(
     """
     client = mlflow.MlflowClient()
 
+    global_rank = os.getenv("SLURM_PROCID", None)
     if global_rank is None:
         run_entity = doc.entity(f'{run.info.run_name}',other_attributes={
             "mlflow:run_id": str(lv_attr(LVL_1,str(run.info.run_id))),
@@ -68,12 +66,16 @@ def first_level_prov(
             "prov:level":LVL_1
         })
     else:
+        local_rank = os.getenv("SLURM_LOCALID", None) 
+        node_rank = os.getenv("SLURM_NODEID", None)
+        
         run_entity = doc.entity(f'{run.info.run_name}',other_attributes={
             "mlflow:run_id": str(lv_attr(LVL_1,str(run.info.run_id))),
             "mlflow:artifact_uri":str(lv_attr(LVL_1,str(run.info.artifact_uri))),
             "prov-ml:type":str(lv_attr(LVL_1,"LearningStage")),
             "mlflow:user_id":str(lv_attr(LVL_1,str(run.info.user_id))),
             "prov:level":LVL_1, 
+            # multi-node execution attributes
             "mlflow:global_rank":str(lv_attr(LVL_1,global_rank)),
             "mlflow:local_rank":str(lv_attr(LVL_1,local_rank)),
             "mlflow:node_rank":str(lv_attr(LVL_1,node_rank)),
