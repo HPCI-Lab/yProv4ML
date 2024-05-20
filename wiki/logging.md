@@ -15,6 +15,22 @@ To specify arbitrary training parameters used during the execution of the experi
 prov4ml.log_param("param_name", "param_value")
 ```
 
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `key` | `string` | **Required**. Name of the parameter |
+| `value` | `string` | **Required**. Value of the parameter |
+
+The `log_params` logs multiple parameter key-value pairs to the MLflow tracking context.
+
+```python
+prov4ml.log_params(params)
+```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `params` | `dict` | **Required**. Dictionary of parameters to log |
+
+
 ## Log Metrics
 
 To specify metrics, which can be tracked during the execution of the experiment, the user can call the following function.
@@ -33,6 +49,18 @@ prov4ml.log_metric("metric_name",metric_value,prov4ml.Context.TRAINING, step=cur
 | `timestamp` | `int` | **Optional**. Timestamp of the metric |
 
 The *step* parameter is optional and can be used to specify the current time step of the experiment, for example the current epoch.
+
+The `log_metrics` function logs the given metrics and their associated contexts to the active MLflow run.
+
+```python
+prov4ml.log_metrics(metrics, step, synchronous=False)
+```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `metrics` | `dict` | **Required**. Dictionary of metrics to log |
+| `step` | `int` | **Required**. Step of the metric |
+| `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
 
 ## Log Artifacts
 

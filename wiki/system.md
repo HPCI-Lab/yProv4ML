@@ -23,3 +23,33 @@ This function logs the following system metrics:
 | `Disk usage` | Disk usage of the system | % |
 | `Gpu memory usage` | Memory usage of the GPU | % |
 | `Gpu usage` | Usage of the GPU | % |
+
+
+# FLOPs per Epoch
+
+The log_flops_per_epoch function logs the number of floating-point operations (FLOPs) performed per epoch for a given model and dataset. 
+
+```python
+prov4ml.log_flops_per_epoch(label, dataset, context, step):
+```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `label` | `string` | **Required**. Label of the FLOPs |
+| `dataset` | `string` | **Required**. Dataset used for the FLOPs calculation |
+| `context` | `prov4ml.Context` | **Required**. Context of the metric |
+| `step` | `int` | **Optional**. Step of the metric |
+
+# FLOPs per Batch
+
+The log_flops_per_batch function logs the number of floating-point operations (FLOPs) performed per batch for a given model and batch of data. 
+
+```python
+prov4ml.log_flops_per_batch(label, context, step):
+```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `label` | `string` | **Required**. Label of the FLOPs |
+| `context` | `prov4ml.Context` | **Required**. Context of the metric |
+| `step` | `int` | **Optional**. Step of the metric |
