@@ -82,7 +82,7 @@ trainer = L.Trainer(
     devices=1,
     max_epochs=EPOCHS,
     log_every_n_steps=1,
-    logger=[prov4ml.ProvMLLogger(name="mnist_model"), prov4ml.ModelVersioningLogger("./", name="mnist_model")],
+    logger=[prov4ml.ProvMLLogger(name="mnist_model")],
     enable_checkpointing=False, 
 )
 

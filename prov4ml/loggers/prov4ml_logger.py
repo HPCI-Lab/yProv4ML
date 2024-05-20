@@ -10,10 +10,8 @@ from ..provenance.context import Context
 
 
 class ProvMLLogger(Logger):
-
     def __init__(
         self,
-        # save_dir: str,
         name: Optional[str] = "lightning_logs",
         version: Optional[Union[int, str]] = None,
         prefix: str = "",
@@ -21,7 +19,6 @@ class ProvMLLogger(Logger):
     ):
         super().__init__()
         self._name = name or ""
-        # self._save_dir = save_dir
         self._version = version
         self._prefix = prefix
         self._experiment = None
@@ -51,17 +48,6 @@ class ProvMLLogger(Logger):
         version = self.version if isinstance(self.version, str) else f"version_{self.version}"
         return os.path.join(self.root_dir, version)
 
-    # @property
-    # @override
-    # def save_dir(self) -> str:
-    #     """The current directory where logs are saved.
-
-    #     Returns:
-    #         The path to current directory where logs are saved.
-
-    #     """
-    #     return self._save_dir
-    
     @property
     @override
     def name(self) -> str:
@@ -91,7 +77,3 @@ class ProvMLLogger(Logger):
     @override
     def log_hyperparams(self, params: Union[Dict[str, Any], Namespace]) -> None:
         log_params(params)
-
-    # @override
-    # def save(self) -> None:
-    #     super().save()

@@ -20,15 +20,15 @@ All artifacts and metrics logged during the execution of the experiment will be 
 
 Several runs can be executed in the same experiment. All runs will be saved in the same directory (according to the specific experiment name and ID).
 
-## Documentation
+# Documentation
 
 For detailed information, please refer to the following documentation files:
 
-- [Carbon](./wiki/carbon.md)
 - [Installation](./wiki/installation.md)
-- [Logging](./wiki/logging.md)
 - [Setup](./wiki/setup.md)
-- [System](./wiki/system.md)
-- [Time](./wiki/time.md)
+- [Logging](./wiki/logging.md)
+- [Carbon Metrics](./wiki/carbon.md)
+- [System Metrics](./wiki/system.md)
+- [Time Metrics](./wiki/time.md)
 - [Usage with PyTorch](./wiki/usage_pytorch.md)
 - [Usage with Lightning](./wiki/usage_lightning.md)
