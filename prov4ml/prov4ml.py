@@ -1,7 +1,6 @@
 import os
 import mlflow
 from mlflow import ActiveRun
-from lightning.pytorch.loggers import MLFlowLogger
 import prov.model as prov
 import prov.dot as dot
 
@@ -12,7 +11,7 @@ from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
 from .provenance.provenance_graph import first_level_prov, second_level_prov
-from .constants import MLFLOW_SUBDIR, ARTIFACTS_SUBDIR, LIGHTNING_SUBDIR
+from .constants import MLFLOW_SUBDIR, ARTIFACTS_SUBDIR
 
 @contextmanager
 def start_run_ctx(
@@ -43,29 +42,27 @@ def start_run_ctx(
         ActiveRun: The active run object.
 
     """
-    global USER_NAMESPACE, PROV_SAVE_PATH, MLFLOW_SAVE_PATH, EXPERIMENT_NAME
+    global USER_NAMESPACE, PROV_SAVE_PATH
 
     USER_NAMESPACE = prov_user_namespace
     PROV_SAVE_PATH = provenance_save_dir
-    MLFLOW_SAVE_PATH = mlflow_save_dir
-    EXPERIMENT_NAME = experiment_name
 
-    if MLFLOW_SAVE_PATH:
-        mlflow.set_tracking_uri(os.path.join(MLFLOW_SAVE_PATH, MLFLOW_SUBDIR))
+    if mlflow_save_dir:
+        mlflow.set_tracking_uri(os.path.join(mlflow_save_dir, MLFLOW_SUBDIR))
 
-    exp = mlflow.get_experiment_by_name(name=EXPERIMENT_NAME)
+    exp = mlflow.get_experiment_by_name(name=experiment_name)
     if not exp:
-        if MLFLOW_SAVE_PATH: 
+        if mlflow_save_dir: 
             experiment_id = mlflow.create_experiment(
-                name=EXPERIMENT_NAME,
-                artifact_location=os.path.join(MLFLOW_SAVE_PATH, ARTIFACTS_SUBDIR)
+                name=experiment_name,
+                artifact_location=os.path.join(mlflow_save_dir, ARTIFACTS_SUBDIR)
             )
         else: 
-            experiment_id = mlflow.create_experiment(name=EXPERIMENT_NAME)
+            experiment_id = mlflow.create_experiment(name=experiment_name)
     else:
         experiment_id = exp.experiment_id
 
-    mlflow.set_experiment(EXPERIMENT_NAME)
+    mlflow.set_experiment(experiment_name)
     mlflow.pytorch.autolog(silent=True)
 
     current_run = mlflow.start_run(
@@ -147,29 +144,27 @@ def start_run(
         description (Optional[str], optional): Description of the run. Defaults to None.
         log_system_metrics (Optional[bool], optional): If True, logs system metrics during the run. Defaults to None.
     """
-    global USER_NAMESPACE, PROV_SAVE_PATH, MLFLOW_SAVE_PATH, EXPERIMENT_NAME
+    global USER_NAMESPACE, PROV_SAVE_PATH
 
     USER_NAMESPACE = prov_user_namespace
     PROV_SAVE_PATH = provenance_save_dir
-    MLFLOW_SAVE_PATH = mlflow_save_dir
-    EXPERIMENT_NAME = experiment_name
 
-    if MLFLOW_SAVE_PATH:
-        mlflow.set_tracking_uri(os.path.join(MLFLOW_SAVE_PATH, MLFLOW_SUBDIR))
+    if mlflow_save_dir:
+        mlflow.set_tracking_uri(os.path.join(mlflow_save_dir, MLFLOW_SUBDIR))
 
-    exp = mlflow.get_experiment_by_name(name=EXPERIMENT_NAME)
+    exp = mlflow.get_experiment_by_name(name=experiment_name)
     if not exp:
-        if MLFLOW_SAVE_PATH: 
+        if mlflow_save_dir: 
             experiment_id = mlflow.create_experiment(
-                name=EXPERIMENT_NAME,
-                artifact_location=os.path.join(MLFLOW_SAVE_PATH, ARTIFACTS_SUBDIR)
+                name=experiment_name,
+                artifact_location=os.path.join(mlflow_save_dir, ARTIFACTS_SUBDIR)
             )
         else: 
-            experiment_id = mlflow.create_experiment(name=EXPERIMENT_NAME)
+            experiment_id = mlflow.create_experiment(name=experiment_name)
     else:
         experiment_id = exp.experiment_id
 
-    mlflow.set_experiment(EXPERIMENT_NAME)
+    mlflow.set_experiment(experiment_name)
     mlflow.pytorch.autolog(silent=True)
 
     mlflow.start_run(
@@ -205,12 +200,8 @@ def end_run(create_graph: Optional[bool] = True):
     doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
     doc.add_namespace('mlflow', 'mlflow') #TODO: find namespaces of mlflow and prov-ml ontologies
     doc.add_namespace('prov-ml', 'prov-ml')
-
-    local_rank = os.getenv("SLURM_LOCALID", None)
-    global_rank = os.getenv("SLURM_PROCID", None)
-    node_id = os.getenv("SLURM_NODEID", None)
-
-    doc = first_level_prov(active_run,doc, local_rank, global_rank, node_id)
+    
+    doc = first_level_prov(active_run,doc)
     doc = second_level_prov(active_run,doc)    
 
     #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
@@ -233,29 +224,6 @@ def end_run(create_graph: Optional[bool] = True):
         path_dot = "/".join([PROV_SAVE_PATH, dot_filename]) if PROV_SAVE_PATH else dot_filename
         with open(path_dot, 'w') as prov_dot:
             prov_dot.write(dot.prov_to_dot(doc).to_string())
-
-def get_mlflow_logger():
-    """Returns an MLFlowLogger instance configured with the specified parameters.
-
-    Returns:
-        MLFlowLogger: An MLFlowLogger instance.
-    """ 
-
-    if MLFLOW_SAVE_PATH is not None: 
-        return MLFlowLogger(
-            experiment_name=EXPERIMENT_NAME,
-            artifact_location=os.path.join(MLFLOW_SAVE_PATH, LIGHTNING_SUBDIR),
-            tracking_uri=mlflow.get_tracking_uri(),
-            run_id=get_run_id(),
-            log_model="all",
-        )
-    else:
-        return MLFlowLogger(
-            experiment_name=EXPERIMENT_NAME,
-            tracking_uri=mlflow.get_tracking_uri(),
-            run_id=get_run_id(),
-            log_model="all",
-        )
 
 def get_run_id(): 
     """Returns the ID of the currently active MLflow run.
