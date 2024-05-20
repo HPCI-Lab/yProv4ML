@@ -134,7 +134,7 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
         log_model_memory_footprint(model, model_name)
 
     if log_as_artifact:
-        save_model_version(model, model_name)
+        save_model_version(model, model_name, Context.EVALUATION)
 
     return mlflow.pytorch.log_model(
         pytorch_model=model,
@@ -265,7 +265,7 @@ def log_artifact(artifact_path : str) -> None:
 def save_model_version(
         model: torch.nn.Module, 
         model_name: str, 
-        context:Context = Context.EVALUATION, 
+        context:Context, 
         step: Optional[int] = None
     ) -> None:
 
