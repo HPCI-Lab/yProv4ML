@@ -129,6 +129,7 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
         model (Union[torch.nn.Module, Any]): The model to be logged.
         model_name (str, optional): Name of the model. Defaults to "default".
         log_model_info (bool, optional): Whether to log model memory footprint. Defaults to True.
+        log_as_artifact (bool, optional): Whether to log the model as an artifact. Defaults to True.
     """
     if log_model_info:
         log_model_memory_footprint(model, model_name)
@@ -259,15 +260,30 @@ def log_optimizer(optimizer: torch.optim.Optimizer) -> None:
         log_param("lr", optimizer.param_groups[0]["lr"])
 
 def log_artifact(artifact_path : str) -> None:
+    """
+    Logs the specified artifact to the active MLflow run.
+
+    Parameters:
+        artifact_path (str): The file path of the artifact to log.
+    """
     # TODO: add separation for steps and contexts
     mlflow.log_artifact(artifact_path, run_id=mlflow.active_run().info.run_id)
 
 def save_model_version(
         model: torch.nn.Module, 
         model_name: str, 
-        context:Context, 
+        context: Context, 
         step: Optional[int] = None
     ) -> None:
+    """
+    Saves the state dictionary of the provided model and logs it as an artifact.
+    
+    Parameters:
+        model (torch.nn.Module): The PyTorch model to be saved.
+        model_name (str): The name under which to save the model.
+        context (Context): The context in which the model is saved.
+        step (Optional[int]): The step or epoch number associated with the saved model. Defaults to None.
+    """
 
     path = os.path.join(ARTIFACTS_SUBDIR, model_name)
     if not os.path.exists(path):
