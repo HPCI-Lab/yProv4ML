@@ -6,6 +6,10 @@ This library is a wrapper around MLFlow to provide a unified interface for loggi
 
 It allows users to create provenance graphs from the logged information.
 
+## Data Model
+
+![Data Model](./assets/prov4ml.datamodel.png)
+
 ## Example
 
 ![Example](./assets/example.svg)
