@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
-from .provenance.provenance_graph import first_level_prov, second_level_prov
+from .provenance.provenance_graph import first_level_prov
 from .constants import MLFLOW_SUBDIR, ARTIFACTS_SUBDIR
 
 @contextmanager
@@ -202,7 +202,7 @@ def end_run(create_graph: Optional[bool] = True):
     doc.add_namespace('prov-ml', 'prov-ml')
     
     doc = first_level_prov(active_run,doc)
-    doc = second_level_prov(active_run,doc)    
+    # doc = second_level_prov(active_run,doc)    
 
     #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
     # for input_tag in dataset_input.tags:

@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 from .utils import energy_utils, flops_utils, system_utils, time_utils
 from .provenance.context import Context
-from .constants import ARTIFACTS_SUBDIR
+from .constants import ARTIFACTS_SUBDIR, PROV4ML_DATA
 
 def log_metrics(
         metrics:Dict[str,Tuple[float,Context]],
@@ -53,6 +53,8 @@ def log_metric(key: str, value: float, context:Context, step: Optional[int] = No
         Optional[RunOperations]: The run operations object.
 
     """
+    PROV4ML_DATA.add_metric(key,value,step, context=context)
+
     client = mlflow.MlflowClient()
     client.set_tag(mlflow.active_run().info.run_id,f'metric.context.{key}',context.name)
     return client.log_metric(mlflow.active_run().info.run_id,key,value,step=step or 0,synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
@@ -82,6 +84,9 @@ def log_param(key: str, value: Any) -> None:
         key (str): The key of the parameter.
         value (Any): The value of the parameter.
     """
+
+    PROV4ML_DATA.add_parameter(key,value)
+
     return mlflow.log_param(key, value)
 
 def log_params(params: Dict[str, Any]) -> None:
@@ -259,7 +264,11 @@ def log_optimizer(optimizer: torch.optim.Optimizer) -> None:
     if len(optimizer.param_groups) > 0:
         log_param("lr", optimizer.param_groups[0]["lr"])
 
-def log_artifact(artifact_path : str) -> None:
+def log_artifact(
+        artifact_path : str, 
+        context: Context,
+        step: Optional[int] = None, 
+    ) -> None:
     """
     Logs the specified artifact to the active MLflow run.
 
