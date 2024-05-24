@@ -16,6 +16,13 @@ It allows users to create provenance graphs from the logged information.
 
 The image shown above has been generated from the [example](./examples/mlflow_lightning.py) program provided in the ```example``` directory.
 
+## Metrics Visualization
+
+  |   
+:-------------------------:|:-------------------------:
+![](assets/loss.png) | ![](assets/ee.png) 
+![](assets/cpu.png) | ![](assets/gpu.png)
+
 ## Experiments and Runs
 
 An experiment is a collection of runs. Each run is a single execution of a machine learning model. 
