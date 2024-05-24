@@ -38,9 +38,9 @@ def first_level_prov(
         node_rank = os.getenv("SLURM_NODEID", None)
         local_rank = os.getenv("SLURM_LOCALID", None) 
         run_entity.add_attributes({
-            "mlflow:global_rank":Prov4MLLOD.get_lv1_attr(global_rank),
-            "mlflow:local_rank":Prov4MLLOD.get_lv1_attr(local_rank),
-            "mlflow:node_rank":Prov4MLLOD.get_lv1_attr(node_rank),
+            "prov-ml:global_rank":Prov4MLLOD.get_lv1_attr(global_rank),
+            "prov-ml:local_rank":Prov4MLLOD.get_lv1_attr(local_rank),
+            "prov-ml:node_rank":Prov4MLLOD.get_lv1_attr(node_rank),
         })
 
     run_activity = doc.activity(f'{run.info.run_name}_execution', other_attributes={
@@ -50,7 +50,7 @@ def first_level_prov(
     #experiment entity generation
     experiment = doc.entity(PROV4ML_DATA.experiment_name,other_attributes={
         "prov-ml:type": Prov4MLLOD.get_lv1_attr("Experiment"),
-        "mlflow:experiment_id": Prov4MLLOD.get_lv1_attr(run.info.experiment_id),
+        # "mlflow:experiment_id": Prov4MLLOD.get_lv1_attr(run.info.experiment_id),
         "prov:level":Prov4MLLOD.LVL_1
     })
 
@@ -61,8 +61,11 @@ def first_level_prov(
         "prov:level":Prov4MLLOD.LVL_1,
     })
     doc.entity('source_code',{
-        "mlflow:source_name": Prov4MLLOD.get_lv1_attr(run.data.tags['mlflow.source.name']),
-        "mlflow:source_type": Prov4MLLOD.get_lv1_attr(run.data.tags['mlflow.source.type']),
+        "prov-ml:type": Prov4MLLOD.get_lv1_attr("SourceCode"),
+        "prov-ml:source_name": Prov4MLLOD.get_lv1_attr(__file__.split('/')[-1]),
+        "prov-ml:source_type": Prov4MLLOD.get_lv1_attr("LOCAL"), # TODO: get if on remote
+        # "mlflow:source_name": Prov4MLLOD.get_lv1_attr(run.data.tags['mlflow.source.name']),
+        # "mlflow:source_type": Prov4MLLOD.get_lv1_attr(run.data.tags['mlflow.source.type']),
         'prov:level':Prov4MLLOD.LVL_1,   
     })
 
@@ -97,7 +100,7 @@ def first_level_prov(
 
                 for metric_value in metric_per_epoch:
                     metric_entity.add_attributes({
-                        'mlflow:step-value':Prov4MLLOD.get_lv1_epoch_value(epoch, metric_value),
+                        'prov-ml:step-value':Prov4MLLOD.get_lv1_epoch_value(epoch, metric_value),
                     })
                 doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',
                                     identifier=f'{name}_{epoch}_gen',
@@ -139,7 +142,7 @@ def first_level_prov(
 
                 for metric_value in metric_per_epoch:
                     metric_entity.add_attributes({
-                        'mlflow:step-value':Prov4MLLOD.get_lv1_epoch_value(epoch, metric_value),
+                        'prov-ml:step-value':Prov4MLLOD.get_lv1_epoch_value(epoch, metric_value),
                     })
                 doc.wasGeneratedBy(metric_entity,f'eval',
                                     identifier=f'eval_gen',
@@ -149,7 +152,7 @@ def first_level_prov(
                         
     for name, param in PROV4ML_DATA.parameters.items():
         ent = doc.entity(f'{name}',{
-            'mlflow:value': Prov4MLLOD.get_lv1_attr(param.value),
+            'prov-ml:value': Prov4MLLOD.get_lv1_attr(param.value),
             'prov-ml:type': Prov4MLLOD.get_lv1_attr('Parameter'),
             'prov:level':Prov4MLLOD.LVL_1,
         })
@@ -210,7 +213,7 @@ def first_level_prov(
     #artifact entities generation
     for artifact in PROV4ML_DATA.get_artifacts():
         ent=doc.entity(f'{artifact.path}',{
-            'mlflow:artifact_path': Prov4MLLOD.get_lv1_attr(artifact.path),
+            'prov-ml:artifact_path': Prov4MLLOD.get_lv1_attr(artifact.path),
             'prov:level':Prov4MLLOD.LVL_1,
             #the FileInfo object stores only size and path of the artifact, specific connectors to the artifact store are needed to get other metadata
         })
