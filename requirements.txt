@@ -8,3 +8,4 @@ psutil
 GPUtil
 fvcore
 codecarbon
+pydot
