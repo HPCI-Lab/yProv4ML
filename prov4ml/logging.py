@@ -268,6 +268,7 @@ def log_artifact(
         artifact_path : str, 
         context: Context,
         step: Optional[int] = None, 
+        timestamp: Optional[int] = None
     ) -> None:
     """
     Logs the specified artifact to the active MLflow run.
@@ -275,14 +276,17 @@ def log_artifact(
     Parameters:
         artifact_path (str): The file path of the artifact to log.
     """
-    # TODO: add separation for steps and contexts
+    timestamp = timestamp or get_current_time_millis()
+    PROV4ML_DATA.add_artifact(artifact_path, step=step, context=context, timestamp=timestamp)
+
     mlflow.log_artifact(artifact_path, run_id=mlflow.active_run().info.run_id)
 
 def save_model_version(
         model: torch.nn.Module, 
         model_name: str, 
         context: Context, 
-        step: Optional[int] = None
+        step: Optional[int] = None, 
+        timestamp: Optional[int] = None
     ) -> None:
     """
     Saves the state dictionary of the provided model and logs it as an artifact.
@@ -299,4 +303,4 @@ def save_model_version(
         os.makedirs(path)
 
     torch.save(model.state_dict(), f"{path}/{model_name}.pth")
-    log_artifact(f"{path}/{model_name}.pth", context=context, step=step)
+    log_artifact(f"{path}/{model_name}.pth", context=context, step=step, timestamp=timestamp)

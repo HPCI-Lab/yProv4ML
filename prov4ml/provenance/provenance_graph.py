@@ -1,44 +1,12 @@
 
-import warnings
-import mlflow
 import os
 import prov
 import prov.model as prov
 from datetime import datetime
 from mlflow.entities import Run
-from mlflow.entities.file_info import FileInfo
-from typing import List
 
-from ..constants import Prov4MLLOD, PROV4ML_DATA
+from ..constants import Prov4MLLOD, PROV4ML_DATA, artifact_is_pytorch_model
 from ..provenance.context import Context
-
-def artifact_is_pytorch_model(artifact):
-    return artifact.path.endswith(".pt") or artifact.path.endswith(".pth") or artifact.path.endswith(".torch")
-
-def traverse_artifact_tree(
-        client:mlflow.MlflowClient,
-        run_id:str,path=None
-        ) -> List[FileInfo]:
-    """
-    Recursively traverses the artifact tree of a given run in MLflow and returns a list of FileInfo objects.
-
-    Args:
-        client (mlflow.MlflowClient): The MLflow client object.
-        run_id (str): The ID of the run.
-        path (str, optional): The path to start the traversal from. Defaults to None.
-
-    Returns:
-        List[FileInfo]: A list of FileInfo objects representing the artifacts in the tree.
-    """    
-
-    artifact_list=client.list_artifacts(run_id,path)
-    artifact_paths=[]
-    for artifact in artifact_list:
-        if artifact.is_dir:
-            artifact_paths.extend(traverse_artifact_tree(client,run_id,artifact.path))
-        else:
-            artifact_paths.append(artifact)
-    return artifact_paths
 
 def first_level_prov(
         run:Run, 
@@ -54,7 +22,6 @@ def first_level_prov(
     Returns:
         prov.ProvDocument: The provenance document.
     """
-    client = mlflow.MlflowClient()
 
     run_entity = doc.entity(f'{run.info.run_name}',other_attributes={
         "mlflow:run_id": Prov4MLLOD.get_lv1_attr(run.info.run_id),
@@ -79,7 +46,7 @@ def first_level_prov(
         "prov:level": Prov4MLLOD.LVL_1
     })
     #experiment entity generation
-    experiment = doc.entity(f'{client.get_experiment(run.info.experiment_id).name}',other_attributes={
+    experiment = doc.entity(PROV4ML_DATA.experiment_name,other_attributes={
         "prov-ml:type": Prov4MLLOD.get_lv1_attr("Experiment"),
         "mlflow:experiment_id": Prov4MLLOD.get_lv1_attr(run.info.experiment_id),
         "prov:level":Prov4MLLOD.LVL_1
@@ -134,6 +101,27 @@ def first_level_prov(
                                     identifier=f'{name}_{epoch}_gen',
                                     other_attributes={'prov:level':Prov4MLLOD.LVL_1})
                 
+            # elif metric.context == Context.VALIDATION:
+            #     if not doc.get_record(f'epoch_{epoch}'):
+            #         train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
+            #         "prov-ml:type": Prov4MLLOD.get_lv1_attr("ValidationExecution"),
+            #         'prov:level':Prov4MLLOD.LVL_1,
+            #         })
+            #         doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+
+            #     metric_entity = doc.entity(f'{name}',{
+            #         'prov-ml:type':Prov4MLLOD.get_lv1_attr('Metric'),
+            #         'prov:level':Prov4MLLOD.LVL_1,
+            #     })
+
+            #     for metric_value in metric_per_epoch:
+            #         metric_entity.add_attributes({
+            #             'mlflow:step-value':Prov4MLLOD.get_lv1_epoch_value(epoch, metric_value),
+            #         })
+            #     doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',
+            #                         identifier=f'{name}_{epoch}_gen',
+            #                         other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+                
             elif metric.context == Context.EVALUATION:
                 if not doc.get_record(f'eval'):
                     eval_activity=doc.activity(f'eval',other_attributes={
@@ -180,30 +168,26 @@ def first_level_prov(
     
 
     #model version entities generation
-    models_saved = client.search_model_versions(f'run_id="{run.info.run_id}"')
-    if len(models_saved) > 0:
-        model_version = models_saved[0] #only one model version per run (in this case)
+    model_version = PROV4ML_DATA.get_final_model()
+    model_entity_label = model_version.path
+    modv_ent=doc.entity(model_entity_label,{
+        "prov-ml:type": Prov4MLLOD.get_lv1_attr("ModelVersion"),
+        'prov-ml:creation_epoch': Prov4MLLOD.get_lv1_attr(model_version.step),
+        'prov-ml:artifact_uri': Prov4MLLOD.get_lv1_attr(model_version.path),
+        'prov-ml:creation_timestamp': Prov4MLLOD.get_lv1_attr(datetime.fromtimestamp(model_version.creation_timestamp / 1000)),
+        'prov-ml:last_modified_timestamp': Prov4MLLOD.get_lv1_attr(datetime.fromtimestamp(model_version.last_modified_timestamp / 1000)),
+        'prov:level': Prov4MLLOD.LVL_1
+    })
+    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_entity_label}_gen',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     
-        modv_ent=doc.entity(f'{model_version.name}_{model_version.version}',{
-            "prov-ml:type": Prov4MLLOD.get_lv1_attr("ModelVersion"),
-            'mlflow:version': Prov4MLLOD.get_lv1_attr(model_version.version),
-            'mlflow:artifact_uri': Prov4MLLOD.get_lv1_attr(model_version.source),
-            'mlflow:creation_timestamp': Prov4MLLOD.get_lv1_attr(datetime.fromtimestamp(model_version.creation_timestamp/1000)),
-            'mlflow:last_updated_timestamp': Prov4MLLOD.get_lv1_attr(datetime.fromtimestamp(model_version.last_updated_timestamp/1000)),
-            'prov:level': Prov4MLLOD.LVL_1
-        })
-        doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_version.name}_{model_version.version}_gen',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
-        
-        model = client.get_registered_model(model_version.name)
-        mod_ent=doc.entity(f'{model.name}',{
-            "prov-ml:type": Prov4MLLOD.get_lv1_attr("Model"),
-            'mlflow:creation_timestamp':Prov4MLLOD.get_lv1_attr(datetime.fromtimestamp(model.creation_timestamp/1000)),
-            'prov:level': Prov4MLLOD.LVL_1,
-        })
-        spec=doc.specializationOf(modv_ent,mod_ent)
-        spec.add_attributes({'prov:level':Prov4MLLOD.LVL_1})   #specilizationOf doesn't accept other_attributes, but its cast as record does
-    else:
-        warnings.warn(f"No model version found for run {run.info.run_id}. Did you remember to call prov4ml.log_model()?")
+    model_ser = doc.activity(f'mlflow:ModelRegistration',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+    doc.wasInformedBy(model_ser,run_activity,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+    doc.wasGeneratedBy(model_entity_label,model_ser,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+    
+    for artifact in PROV4ML_DATA.get_model_versions()[:-1]: 
+        memb=doc.hadMember(model_entity_label,f"{artifact.path}")
+        memb.add_attributes({'prov:level':Prov4MLLOD.LVL_1})
+    
 
     doc.activity("data_preparation",other_attributes={
         "prov-ml:type":"FeatureExtractionExecution",
@@ -221,23 +205,8 @@ def first_level_prov(
         doc.wasGeneratedBy(ent,'data_preparation',other_attributes={'prov:level':Prov4MLLOD.LVL_1})        #use two binary relation for yProv
     doc.used('data_preparation','dataset',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     
-    model_versions = client.search_model_versions(f'run_id="{run.info.run_id}"')
-    model_ser = doc.activity(f'mlflow:ModelRegistration',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
-    if len(model_versions) > 0:
-        model_version = model_versions[0]
-
-        doc.wasInformedBy(model_ser,run_activity,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
-        doc.wasGeneratedBy(f'{model_version.name}_{model_version.version}',model_ser,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
-        
-        for artifact in traverse_artifact_tree(client,run.info.run_id,model_version.name): #get artifacts whose path starts with TinyVGG: these are model serialization and metadata files
-            memb=doc.hadMember(f'{model_version.name}_{model_version.version}',f"{artifact.path}")
-            memb.add_attributes({'prov:level':Prov4MLLOD.LVL_1})
-    else: 
-        warnings.warn(f"No model version found for run {run.info.run_id}. Did you remember to call prov4ml.log_model()?")
-    
     #artifact entities generation
-    artifacts=traverse_artifact_tree(client,run.info.run_id)
-    for artifact in artifacts:
+    for artifact in PROV4ML_DATA.get_artifacts():
         ent=doc.entity(f'{artifact.path}',{
             'mlflow:artifact_path': Prov4MLLOD.get_lv1_attr(artifact.path),
             'prov:level':Prov4MLLOD.LVL_1,

@@ -11,7 +11,7 @@ from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
 from .provenance.provenance_graph import first_level_prov
-from .constants import MLFLOW_SUBDIR, ARTIFACTS_SUBDIR
+from .constants import MLFLOW_SUBDIR, ARTIFACTS_SUBDIR, PROV4ML_DATA
 
 @contextmanager
 def start_run_ctx(
@@ -46,6 +46,7 @@ def start_run_ctx(
 
     USER_NAMESPACE = prov_user_namespace
     PROV_SAVE_PATH = provenance_save_dir
+    PROV4ML_DATA.experiment = experiment_name
 
     if mlflow_save_dir:
         mlflow.set_tracking_uri(os.path.join(mlflow_save_dir, MLFLOW_SUBDIR))
@@ -99,7 +100,7 @@ def start_run_ctx(
     doc.add_namespace('prov-ml', 'prov-ml')
 
     doc = first_level_prov(active_run,doc)
-    doc = second_level_prov(active_run,doc)    
+    # doc = second_level_prov(active_run,doc)    
 
     #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
     # for input_tag in dataset_input.tags:
@@ -148,6 +149,7 @@ def start_run(
 
     USER_NAMESPACE = prov_user_namespace
     PROV_SAVE_PATH = provenance_save_dir
+    PROV4ML_DATA.experiment = experiment_name
 
     if mlflow_save_dir:
         mlflow.set_tracking_uri(os.path.join(mlflow_save_dir, MLFLOW_SUBDIR))
