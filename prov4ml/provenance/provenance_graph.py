@@ -5,7 +5,9 @@ import prov.model as prov
 from datetime import datetime
 from mlflow.entities import Run
 
-from ..constants import Prov4MLLOD, PROV4ML_DATA, artifact_is_pytorch_model
+from ..constants import PROV4ML_DATA
+from ..datamodel.lod import Prov4MLLOD
+from ..datamodel.artifact_data import artifact_is_pytorch_model
 from ..provenance.context import Context
 
 def first_level_prov(
