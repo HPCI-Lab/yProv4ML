@@ -18,7 +18,7 @@ The image shown above has been generated from the [example](./examples/mlflow_li
 
 ## Metrics Visualization
 
-  |   
+|||
 :-------------------------:|:-------------------------:
 ![](assets/loss.png) | ![](assets/ee.png) 
 ![](assets/cpu.png) | ![](assets/gpu.png)
