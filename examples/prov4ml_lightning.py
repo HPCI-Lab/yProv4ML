@@ -59,7 +59,7 @@ class MNISTModel(L.LightningModule):
 
     def configure_optimizers(self):
         optim = torch.optim.Adam(self.parameters(), lr=0.0002)
-        prov4ml.log_optimizer(optim)
+        prov4ml.log_param("optimizer", "Adam")
         return optim
 
 mnist_model = MNISTModel()
