@@ -148,20 +148,6 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
         registered_model_name=model_name
     )
 
-def log_optimizer(optimizer: torch.optim.Optimizer) -> None:
-    """Logs the provided optimizer to the MLflow tracking context.
-    
-    Args:
-        optimizer (torch.optim.Optimizer): The optimizer to be logged.
-    """
-    opt_name = optimizer.__class__.__name__
-    log_param("optimizer_name", opt_name)
-    log_param("optimizer_state_dict", optimizer.state_dict())
-    # lr
-    for param_group in optimizer.param_groups:
-        log_param("lr", param_group["lr"])
-        break
-
 def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Context, step: Optional[int] = None) -> None:
     """Logs the number of FLOPs (floating point operations) per epoch for the given model and dataset.
     
@@ -250,19 +236,6 @@ def log_carbon_metrics(
     client.log_metric(mlflow.active_run().info.run_id, "ram_energy", emissions.ram_energy, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
     client.set_tag(mlflow.active_run().info.run_id,'metric.context.energy_consumed',context.name)
     client.log_metric(mlflow.active_run().info.run_id, "energy_consumed", emissions.energy_consumed, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-
-def log_optimizer(optimizer: torch.optim.Optimizer) -> None:
-    """Logs the provided optimizer to the MLflow tracking context.
-    
-    Args:
-        optimizer (torch.optim.Optimizer): The optimizer to be logged.
-    """
-    opt_name = optimizer.__class__.__name__
-    log_param("optimizer_name", opt_name)
-    # log_param("optimizer_state_dict", optimizer.state_dict())
-
-    if len(optimizer.param_groups) > 0:
-        log_param("lr", optimizer.param_groups[0]["lr"])
 
 def log_artifact(
         artifact_path : str, 
