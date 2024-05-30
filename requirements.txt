@@ -9,3 +9,4 @@ GPUtil
 fvcore
 codecarbon
 pydot
+pyamdgpuinfo
