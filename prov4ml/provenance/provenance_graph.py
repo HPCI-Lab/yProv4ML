@@ -3,7 +3,9 @@ import os
 import prov
 import prov.model as prov
 from datetime import datetime
-from mlflow.entities import Run
+# from mlflow.entities import Run
+import subprocess
+import getpass
 
 from ..constants import PROV4ML_DATA
 from ..datamodel.lod import Prov4MLLOD
@@ -11,8 +13,9 @@ from ..datamodel.artifact_data import artifact_is_pytorch_model
 from ..provenance.context import Context
 
 def first_level_prov(
-        run:Run, 
+        # run:Run, 
         doc: prov.ProvDocument,
+        run_id : str,
     ) -> prov.ProvDocument:
     """
     Generates the first level of provenance for a given run.
@@ -25,11 +28,15 @@ def first_level_prov(
         prov.ProvDocument: The provenance document.
     """
 
-    run_entity = doc.entity(f'{run.info.run_name}',other_attributes={
-        "mlflow:run_id": Prov4MLLOD.get_lv1_attr(run.info.run_id),
-        "mlflow:artifact_uri":Prov4MLLOD.get_lv1_attr(run.info.artifact_uri),
+    run_name = PROV4ML_DATA.experiment_name + "_RID" + str(run_id)
+
+    run_entity = doc.entity(f'{run_name}',other_attributes={
+        # "mlflow:run_id": Prov4MLLOD.get_lv1_attr(run.info.run_id),
+        "prov-ml:provenance_path":Prov4MLLOD.get_lv1_attr(PROV4ML_DATA.PROV_SAVE_PATH),
+        # "mlflow:artifact_uri":Prov4MLLOD.get_lv1_attr(run.info.artifact_uri),
         "prov-ml:type": Prov4MLLOD.get_lv1_attr("LearningStage"),
-        "mlflow:user_id": Prov4MLLOD.get_lv1_attr(run.info.user_id),
+        # "mlflow:user_id": Prov4MLLOD.get_lv1_attr(run.info.user_id),
+        "prov-ml:user_id": Prov4MLLOD.get_lv1_attr(getpass.getuser()),
         "prov:level": Prov4MLLOD.LVL_1,
     })
         
@@ -43,40 +50,44 @@ def first_level_prov(
             "prov-ml:node_rank":Prov4MLLOD.get_lv1_attr(node_rank),
         })
 
-    run_activity = doc.activity(f'{run.info.run_name}_execution', other_attributes={
+    run_activity = doc.activity(f'{run_name}_execution', other_attributes={
         'prov-ml:type': Prov4MLLOD.get_lv1_attr("LearningExecution"),
         "prov:level": Prov4MLLOD.LVL_1
     })
     #experiment entity generation
     experiment = doc.entity(PROV4ML_DATA.experiment_name,other_attributes={
         "prov-ml:type": Prov4MLLOD.get_lv1_attr("Experiment"),
+        "prov-ml:experiment_name": Prov4MLLOD.get_lv1_attr(PROV4ML_DATA.experiment_name),
         # "mlflow:experiment_id": Prov4MLLOD.get_lv1_attr(run.info.experiment_id),
         "prov:level":Prov4MLLOD.LVL_1
     })
 
-    user_ag = doc.agent(f'{run.info.user_id}',other_attributes={
+    user_ag = doc.agent(f'{getpass.getuser()}',other_attributes={
         "prov:level":Prov4MLLOD.LVL_1,
     })
-    doc.wasAssociatedWith(f'{run.info.run_name}_execution',user_ag,other_attributes={
+    doc.wasAssociatedWith(f'{run_name}_execution',user_ag,other_attributes={
         "prov:level":Prov4MLLOD.LVL_1,
     })
     doc.entity('source_code',{
         "prov-ml:type": Prov4MLLOD.get_lv1_attr("SourceCode"),
         "prov-ml:source_name": Prov4MLLOD.get_lv1_attr(__file__.split('/')[-1]),
-        "prov-ml:source_type": Prov4MLLOD.get_lv1_attr("LOCAL"), # TODO: get if on remote
+        "prov-ml:source_type": Prov4MLLOD.get_lv1_attr("LOCAL") if global_rank is None else Prov4MLLOD.get_lv1_attr("SLURM"),
         # "mlflow:source_name": Prov4MLLOD.get_lv1_attr(run.data.tags['mlflow.source.name']),
         # "mlflow:source_type": Prov4MLLOD.get_lv1_attr(run.data.tags['mlflow.source.type']),
         'prov:level':Prov4MLLOD.LVL_1,   
     })
 
-    if 'mlflow.source.git.commit' in run.data.tags.keys():
+    try:
+        # Run the git command to get the current commit hash
+        commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
         doc.activity('commit',other_attributes={
-            "mlflow:source_git_commit": Prov4MLLOD.get_lv2_attr(run.data.tags['mlflow.source.git.commit']),
+            "prov-ml:source_git_commit": Prov4MLLOD.get_lv2_attr(commit_hash),
             'prov:level':Prov4MLLOD.LVL_1,
         })
         doc.wasGeneratedBy('source_code','commit',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
         doc.wasInformedBy(run_activity,'commit',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
-    else:
+    except:
+        print("Git not found, skipping commit hash retrieval")
         doc.used(run_activity,'source_code',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
 
 
@@ -159,17 +170,18 @@ def first_level_prov(
         doc.used(run_activity,ent,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
 
     #dataset entities generation
-    ent_ds = doc.entity(f'dataset',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
-    for dataset_input in run.inputs.dataset_inputs:
-        attributes={
-            'prov-ml:type': Prov4MLLOD.get_lv1_attr('Dataset'),
-            'mlflow:digest': Prov4MLLOD.get_lv1_attr(dataset_input.dataset.digest),
-            'prov:level':Prov4MLLOD.LVL_1,
-        }
+    # ent_ds = doc.entity(f'dataset',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+    # for dataset_input in run.inputs.dataset_inputs:
+    #     attributes={
+    #         'prov-ml:type': Prov4MLLOD.get_lv1_attr('Dataset'),
+    #         # TODO: add dataset profile and schema
+    #         # 'mlflow:digest': Prov4MLLOD.get_lv1_attr(dataset_input.dataset.digest),
+    #         'prov:level':Prov4MLLOD.LVL_1,
+    #     }
 
-        ent= doc.entity(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
-        doc.used(run_activity,ent, other_attributes={'prov:level':Prov4MLLOD.LVL_1})
-        doc.wasDerivedFrom(ent,ent_ds,identifier=f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+    #     ent= doc.entity(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
+    #     doc.used(run_activity,ent, other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+    #     doc.wasDerivedFrom(ent,ent_ds,identifier=f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     
 
     #model version entities generation
@@ -185,7 +197,7 @@ def first_level_prov(
     })
     doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_entity_label}_gen',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     
-    model_ser = doc.activity(f'mlflow:ModelRegistration',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
+    model_ser = doc.activity(f'prov-ml:ModelRegistration',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     doc.wasInformedBy(model_ser,run_activity,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     doc.wasGeneratedBy(model_entity_label,model_ser,other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     
@@ -199,15 +211,16 @@ def first_level_prov(
         'prov:level':Prov4MLLOD.LVL_1,
     })
     #add attributes to dataset entities
-    for dataset_input in run.inputs.dataset_inputs:
-        attributes={
-            'mlflow:profile': Prov4MLLOD.get_lv2_attr(dataset_input.dataset.profile),
-            'mlflow:schema': Prov4MLLOD.get_lv2_attr(dataset_input.dataset.schema),
-        }
-        ent= doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}')[0]
-        ent.add_attributes(attributes)
+    # for dataset_input in run.inputs.dataset_inputs:
+    #     attributes={
+    #         # TODO: add dataset profile and schema
+    #         # 'mlflow:profile': Prov4MLLOD.get_lv2_attr(dataset_input.dataset.profile),
+    #         # 'mlflow:schema': Prov4MLLOD.get_lv2_attr(dataset_input.dataset.schema),
+    #     }
+    #     ent= doc.get_record(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}')[0]
+    #     ent.add_attributes(attributes)
 
-        doc.wasGeneratedBy(ent,'data_preparation',other_attributes={'prov:level':Prov4MLLOD.LVL_1})        #use two binary relation for yProv
+    #     doc.wasGeneratedBy(ent,'data_preparation',other_attributes={'prov:level':Prov4MLLOD.LVL_1})        #use two binary relation for yProv
     doc.used('data_preparation','dataset',other_attributes={'prov:level':Prov4MLLOD.LVL_1})
     
     #artifact entities generation

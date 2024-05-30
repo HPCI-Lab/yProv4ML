@@ -1,4 +1,3 @@
-import os
 import lightning as L
 import torch
 import torch.nn.functional as F
@@ -96,14 +95,5 @@ test_ds = Subset(test_ds, range(BATCH_SIZE*2))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 result = trainer.test(mnist_model, test_loader)
 
-# get the run id for saving the provenance graph
-# this has to be done before ending the run
-run_id = prov4ml.get_run_id()
-dot_path = f"prov/provgraph_{run_id}.dot"
-
 # save the provenance graph
 prov4ml.end_run()
-
-# run the command dot -Tsvg -O prov_graph.dot
-# to generate the graph in svg format
-os.system(f"dot -Tsvg -O {dot_path}")
