@@ -1,23 +1,16 @@
 import os
 import torch
 import warnings
-import time
 # import mlflow
 # from mlflow.entities import Metric, RunTag
-# from mlflow.tracking.fluent import log_metric, log_param
+from mlflow.tracking.fluent import log_metric, log_param
 # from mlflow.tracking.fluent import get_current_time_millis
-# from mlflow.utils.async_logging.run_operations import RunOperations
+from mlflow.utils.async_logging.run_operations import RunOperations
 from typing import Any, Dict, Optional, Tuple, Union
 
-from .utils import energy_utils, flops_utils, system_utils, time_utils
+from .utils import energy_utils, flops_utils, system_utils, time_utils, funcs
 from .provenance.context import Context
-from .constants import ARTIFACTS_SUBDIR, PROV4ML_DATA
-
-def get_current_time_millis():
-    """
-    Returns the time in milliseconds since the epoch as an integer number.
-    """
-    return int(time.time() * 1000)
+from .constants import PROV4ML_DATA
 
 # def log_metrics(
 #         metrics:Dict[str,Tuple[float,Context]],
@@ -44,7 +37,7 @@ def get_current_time_millis():
 
 #     return client.log_batch(mlflow.active_run().info.run_id,metrics=metrics_arr,tags=tag_arr,synchronous=synchronous)
 
-def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, synchronous: bool = True, timestamp: Optional[int] = None):# -> Optional[RunOperations]:
+def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, synchronous: bool = True, timestamp: Optional[int] = None) -> Optional[RunOperations]:
     """
     Logs a metric with the specified key, value, and context.
 
@@ -93,7 +86,6 @@ def log_param(key: str, value: Any) -> None:
     """
 
     PROV4ML_DATA.add_parameter(key,value)
-
     # return mlflow.log_param(key, value)
 
 # def log_params(params: Dict[str, Any]) -> None:
@@ -117,7 +109,10 @@ def log_model_memory_footprint(model: Union[torch.nn.Module, Any], model_name: s
     try: 
         if hasattr(model, "trainer"): 
             precision_to_bits = {"64": 64, "32": 32, "16": 16, "bf16": 16}
-            precision = precision_to_bits.get(model.trainer.precision, 32)  
+            if hasattr(model.trainer, "precision"):
+                precision = precision_to_bits.get(model.trainer.precision, 32)
+            else: 
+                precision = 32
         else: 
             precision = 32
     except RuntimeError: 
@@ -149,6 +144,7 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
     if log_as_artifact:
         save_model_version(model, model_name, Context.EVALUATION)
 
+    # TODO: Implement model logging as a registered model
     # return mlflow.pytorch.log_model(
     #     pytorch_model=model,
     #     artifact_path=mlflow.active_run().info.run_name.split("/")[-1],
@@ -193,23 +189,12 @@ def log_system_metrics(
         synchronous (bool, optional): If True, performs synchronous logging. Defaults to True.
         timestamp (Optional[int], optional): The timestamp for the logged metrics. Defaults to None.
     """
-    # client = mlflow.MlflowClient()
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.cpu_usage',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "cpu_usage", system_utils.get_cpu_usage(), step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.memory_usage',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "memory_usage", system_utils.get_memory_usage(), step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.disk_usage',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "disk_usage", system_utils.get_disk_usage(), step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.gpu_memory_usage',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "gpu_memory_usage", system_utils.get_gpu_memory_usage(), step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.gpu_usage',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "gpu_usage", system_utils.get_gpu_usage(), step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-
     log_metric("cpu_usage", system_utils.get_cpu_usage(), context, step=step, synchronous=synchronous, timestamp=timestamp)
     log_metric("memory_usage", system_utils.get_memory_usage(), context, step=step, synchronous=synchronous, timestamp=timestamp)
     log_metric("disk_usage", system_utils.get_disk_usage(), context, step=step, synchronous=synchronous, timestamp=timestamp)
     log_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), context, step=step, synchronous=synchronous, timestamp=timestamp)
     log_metric("gpu_usage", system_utils.get_gpu_usage(), context, step=step, synchronous=synchronous, timestamp=timestamp)
+    log_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), context, step=step, synchronous=synchronous, timestamp=timestamp)
 
 def log_carbon_metrics(
     context: Context,
@@ -240,26 +225,6 @@ def log_carbon_metrics(
     log_metric("ram_energy", emissions.ram_energy, context, step=step, synchronous=synchronous, timestamp=timestamp)
     log_metric("energy_consumed", emissions.energy_consumed, context, step=step, synchronous=synchronous, timestamp=timestamp)
 
-    # client = mlflow.MlflowClient()
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.emissions',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "emissions", emissions.energy_consumed, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.emissions_rate',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "emissions_rate", emissions.emissions_rate, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.cpu_power',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "cpu_power", emissions.cpu_power, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.gpu_power',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "gpu_power", emissions.gpu_power, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.ram_power',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "ram_power", emissions.ram_power, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.cpu_energy',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "cpu_energy", emissions.cpu_energy, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.gpu_energy',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "gpu_energy", emissions.gpu_energy, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.ram_energy',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "ram_energy", emissions.ram_energy, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-    # client.set_tag(mlflow.active_run().info.run_id,'metric.context.energy_consumed',context.name)
-    # client.log_metric(mlflow.active_run().info.run_id, "energy_consumed", emissions.energy_consumed, step=step, synchronous=synchronous,timestamp=timestamp or get_current_time_millis())
-
 def log_artifact(
         artifact_path : str, 
         context: Context,
@@ -272,7 +237,7 @@ def log_artifact(
     Parameters:
         artifact_path (str): The file path of the artifact to log.
     """
-    timestamp = timestamp or get_current_time_millis()
+    timestamp = timestamp or funcs.get_current_time_millis()
     PROV4ML_DATA.add_artifact(artifact_path, step=step, context=context, timestamp=timestamp)
 
     # mlflow.log_artifact(artifact_path, run_id=mlflow.active_run().info.run_id)
@@ -294,7 +259,7 @@ def save_model_version(
         step (Optional[int]): The step or epoch number associated with the saved model. Defaults to None.
     """
 
-    path = os.path.join(ARTIFACTS_SUBDIR, model_name)
+    path = os.path.join(PROV4ML_DATA.ARTIFACTS_DIR, model_name)
     if not os.path.exists(path):
         os.makedirs(path)
 

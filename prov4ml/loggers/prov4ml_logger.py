@@ -5,7 +5,7 @@ from typing_extensions import override
 from argparse import Namespace
 from torch import Tensor
 
-from ..logging import log_params, log_metric
+from ..logging import log_param, log_metric
 from ..provenance.context import Context
 
 class ProvMLLogger(Logger):
@@ -85,7 +85,12 @@ class ProvMLLogger(Logger):
         return self._version
     
     @override
-    def log_metrics(self, metrics: Dict[str, Union[Tensor, float]], step: Optional[int] = None) -> None:
+    def log_metrics(
+        self, 
+        metrics: Dict[str, Union[Tensor, float]], 
+        step: Optional[int] = None, 
+        context : Optional[Context] = None
+        ) -> None:
         """
         Logs the provided metrics to the MLflow tracking context.
 
@@ -93,6 +98,9 @@ class ProvMLLogger(Logger):
             metrics (Dict[str, Union[Tensor, float]]): A dictionary containing the metrics and their associated values.
             step (Optional[int]): The step number for the metrics. Defaults to None.
         """
+        print(metrics)
+        print(step)
+        print(context)
         log_metric(list(metrics.keys())[0], metrics[list(metrics.keys())[0]], context=Context.TRAINING, step=metrics["epoch"])
     
     @override
@@ -103,4 +111,5 @@ class ProvMLLogger(Logger):
         Parameters:
             params (Union[Dict[str, Any], Namespace]): The hyperparameters to be logged.
         """
-        log_params(params)
+        for key, value in params.items():
+            log_param(key, value)

@@ -1,7 +1,4 @@
 import os
-# import mlflow
-# from mlflow import ActiveRun
-import prov.model as prov
 import prov.dot as dot
 
 from typing import Optional, Dict, Any
@@ -10,21 +7,17 @@ from contextlib import contextmanager
 from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
-from .provenance.provenance_graph import first_level_prov
-from .constants import MLFLOW_SUBDIR, ARTIFACTS_SUBDIR, PROV4ML_DATA
+from .provenance.provenance_graph import create_prov_document
+from .constants import PROV4ML_DATA
 
 @contextmanager
 def start_run_ctx(
     prov_user_namespace: str,
     experiment_name: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
-    mlflow_save_dir: Optional[str] = None,
-    nested: bool = False,
-    tags: Optional[Dict[str, Any]] = None,
-    description: Optional[str] = None,
-    log_system_metrics: Optional[bool] = None, 
-    create_graph: Optional[bool] = True
-    ): # type: ignore
+    create_graph: Optional[bool] = False, 
+    create_svg: Optional[bool] = False
+    ) -> None: # type: ignore
     """
     Starts an MLflow run and generates provenance information.
 
@@ -42,38 +35,11 @@ def start_run_ctx(
         ActiveRun: The active run object.
 
     """
+    if create_svg and not create_graph:
+        raise ValueError("Cannot create SVG without creating the graph.")
 
-    # PROV_SAVE_PATH = provenance_save_dir
-    PROV4ML_DATA.set_provenance_save_path(provenance_save_dir)
-    PROV4ML_DATA.set_experiment_name(experiment_name)
-    PROV4ML_DATA.set_user_namespace(prov_user_namespace)
-
-    # if mlflow_save_dir:
-    #     mlflow.set_tracking_uri(os.path.join(mlflow_save_dir, MLFLOW_SUBDIR))
-
-    # exp = mlflow.get_experiment_by_name(name=experiment_name)
-    # if not exp:
-    #     if mlflow_save_dir: 
-    #         experiment_id = mlflow.create_experiment(
-    #             name=experiment_name,
-    #             artifact_location=os.path.join(mlflow_save_dir, ARTIFACTS_SUBDIR)
-    #         )
-    #     else: 
-    #         experiment_id = mlflow.create_experiment(name=experiment_name)
-    # else:
-    #     experiment_id = exp.experiment_id
-
-    # mlflow.set_experiment(experiment_name)
-    # mlflow.pytorch.autolog(silent=True)
-
-    # current_run = mlflow.start_run(
-    #     experiment_id=experiment_id,
-    #     nested=nested,
-    #     tags=tags,
-    #     description=description,
-    #     log_system_metrics=log_system_metrics, 
-    # )
-
+    PROV4ML_DATA.init(experiment_name=experiment_name, prov_save_path=provenance_save_dir, user_namespace=prov_user_namespace)
+   
     energy_utils._carbon_init()
     flops_utils._init_flops_counters()
 
@@ -83,44 +49,21 @@ def start_run_ctx(
 
     log_execution_end_time()
 
-    # run_id=mlflow.active_run().info.run_id
-    
-    # mlflow.end_run() #end the run, as per mlflow documentation
+    doc = create_prov_document()
 
-    # client = mlflow.MlflowClient()
-    # active_run=client.get_run(run_id)
+    graph_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.json'
+    dot_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.dot'
 
-    doc = prov.ProvDocument()
+    if not os.path.exists(PROV4ML_DATA.EXPERIMENT_DIR):
+        os.makedirs(PROV4ML_DATA.EXPERIMENT_DIR, exist_ok=True)
 
-    #set namespaces
-    doc.set_default_namespace(PROV4ML_DATA.PROV_USER_NAMESPACE)
-    doc.add_namespace('prov','http://www.w3.org/ns/prov#')
-    doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
-    doc.add_namespace('mlflow', 'mlflow') #TODO: find namespaces of mlflow and prov-ml ontologies
-    doc.add_namespace('prov-ml', 'prov-ml')
-
-    exp_id = 0 #active_run.info.experiment_id
-    doc = first_level_prov(doc, exp_id)
-    # doc = second_level_prov(active_run,doc)    
-
-    #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
-    # for input_tag in dataset_input.tags:
-    #     attributes[f'mlflow:{input_tag.key.strip("mlflow.")}']=str(input_tag.value)
-    # for key,value in ds_tags['tags'].items():
-    #     attributes[f'mlflow:{str(key).strip("mlflow.")}']=str(value)
-
-    graph_filename = f'provgraph_{exp_id}.json'
-    dot_filename = f'provgraph_{exp_id}.dot'
-    path_graph = "/".join([PROV4ML_DATA.PROV_SAVE_PATH, graph_filename]) if PROV4ML_DATA.PROV_SAVE_PATH else graph_filename
-
-    if PROV4ML_DATA.PROV_SAVE_PATH and not os.path.exists(PROV4ML_DATA.PROV_SAVE_PATH):
-        os.makedirs(PROV4ML_DATA.PROV_SAVE_PATH)
+    path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
 
     with open(path_graph,'w') as prov_graph:
         doc.serialize(prov_graph)
 
     if create_graph:
-        path_dot = "/".join([PROV4ML_DATA.PROV_SAVE_PATH, dot_filename]) if PROV4ML_DATA.PROV_SAVE_PATH else dot_filename
+        path_dot = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, dot_filename)
         with open(path_dot, 'w') as prov_dot:
             prov_dot.write(dot.prov_to_dot(doc).to_string())
 
@@ -128,11 +71,6 @@ def start_run(
     prov_user_namespace: str,
     experiment_name: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
-    mlflow_save_dir: Optional[str] = None,
-    nested: bool = False,
-    tags: Optional[Dict[str, Any]] = None,
-    description: Optional[str] = None,
-    log_system_metrics: Optional[bool] = None
     ) -> None:
     """Starts an MLflow run with the specified configurations and options.
     
@@ -147,91 +85,42 @@ def start_run(
         log_system_metrics (Optional[bool], optional): If True, logs system metrics during the run. Defaults to None.
     """
 
-    PROV4ML_DATA.set_provenance_save_path(provenance_save_dir)
-    PROV4ML_DATA.set_experiment_name(experiment_name)
-    PROV4ML_DATA.set_user_namespace(prov_user_namespace)
-
-    # if mlflow_save_dir:
-    #     mlflow.set_tracking_uri(os.path.join(mlflow_save_dir, MLFLOW_SUBDIR))
-
-    # exp = mlflow.get_experiment_by_name(name=experiment_name)
-    # if not exp:
-    #     if mlflow_save_dir: 
-    #         experiment_id = mlflow.create_experiment(
-    #             name=experiment_name,
-    #             artifact_location=os.path.join(mlflow_save_dir, ARTIFACTS_SUBDIR)
-    #         )
-    #     else: 
-    #         experiment_id = mlflow.create_experiment(name=experiment_name)
-    # else:
-    #     experiment_id = exp.experiment_id
-
-    # mlflow.set_experiment(experiment_name)
-    # mlflow.pytorch.autolog(silent=True)
-
-    # mlflow.start_run(
-    #     experiment_id=experiment_id,
-    #     nested=nested,
-    #     tags=tags,
-    #     description=description,
-    #     log_system_metrics=log_system_metrics, 
-    # )
+    PROV4ML_DATA.init(experiment_name=experiment_name, prov_save_path=provenance_save_dir, user_namespace=prov_user_namespace)
 
     energy_utils._carbon_init()
     flops_utils._init_flops_counters()
 
     log_execution_start_time()
 
-def end_run(create_graph: Optional[bool] = True): 
+def end_run(
+        create_graph: Optional[bool] = False, 
+        create_svg: Optional[bool] = False
+        ): 
     """Ends the active MLflow run, generates provenance graph, and saves it."""
+
+    if create_svg and not create_graph:
+        raise ValueError("Cannot create SVG without creating the graph.")
     
     log_execution_end_time()
 
-    # run_id=mlflow.active_run().info.run_id
+    doc = create_prov_document()
+   
+    graph_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.json'
+    dot_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.dot'
     
-    # mlflow.end_run() #end the run, as per mlflow documentation
-
-    # client = mlflow.MlflowClient()
-    # active_run=client.get_run(run_id)
-
-    doc = prov.ProvDocument()
-
-    #set namespaces
-    doc.set_default_namespace(PROV4ML_DATA.PROV_USER_NAMESPACE)
-    doc.add_namespace('prov','http://www.w3.org/ns/prov#')
-    doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
-    doc.add_namespace('mlflow', 'mlflow') #TODO: find namespaces of mlflow and prov-ml ontologies
-    doc.add_namespace('prov-ml', 'prov-ml')
+    if not os.path.exists(PROV4ML_DATA.EXPERIMENT_DIR):
+        os.makedirs(PROV4ML_DATA.EXPERIMENT_DIR, exist_ok=True)
     
-    exp_id = 0 #active_run.info.experiment_id
-    doc = first_level_prov(doc, exp_id)
-    # doc = second_level_prov(active_run,doc)    
-
-    #datasets are associated with two sets of tags: input tags, of the DatasetInput object, and the tags of the dataset itself
-    # for input_tag in dataset_input.tags:
-    #     attributes[f'mlflow:{input_tag.key.strip("mlflow.")}']=str(input_tag.value)
-    # for key,value in ds_tags['tags'].items():
-    #     attributes[f'mlflow:{str(key).strip("mlflow.")}']=str(value)
-
-    graph_filename = f'provgraph_{exp_id}.json'
-    dot_filename = f'provgraph_{exp_id}.dot'
-    path_graph = "/".join([PROV4ML_DATA.PROV_SAVE_PATH, graph_filename]) if PROV4ML_DATA.PROV_SAVE_PATH else graph_filename
-
-    if PROV4ML_DATA.PROV_SAVE_PATH and not os.path.exists(PROV4ML_DATA.PROV_SAVE_PATH):
-        os.makedirs(PROV4ML_DATA.PROV_SAVE_PATH)
+    path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
 
     with open(path_graph,'w') as prov_graph:
         doc.serialize(prov_graph)
 
     if create_graph:
-        path_dot = "/".join([PROV4ML_DATA.PROV_SAVE_PATH, dot_filename]) if PROV4ML_DATA.PROV_SAVE_PATH else dot_filename
+        path_dot = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, dot_filename)
         with open(path_dot, 'w') as prov_dot:
             prov_dot.write(dot.prov_to_dot(doc).to_string())
 
-# def get_run_id(): 
-#     """Returns the ID of the currently active MLflow run.
+    if create_svg:
+        os.system(f"dot -Tsvg -O {path_dot}")
 
-#     Returns:
-#         str: The ID of the currently active MLflow run.
-#     """
-#     return mlflow.active_run().info.run_id
