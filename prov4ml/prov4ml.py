@@ -1,7 +1,7 @@
 import os
 import prov.dot as dot
 
-from typing import Optional, Dict, Any
+from typing import Optional
 from contextlib import contextmanager
 
 from .utils import energy_utils

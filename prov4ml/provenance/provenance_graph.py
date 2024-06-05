@@ -3,7 +3,6 @@ import os
 import prov
 import prov.model as prov
 from datetime import datetime
-# from mlflow.entities import Run
 import getpass
 import subprocess
 
@@ -29,10 +28,9 @@ def create_prov_document() -> prov.ProvDocument:
     doc.set_default_namespace(PROV4ML_DATA.USER_NAMESPACE)
     doc.add_namespace('prov','http://www.w3.org/ns/prov#')
     doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
-    doc.add_namespace('mlflow', 'mlflow') #TODO: find namespaces of mlflow and prov-ml ontologies
     doc.add_namespace('prov-ml', 'prov-ml')
 
-    run_name = PROV4ML_DATA.EXPERIMENT_NAME # TODO: fix
+    run_name = PROV4ML_DATA.EXPERIMENT_NAME 
     run_entity = doc.entity(f'{run_name}',other_attributes={
         "prov-ml:provenance_path":Prov4MLAttribute.get_attr(PROV4ML_DATA.PROV_SAVE_PATH),
         "prov-ml:artifact_uri":Prov4MLAttribute.get_attr(PROV4ML_DATA.ARTIFACTS_DIR),
@@ -111,6 +109,9 @@ def create_prov_document() -> prov.ProvDocument:
         if not doc.get_record(f'{name}_{ctx}'):
             metric_entity = doc.entity(f'{name}_{ctx}',{
                 'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
+                'prov-ml:name':Prov4MLAttribute.get_attr(name),
+                'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
+                'prov-ml:source':Prov4MLAttribute.get_source_from_kind(metric.source),
                 # 'prov:level':1,
             })
         else:
@@ -205,6 +206,7 @@ def create_prov_document() -> prov.ProvDocument:
     #              )
     #     doc.wasDerivedFrom(ent,ent_ds,identifier=f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der',other_attributes={'prov:level':1})
     
+
 
     #model version entities generation
     model_version = PROV4ML_DATA.get_final_model()
