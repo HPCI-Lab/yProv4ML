@@ -2,9 +2,10 @@
 import psutil
 import torch
 import sys
-import pyamdgpuinfo
+import warnings
 if sys.platform != 'darwin':
     import GPUtil
+    import pyamdgpuinfo
 else: 
     import apple_gpu
 
@@ -59,16 +60,12 @@ def get_gpu_power_usage() -> float:
         gpu_power = 0.0
         if torch.cuda.is_available():
             current_gpu = torch.cuda.current_device()
-            gpus = GPUtil.getGPUs()
-            if current_gpu < len(gpus) and hasattr(gpus[current_gpu], 'power'):
-                gpu_power = gpus[current_gpu].power
-            else:
+            gpu = pyamdgpuinfo.get_gpu(current_gpu)
+            try:
+                gpu_power = gpu.query_power()
+            except:
                 gpu_power = 0.0
-
-            if gpu_power is None:
-                n_devices = pyamdgpuinfo.detect_gpus()
-                first_gpu = pyamdgpuinfo.get_gpu(0) # returns a GPUInfo object
-                gpu_power = first_gpu.query_power()
+                warnings.warn("Could not query GPU power usage.")   
     else:
         statistics = apple_gpu.accelerator_performance_statistics()
         if 'Power Usage' in statistics.keys():
@@ -78,37 +75,6 @@ def get_gpu_power_usage() -> float:
 
     return gpu_power
     
-
-def get_gpu_temperature() -> float:
-    """
-    Returns the current GPU temperature, if GPU is available.
-    
-    Returns:
-        float: The GPU temperature.
-    """
-    if sys.platform != 'darwin':
-        gpu_temperature = 0.0
-        if torch.cuda.is_available():
-            current_gpu = torch.cuda.current_device()
-            gpus = GPUtil.getGPUs()
-            if current_gpu < len(gpus) and hasattr(gpus[current_gpu], 'temperature'):
-                gpu_temperature = gpus[current_gpu].temperature
-            else:
-                gpu_temperature = 0.0
-
-            if gpu_temperature is None:
-                n_devices = pyamdgpuinfo.detect_gpus()
-                first_gpu = pyamdgpuinfo.get_gpu(0)
-                gpu_temperature = first_gpu.query_temperature()
-    else:
-        statistics = apple_gpu.accelerator_performance_statistics()
-        if 'Temperature' in statistics.keys():
-            gpu_temperature = statistics['Temperature']
-        else:
-            gpu_temperature = 0.0
-
-    return gpu_temperature
-
 def get_gpu_usage() -> float:
     """
     Returns the current GPU usage percentage, if GPU is available.
@@ -120,16 +86,12 @@ def get_gpu_usage() -> float:
         gpu_utilization = 0.0
         if torch.cuda.is_available():
             current_gpu = torch.cuda.current_device()
-            gpus = GPUtil.getGPUs()
-            if current_gpu < len(gpus) and hasattr(gpus[current_gpu], 'load'):
-                gpu_utilization = gpus[current_gpu].load
-            else:
+            gpu = pyamdgpuinfo.get_gpu(current_gpu)
+            try: 
+                gpu_utilization = gpu.query_utilization()
+            except:
                 gpu_utilization = 0.0
-
-            if gpu_utilization is None:
-                n_devices = pyamdgpuinfo.detect_gpus()
-                first_gpu = pyamdgpuinfo.get_gpu(0)
-                gpu_utilization = first.query_load()
+                warnings.warn("Could not query GPU utilization.")
     else:
         statistics = apple_gpu.accelerator_performance_statistics()
         if 'Device Utilization' in statistics.keys():

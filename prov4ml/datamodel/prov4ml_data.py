@@ -1,9 +1,12 @@
 
+import os
 from typing import Any, Dict, List, Optional
 
 from .artifact_data import ArtifactInfo
 from .parameter_data import ParameterInfo
 from .metric_data import MetricInfo
+from ..provenance.context import Context
+from ..utils import funcs
 
 class Prov4MLData:
     """
@@ -16,11 +19,36 @@ class Prov4MLData:
         experiment_name (str): The name of the experiment.
     """
     def __init__(self) -> None:
-        self.metrics: Dict[str, MetricInfo] = {}
+        self.metrics: Dict[(str, Context), MetricInfo] = {}
         self.parameters: Dict[str, ParameterInfo] = {}
-        self.artifacts: Dict[str, ArtifactInfo] = {}
+        self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
 
-        self.experiment_name = "test_experiment"
+        self.PROV_SAVE_PATH = "prov_save_path"
+        self.EXPERIMENT_NAME = "test_experiment"
+        self.EXPERIMENT_DIR = "test_experiment_dir"
+        self.ARTIFACTS_DIR = "artifact_dir"
+        self.USER_NAMESPACE = "user_namespace"
+        self.RUN_ID = 0
+
+    def init(self, experiment_name, prov_save_path=None, user_namespace=None): 
+        if prov_save_path: 
+            self.PROV_SAVE_PATH = prov_save_path
+        if user_namespace:
+            self.USER_NAMESPACE = user_namespace
+        
+        global_rank = os.getenv("SLURM_PROCID", None)
+        self.EXPERIMENT_NAME = experiment_name + f"_GR{global_rank}" if global_rank else experiment_name
+
+        # look at PROV dir how many experiments are there with the same name
+        if not os.path.exists(self.PROV_SAVE_PATH):
+            os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
+        prev_exps = os.listdir(self.PROV_SAVE_PATH) if self.PROV_SAVE_PATH else []
+        run_id = len([exp for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]) 
+
+        self.EXPERIMENT_DIR = os.path.join(self.PROV_SAVE_PATH, experiment_name + f"_{run_id}")
+        self.RUN_ID = run_id
+        self.ARTIFACTS_DIR = os.path.join(self.EXPERIMENT_DIR, "artifacts")
+
 
     def add_metric(self, metric: str, value: Any, step: int, context: Optional[Any] = None) -> None:
         """
@@ -32,9 +60,9 @@ class Prov4MLData:
             step (int): The step number for the metric.
             context (Optional[Any]): The context of the metric. Defaults to None.
         """
-        if metric not in self.metrics:
-            self.metrics[metric] = MetricInfo(metric, context)
-        self.metrics[metric].add_metric(value, step)
+        if (metric, context) not in self.metrics:
+            self.metrics[(metric, context)] = MetricInfo(metric, context)
+        self.metrics[(metric, context)].add_metric(value, step)
 
     def add_parameter(self, parameter: str, value: Any) -> None:
         """
@@ -64,7 +92,7 @@ class Prov4MLData:
             context (Optional[Any]): The context of the artifact. Defaults to None.
             timestamp (Optional[int]): The timestamp of the artifact. Defaults to None.
         """
-        self.artifacts[artifact_name] = ArtifactInfo(artifact_name, value, step, context=context, timestamp=timestamp)
+        self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, value, step, context=context, timestamp=timestamp)
 
     def get_artifacts(self) -> List[ArtifactInfo]:
         """
