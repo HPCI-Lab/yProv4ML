@@ -1,5 +1,6 @@
 
 from typing import Any, Dict, List
+from .attribute_type import LoggingItemKind
 
 class MetricInfo:
     """
@@ -10,9 +11,10 @@ class MetricInfo:
         context (Any): The context of the metric.
         epochDataList (Dict[int, List[Any]]): A dictionary mapping epochs to lists of metric values.
     """
-    def __init__(self, name: str, context: Any) -> None:
+    def __init__(self, name: str, context: Any, source=LoggingItemKind) -> None:
         self.name = name
         self.context = context
+        self.source = source
         self.epochDataList: Dict[int, List[Any]] = {}
 
     def add_metric(self, value: Any, epoch: int) -> None:

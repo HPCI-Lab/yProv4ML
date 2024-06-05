@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from .artifact_data import ArtifactInfo
+from .attribute_type import LoggingItemKind
 from .parameter_data import ParameterInfo
 from .metric_data import MetricInfo
 from ..provenance.context import Context
@@ -50,7 +51,7 @@ class Prov4MLData:
         self.ARTIFACTS_DIR = os.path.join(self.EXPERIMENT_DIR, "artifacts")
 
 
-    def add_metric(self, metric: str, value: Any, step: int, context: Optional[Any] = None) -> None:
+    def add_metric(self, metric: str, value: Any, step: int, context: Optional[Any] = None, source:LoggingItemKind=None) -> None:
         """
         Adds a metric to the metrics dictionary.
 
@@ -61,7 +62,7 @@ class Prov4MLData:
             context (Optional[Any]): The context of the metric. Defaults to None.
         """
         if (metric, context) not in self.metrics:
-            self.metrics[(metric, context)] = MetricInfo(metric, context)
+            self.metrics[(metric, context)] = MetricInfo(metric, context, source=source)
         self.metrics[(metric, context)].add_metric(value, step)
 
     def add_parameter(self, parameter: str, value: Any) -> None:

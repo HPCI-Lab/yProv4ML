@@ -1,4 +1,5 @@
 
+import sys
 from typing import Any
 from collections import namedtuple
 from enum import Enum
@@ -36,3 +37,24 @@ class Prov4MLAttribute:
     @staticmethod
     def get_epoch_source_attr(epoch: int, source: Any, value: Any) -> str:
         return str(Prov4MLAttribute.EPOCH_ATTR_SOURCE(epoch, source, value))
+    
+    @staticmethod
+    def get_source_from_kind(kind: LoggingItemKind) -> str:
+        if kind == LoggingItemKind.METRIC or kind == None:
+            return 'custom_metric'
+        elif kind == LoggingItemKind.FLOPS_PER_BATCH or kind == LoggingItemKind.FLOPS_PER_EPOCH:
+            return 'fvcore.nn.FlopCountAnalysis'
+        elif kind == LoggingItemKind.SYSTEM_METRIC:
+            if sys.platform != 'darwin':
+                return 'pyamdgpuinfo'
+            else: 
+                return "apple_gpu"            
+        elif kind == LoggingItemKind.CARBON_METRIC:
+            return 'codecarbon'
+        elif kind == LoggingItemKind.EXECUTION_TIME:
+            return 'std.time'
+        elif kind == LoggingItemKind.MODEL_VERSION or kind == LoggingItemKind.FINAL_MODEL_VERSION:
+            return 'torch'
+        else:
+            return ""
+
