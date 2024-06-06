@@ -17,7 +17,7 @@ class MetricInfo:
         self.source = source
         self.epochDataList: Dict[int, List[Any]] = {}
 
-    def add_metric(self, value: Any, epoch: int) -> None:
+    def add_metric(self, value: Any, epoch: int, timestamp : int) -> None:
         """
         Adds a metric value for a specific epoch.
 
@@ -28,4 +28,4 @@ class MetricInfo:
         if epoch not in self.epochDataList:
             self.epochDataList[epoch] = []
 
-        self.epochDataList[epoch].append(value)
+        self.epochDataList[epoch].append((value, timestamp))
