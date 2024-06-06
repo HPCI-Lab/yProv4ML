@@ -31,14 +31,21 @@ class Prov4MLData:
         self.USER_NAMESPACE = "user_namespace"
         self.RUN_ID = 0
 
-    def init(self, experiment_name, prov_save_path=None, user_namespace=None): 
+        self.global_rank = None
+        self.is_collecting = False
+
+    def init(self, experiment_name, prov_save_path=None, user_namespace=None, collect_all_processes=False): 
+        
+        self.global_rank = os.getenv("SLURM_PROCID", None)
+        self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name
+        self.is_collecting = self.global_rank is None or self.global_rank == 0 or collect_all_processes
+        
+        if not self.is_collecting: return
+
         if prov_save_path: 
             self.PROV_SAVE_PATH = prov_save_path
         if user_namespace:
             self.USER_NAMESPACE = user_namespace
-        
-        global_rank = os.getenv("SLURM_PROCID", None)
-        self.EXPERIMENT_NAME = experiment_name + f"_GR{global_rank}" if global_rank else experiment_name
 
         # look at PROV dir how many experiments are there with the same name
         if not os.path.exists(self.PROV_SAVE_PATH):
@@ -61,6 +68,8 @@ class Prov4MLData:
             step (int): The step number for the metric.
             context (Optional[Any]): The context of the metric. Defaults to None.
         """
+        if not self.is_collecting: return
+
         if (metric, context) not in self.metrics:
             self.metrics[(metric, context)] = MetricInfo(metric, context, source=source)
         self.metrics[(metric, context)].add_metric(value, step)
@@ -73,6 +82,8 @@ class Prov4MLData:
             parameter (str): The name of the parameter.
             value (Any): The value of the parameter.
         """
+        if not self.is_collecting: return
+
         self.parameters[parameter] = ParameterInfo(parameter, value)
 
     def add_artifact(
@@ -93,6 +104,8 @@ class Prov4MLData:
             context (Optional[Any]): The context of the artifact. Defaults to None.
             timestamp (Optional[int]): The timestamp of the artifact. Defaults to None.
         """
+        if not self.is_collecting: return
+
         self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, value, step, context=context, timestamp=timestamp)
 
     def get_artifacts(self) -> List[ArtifactInfo]:
@@ -102,6 +115,8 @@ class Prov4MLData:
         Returns:
             List[ArtifactInfo]: A list of artifact information objects.
         """
+        if not self.is_collecting: return
+
         return list(self.artifacts.values())
     
     def get_model_versions(self) -> List[ArtifactInfo]:
@@ -111,6 +126,8 @@ class Prov4MLData:
         Returns:
             List[ArtifactInfo]: A list of model version artifact information objects.
         """
+        if not self.is_collecting: return
+
         return [artifact for artifact in self.artifacts.values() if artifact.is_model_version]
     
     def get_final_model(self) -> Optional[ArtifactInfo]:
@@ -120,6 +137,8 @@ class Prov4MLData:
         Returns:
             Optional[ArtifactInfo]: The most recent model version artifact information object, or None if no model versions exist.
         """
+        if not self.is_collecting: return
+
         model_versions = self.get_model_versions()
         if model_versions:
             return model_versions[-1]
