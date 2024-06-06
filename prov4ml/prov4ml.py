@@ -15,6 +15,7 @@ def start_run_ctx(
     prov_user_namespace: str,
     experiment_name: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
+    collect_all_processes: Optional[bool] = False,
     create_graph: Optional[bool] = False, 
     create_svg: Optional[bool] = False
     ) -> None: # type: ignore
@@ -38,7 +39,12 @@ def start_run_ctx(
     if create_svg and not create_graph:
         raise ValueError("Cannot create SVG without creating the graph.")
 
-    PROV4ML_DATA.init(experiment_name=experiment_name, prov_save_path=provenance_save_dir, user_namespace=prov_user_namespace)
+    PROV4ML_DATA.init(
+        experiment_name=experiment_name, 
+        prov_save_path=provenance_save_dir, 
+        user_namespace=prov_user_namespace, 
+        collect_all_processes=collect_all_processes
+    )
    
     energy_utils._carbon_init()
     flops_utils._init_flops_counters()
@@ -71,6 +77,7 @@ def start_run(
     prov_user_namespace: str,
     experiment_name: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
+    collect_all_processes: Optional[bool] = False,
     ) -> None:
     """Starts an MLflow run with the specified configurations and options.
     
@@ -85,7 +92,12 @@ def start_run(
         log_system_metrics (Optional[bool], optional): If True, logs system metrics during the run. Defaults to None.
     """
 
-    PROV4ML_DATA.init(experiment_name=experiment_name, prov_save_path=provenance_save_dir, user_namespace=prov_user_namespace)
+    PROV4ML_DATA.init(
+        experiment_name=experiment_name, 
+        prov_save_path=provenance_save_dir, 
+        user_namespace=prov_user_namespace, 
+        collect_all_processes=collect_all_processes
+    )
 
     energy_utils._carbon_init()
     flops_utils._init_flops_counters()
@@ -101,6 +113,8 @@ def end_run(
     if create_svg and not create_graph:
         raise ValueError("Cannot create SVG without creating the graph.")
     
+    if not PROV4ML_DATA.is_collecting: return
+
     log_execution_end_time()
 
     doc = create_prov_document()
