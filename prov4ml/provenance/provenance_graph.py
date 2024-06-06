@@ -204,24 +204,33 @@ def create_prov_document() -> prov.ProvDocument:
                 #  other_attributes={'prov:level':1}
                  )
 
-    #dataset entities generation
-    ent_ds = doc.entity(f'dataset',
+       #dataset entities generation
+    ent_ds = doc.entity(f'datasets',
                         # other_attributes={'prov:level':1}
                         )
-    # for dataset_input in run.inputs.dataset_inputs:
-    #     attributes={
-    #         'prov-ml:type': Prov4MLAttribute.get_attr('Dataset'),
-    #         'mlflow:digest': Prov4MLAttribute.get_attr(dataset_input.dataset.digest),
-    #         # 'prov:level':1,
-    #     }
 
-    #     ent= doc.entity(f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}',attributes)
-    #     doc.used(run_activity,ent, 
-    #             #  other_attributes={'prov:level':1}
-    #              )
-    #     doc.wasDerivedFrom(ent,ent_ds,identifier=f'{dataset_input.dataset.name}-{dataset_input.dataset.digest}_der',other_attributes={'prov:level':1})
+    for name, param in PROV4ML_DATA.parameters.items():
+        if "dataset" in name:
+            dataset_name = name.split('_')[0] + "_dataset"
+            if not doc.get_record(f'{dataset_name}'):
+                ent = doc.entity(f'{dataset_name}',{
+                    'prov-ml:type': Prov4MLAttribute.get_attr('Dataset'),
+                    # 'prov:level':1,
+                })
+
+                doc.used(run_activity,ent)
+                doc.hadMember(ent_ds,f'{dataset_name}')
+
+            ent = doc.get_record(f'{dataset_name}')[0]
+
+            label = name.split('_')[-1]
+            ent.add_attributes({
+                f'prov-ml:{label}': Prov4MLAttribute.get_attr(param.value),
+                # 'prov:level':1,
+            })
+
+    doc.wasGeneratedBy(ent_ds,run_activity)
     
-
 
     #model version entities generation
     model_version = PROV4ML_DATA.get_final_model()

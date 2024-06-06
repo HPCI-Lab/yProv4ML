@@ -38,7 +38,7 @@ class Prov4MLData:
         
         self.global_rank = os.getenv("SLURM_PROCID", None)
         self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name
-        self.is_collecting = self.global_rank is None or self.global_rank == 0 or collect_all_processes
+        self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
         
         if not self.is_collecting: return
 
@@ -58,7 +58,7 @@ class Prov4MLData:
         self.ARTIFACTS_DIR = os.path.join(self.EXPERIMENT_DIR, "artifacts")
 
 
-    def add_metric(self, metric: str, value: Any, step: int, context: Optional[Any] = None, source:LoggingItemKind=None) -> None:
+    def add_metric(self, metric: str, value: Any, step: int, context: Optional[Any] = None, source:LoggingItemKind=None, timestamp=None) -> None:
         """
         Adds a metric to the metrics dictionary.
 
@@ -72,7 +72,8 @@ class Prov4MLData:
 
         if (metric, context) not in self.metrics:
             self.metrics[(metric, context)] = MetricInfo(metric, context, source=source)
-        self.metrics[(metric, context)].add_metric(value, step)
+        
+        self.metrics[(metric, context)].add_metric(value, step, timestamp if timestamp else funcs.get_current_time_millis())
 
     def add_parameter(self, parameter: str, value: Any) -> None:
         """
