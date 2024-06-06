@@ -1,5 +1,6 @@
 
 import os
+import sys
 import prov
 import prov.model as prov
 from datetime import datetime
@@ -39,6 +40,20 @@ def create_prov_document() -> prov.ProvDocument:
         "prov-ml:user_id": Prov4MLAttribute.get_attr(getpass.getuser()),
         # "prov:level": 1,
     })
+
+    # add python version to run entity
+    run_entity.add_attributes({
+        "prov-ml:python_version":Prov4MLAttribute.get_attr(sys.version),
+        # "prov:level": 1,
+    })
+
+    # check if requirements.txt exists
+    if os.path.exists("requirements.txt"):
+        env_reqs = open("requirements.txt", "r").read()        
+        run_entity.add_attributes({
+            "prov-ml:requirements":Prov4MLAttribute.get_attr(env_reqs),
+            # "prov:level": 1,
+        })
         
     global_rank = os.getenv("SLURM_PROCID", None)
     if global_rank:
