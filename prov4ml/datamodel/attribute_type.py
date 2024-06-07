@@ -19,6 +19,7 @@ class LoggingItemKind(Enum):
 class Prov4MLAttribute:
     ATTR = namedtuple('prov4ml_attr', ['value'])
     EPOCH_ATTR = namedtuple('prov4ml_epoch_attr', ['epoch', 'value'])
+    EPOCH_ATTR_TIME = namedtuple('prov4ml_epoch_attr_time', ['epoch', 'value', 'time'])
     ATTR_SOURCE = namedtuple('prov4ml_attr_source', ['source', 'value'])
     EPOCH_ATTR_SOURCE = namedtuple('prov4ml_epoch_attr_source', ['epoch', 'source', 'value'])
 
@@ -29,6 +30,9 @@ class Prov4MLAttribute:
     @staticmethod
     def get_epoch_attr(epoch : int, value: Any) -> str:
         return str(Prov4MLAttribute.EPOCH_ATTR(epoch, value))
+    
+    def get_epoch_attr_time(epoch: int, value: Any, time: float) -> str:
+        return str(Prov4MLAttribute.EPOCH_ATTR_TIME(epoch, value, time))
     
     @staticmethod
     def get_source_attr(source: Any, value: Any) -> str:
