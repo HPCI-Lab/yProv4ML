@@ -34,13 +34,25 @@ class Prov4MLData:
         self.global_rank = None
         self.is_collecting = False
 
-    def init(self, experiment_name, prov_save_path=None, user_namespace=None, collect_all_processes=False): 
+        self.save_metrics_after_n_logs = 100
+        self.TMP_DIR = "tmp"
+
+    def init(
+            self, 
+            experiment_name, 
+            prov_save_path=None, 
+            user_namespace=None, 
+            collect_all_processes=False, 
+            save_after_n_logs=100
+        ): 
         
         self.global_rank = os.getenv("SLURM_PROCID", None)
         self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name
-        self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
+        self.is_collecting = self.global_rank is None or self.global_rank == 0 or collect_all_processes
         
         if not self.is_collecting: return
+
+        self.save_metrics_after_n_logs = save_after_n_logs
 
         if prov_save_path: 
             self.PROV_SAVE_PATH = prov_save_path
@@ -56,7 +68,7 @@ class Prov4MLData:
         self.EXPERIMENT_DIR = os.path.join(self.PROV_SAVE_PATH, experiment_name + f"_{run_id}")
         self.RUN_ID = run_id
         self.ARTIFACTS_DIR = os.path.join(self.EXPERIMENT_DIR, "artifacts")
-
+        self.TMP_DIR = os.path.join(self.EXPERIMENT_DIR, "tmp")
 
     def add_metric(self, metric: str, value: Any, step: int, context: Optional[Any] = None, source:LoggingItemKind=None, timestamp=None) -> None:
         """
@@ -74,6 +86,10 @@ class Prov4MLData:
             self.metrics[(metric, context)] = MetricInfo(metric, context, source=source)
         
         self.metrics[(metric, context)].add_metric(value, step, timestamp if timestamp else funcs.get_current_time_millis())
+
+        total_metrics_values = self.metrics[(metric, context)].total_metric_values
+        if total_metrics_values % self.save_metrics_after_n_logs == 0:
+            self.save_metric_to_tmp_file(self.metrics[(metric, context)])
 
     def add_parameter(self, parameter: str, value: Any) -> None:
         """
@@ -144,3 +160,23 @@ class Prov4MLData:
         if model_versions:
             return model_versions[-1]
         return None
+
+    def save_metric_to_tmp_file(self, metric: MetricInfo) -> None:
+        """
+        Saves a metric to a temporary file.
+
+        Parameters:
+            metric (MetricInfo): The metric to save.
+        """
+        if not self.is_collecting: return
+
+        if not os.path.exists(self.TMP_DIR):
+            os.makedirs(self.TMP_DIR, exist_ok=True)
+
+        metric.save_to_file(self.TMP_DIR, process=self.global_rank)
+
+    def save_all_metrics(self) -> None:
+        if not self.is_collecting: return
+
+        for metric in self.metrics.values():
+            self.save_metric_to_tmp_file(metric)

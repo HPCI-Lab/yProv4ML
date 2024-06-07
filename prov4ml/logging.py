@@ -29,7 +29,6 @@ def log_metrics(
     for key, (value, context) in metrics.items():
         log_metric(key, value, context, step=step)
     
-
 def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, source: LoggingItemKind = None) -> Optional[RunOperations]:
     """
     Logs a metric with the specified key, value, and context.
@@ -225,7 +224,6 @@ def log_artifact(
     timestamp = timestamp or funcs.get_current_time_millis()
     PROV4ML_DATA.add_artifact(artifact_path, step=step, context=context, timestamp=timestamp)
 
-
 def save_model_version(
         model: torch.nn.Module, 
         model_name: str, 
@@ -249,3 +247,22 @@ def save_model_version(
 
     torch.save(model.state_dict(), f"{path}/{model_name}.pth")
     log_artifact(f"{path}/{model_name}.pth", context=context, step=step, timestamp=timestamp)
+
+def log_dataset(dataset, label): 
+    # handle datasets from torch.utils.data.DataLoader
+    if hasattr(dataset, "dataset"):
+        dl = dataset
+        dataset = dl.dataset
+
+        log_param(f"{label}_dataset_stat_batch_size", dl.batch_size)
+        log_param(f"{label}_dataset_stat_num_workers", dl.num_workers)
+        # log_param(f"{label}_dataset_stat_shuffle", dl.shuffle)
+        log_param(f"{label}_dataset_stat_total_steps", len(dl))
+
+    total_samples = len(dataset)
+    log_param(f"{label}_dataset_stat_total_samples", total_samples)
+
+ 
+
+
+    

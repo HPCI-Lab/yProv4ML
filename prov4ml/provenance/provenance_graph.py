@@ -31,8 +31,7 @@ def create_prov_document() -> prov.ProvDocument:
     doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
     doc.add_namespace('prov-ml', 'prov-ml')
 
-    run_name = PROV4ML_DATA.EXPERIMENT_NAME 
-    run_entity = doc.entity(f'{run_name}',other_attributes={
+    run_entity = doc.entity(f'{PROV4ML_DATA.EXPERIMENT_NAME}',other_attributes={
         "prov-ml:provenance_path":Prov4MLAttribute.get_attr(PROV4ML_DATA.PROV_SAVE_PATH),
         "prov-ml:artifact_uri":Prov4MLAttribute.get_attr(PROV4ML_DATA.ARTIFACTS_DIR),
         "prov-ml:run_id":Prov4MLAttribute.get_attr(PROV4ML_DATA.RUN_ID),
@@ -54,6 +53,7 @@ def create_prov_document() -> prov.ProvDocument:
             "prov-ml:requirements":Prov4MLAttribute.get_attr(env_reqs),
             # "prov:level": 1,
         })
+
         
     global_rank = os.getenv("SLURM_PROCID", None)
     if global_rank:
@@ -66,7 +66,7 @@ def create_prov_document() -> prov.ProvDocument:
             # "prov:level": 1,
         })
 
-    run_activity = doc.activity(f'{run_name}_execution', other_attributes={
+    run_activity = doc.activity(f'{PROV4ML_DATA.EXPERIMENT_NAME}_execution', other_attributes={
         'prov-ml:type': Prov4MLAttribute.get_attr("LearningExecution"),
         # "prov:level": 1
     })
@@ -81,7 +81,7 @@ def create_prov_document() -> prov.ProvDocument:
     user_ag = doc.agent(f'{getpass.getuser()}',other_attributes={
         # "prov:level": 1,
     })
-    doc.wasAssociatedWith(f'{run_name}_execution',user_ag,other_attributes={
+    doc.wasAssociatedWith(f'{PROV4ML_DATA.EXPERIMENT_NAME}_execution',user_ag,other_attributes={
         # "prov:level": 1,
     })
     doc.entity('source_code',{
@@ -119,82 +119,112 @@ def create_prov_document() -> prov.ProvDocument:
     doc.wasGeneratedBy(run_entity,run_activity,
                     #    other_attributes={'prov:level':1}
                        )
+    
+    all_metrics = os.listdir(PROV4ML_DATA.TMP_DIR) 
+    for metric_file in all_metrics:
+        name = metric_file.split('_')[0]
+        ctx = metric_file.split('_')[-1].replace(".txt","")
+        ctx = Context.get_context_from_string(ctx)
 
-    for (name, ctx), metric in PROV4ML_DATA.metrics.items():
-        if not doc.get_record(f'{name}_{ctx}'):
-            metric_entity = doc.entity(f'{name}_{ctx}',{
-                'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
-                'prov-ml:name':Prov4MLAttribute.get_attr(name),
-                'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
-                'prov-ml:source':Prov4MLAttribute.get_source_from_kind(metric.source),
-                # 'prov:level':1,
-            })
-        else:
-            metric_entity = doc.get_record(f'{name}_{ctx}')[0]
+        with open(os.path.join(PROV4ML_DATA.TMP_DIR, metric_file), 'r') as f:
+            lines = f.readlines()
+            source = lines[0].split(',')[2]
 
-        for epoch, metric_per_epoch in metric.epochDataList.items():
-            if ctx == Context.TRAINING: 
-                if not doc.get_record(f'epoch_{epoch}'):
-                    train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
-                    "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution"),
+            if not doc.get_record(f'{name}_{ctx}'):
+                metric_entity = doc.entity(f'{name}_{ctx}',{
+                    'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
+                    'prov-ml:name':Prov4MLAttribute.get_attr(name),
+                    'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
+                    'prov-ml:source':Prov4MLAttribute.get_source_from_kind(source),
                     # 'prov:level':1,
-                    })
-                    doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':1})
+                })
+            else:
+                metric_entity = doc.get_record(f'{name}_{ctx}')[0]
 
-                for metric_value in metric_per_epoch:
-                    metric_entity.add_attributes({
-                        'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr(epoch, metric_value),
-                        'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
-                    })
-                doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',
-                                    # identifier=f'{name}_{epoch}_gen',
-                                    identifier=f'{name}_train_{epoch}_gen',
-                                    # other_attributes={'prov:level':1}
-                                    )
-                
-            elif ctx == Context.VALIDATION:
-                val_name = f'val_epoch_{epoch}'
-                if not doc.get_record(val_name):
-                    train_activity=doc.activity(val_name,other_attributes={
-                    "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
-                    # 'prov:level':1,
-                    })
-                    doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':1})
+            metric_epoch_data = {}
+            for line in lines[1:]:
+                epoch, value, timestamp = line.split(',')
+                if int(epoch) not in metric_epoch_data:
+                    metric_epoch_data[int(epoch)] = []
+                metric_epoch_data[int(epoch)].append((value, timestamp))
 
-                for metric_value in metric_per_epoch:
-                    metric_entity.add_attributes({
-                        'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr(epoch, metric_value),
-                        'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
-                    })
-                doc.wasGeneratedBy(metric_entity,val_name,
-                                    # identifier=f'{name}_{epoch}_gen',
-                                    identifier=f'{name}_val_{epoch}_gen',
-                                    # other_attributes={'prov:level':1}
-                                    )
-                
-            elif ctx == Context.EVALUATION:
-                if not doc.get_record('test'):
-                    eval_activity=doc.activity('test',other_attributes={
-                    "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution"),
-                    # 'prov:level':1,
-                    })
-                    doc.wasStartedBy(eval_activity,run_activity,other_attributes={'prov:level':1})
+    # for (name, ctx), metric in PROV4ML_DATA.metrics.items():
+    #     if not doc.get_record(f'{name}_{ctx}'):
+    #         metric_entity = doc.entity(f'{name}_{ctx}',{
+    #             'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
+    #             'prov-ml:name':Prov4MLAttribute.get_attr(name),
+    #             'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
+    #             'prov-ml:source':Prov4MLAttribute.get_source_from_kind(metric.source),
+    #             # 'prov:level':1,
+    #         })
+    #     else:
+    #         metric_entity = doc.get_record(f'{name}_{ctx}')[0]
 
-                for metric_value in metric_per_epoch:
-                    metric_entity.add_attributes({
-                        'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr(epoch, metric_value),
-                        'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
-                    })
-                doc.wasGeneratedBy(metric_entity,'test',
-                                    identifier=f'test_gen',
-                                    # other_attributes={'prov:level':1}
-                                    )
+            for epoch, metric_per_epoch in metric_epoch_data.items():
+                if ctx == Context.TRAINING: 
+                    if not doc.get_record(f'epoch_{epoch}'):
+                        train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
+                        "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution"),
+                        # 'prov:level':1,
+                        })
+                        doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':1})
 
-            else: 
-                raise ValueError(f"Context {ctx} not recognized")
+                    for (metric_value, timestamp) in metric_per_epoch:
+                        metric_entity.add_attributes({
+                            'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr_time(epoch, metric_value, timestamp),
+                            'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+                        })
+                    doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',
+                                        # identifier=f'{name}_{epoch}_gen',
+                                        identifier=f'{name}_train_{epoch}_gen',
+                                        # other_attributes={'prov:level':1}
+                                        )
+                    
+                elif ctx == Context.VALIDATION:
+                    val_name = f'val_epoch_{epoch}'
+                    if not doc.get_record(val_name):
+                        train_activity=doc.activity(val_name,other_attributes={
+                        "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
+                        # 'prov:level':1,
+                        })
+                        doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':1})
+
+                    for (metric_value, timestamp) in metric_per_epoch:
+                        metric_entity.add_attributes({
+                            'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr_time(epoch, metric_value, timestamp),
+                            'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+                        })
+                    doc.wasGeneratedBy(metric_entity,val_name,
+                                        # identifier=f'{name}_{epoch}_gen',
+                                        identifier=f'{name}_val_{epoch}_gen',
+                                        # other_attributes={'prov:level':1}
+                                        )
+                    
+                elif ctx == Context.EVALUATION:
+                    if not doc.get_record('test'):
+                        eval_activity=doc.activity('test',other_attributes={
+                        "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution"),
+                        # 'prov:level':1,
+                        })
+                        doc.wasStartedBy(eval_activity,run_activity,other_attributes={'prov:level':1})
+
+                    for (metric_value, timestamp) in metric_per_epoch:
+                        metric_entity.add_attributes({
+                            'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr_time(epoch, metric_value, timestamp),
+                            'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+                        })
+                    doc.wasGeneratedBy(metric_entity,'test',
+                                        identifier=f'test_gen',
+                                        # other_attributes={'prov:level':1}
+                                        )
+
+                else: 
+                    raise ValueError(f"Context {ctx} not recognized")
 
                         
     for name, param in PROV4ML_DATA.parameters.items():
+        if "dataset" in name: continue
+
         ent = doc.entity(f'{name}',{
             'prov-ml:value': Prov4MLAttribute.get_attr(param.value),
             'prov-ml:type': Prov4MLAttribute.get_attr('Parameter'),
@@ -204,13 +234,13 @@ def create_prov_document() -> prov.ProvDocument:
                 #  other_attributes={'prov:level':1}
                  )
 
-       #dataset entities generation
+    #dataset entities generation
     ent_ds = doc.entity(f'datasets',
                         # other_attributes={'prov:level':1}
                         )
 
     for name, param in PROV4ML_DATA.parameters.items():
-        if "dataset" in name:
+        if "dataset_stat" in name:
             dataset_name = name.split('_')[0] + "_dataset"
             if not doc.get_record(f'{dataset_name}'):
                 ent = doc.entity(f'{dataset_name}',{
@@ -229,7 +259,7 @@ def create_prov_document() -> prov.ProvDocument:
                 # 'prov:level':1,
             })
 
-    doc.wasGeneratedBy(ent_ds,run_activity)
+    doc.wasGeneratedBy(ent_ds,run_activity)                    
     
 
     #model version entities generation

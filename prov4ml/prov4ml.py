@@ -16,6 +16,7 @@ def start_run_ctx(
     experiment_name: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
     collect_all_processes: Optional[bool] = False,
+    save_after_n_logs: Optional[int] = 100,
     create_graph: Optional[bool] = False, 
     create_svg: Optional[bool] = False
     ) -> None: # type: ignore
@@ -43,7 +44,8 @@ def start_run_ctx(
         experiment_name=experiment_name, 
         prov_save_path=provenance_save_dir, 
         user_namespace=prov_user_namespace, 
-        collect_all_processes=collect_all_processes
+        collect_all_processes=collect_all_processes, 
+        save_after_n_logs=save_after_n_logs
     )
    
     energy_utils._carbon_init()
@@ -78,6 +80,7 @@ def start_run(
     experiment_name: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
     collect_all_processes: Optional[bool] = False,
+    save_after_n_logs: Optional[int] = 100,
     ) -> None:
     """Starts an MLflow run with the specified configurations and options.
     
@@ -96,7 +99,8 @@ def start_run(
         experiment_name=experiment_name, 
         prov_save_path=provenance_save_dir, 
         user_namespace=prov_user_namespace, 
-        collect_all_processes=collect_all_processes
+        collect_all_processes=collect_all_processes, 
+        save_after_n_logs=save_after_n_logs
     )
 
     energy_utils._carbon_init()
@@ -114,8 +118,11 @@ def end_run(
         raise ValueError("Cannot create SVG without creating the graph.")
     
     if not PROV4ML_DATA.is_collecting: return
-
+    
     log_execution_end_time()
+
+    # save remaining metrics
+    PROV4ML_DATA.save_all_metrics()
 
     doc = create_prov_document()
    
