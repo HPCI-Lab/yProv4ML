@@ -122,7 +122,7 @@ def create_prov_document() -> prov.ProvDocument:
     
     all_metrics = os.listdir(PROV4ML_DATA.TMP_DIR) 
     for metric_file in all_metrics:
-        name = metric_file.split('_')[0]
+        name = "_".join(metric_file.split('_')[:-1])
         ctx = metric_file.split('_')[-1].replace(".txt","")
         ctx = Context.get_context_from_string(ctx)
 
@@ -144,9 +144,12 @@ def create_prov_document() -> prov.ProvDocument:
             metric_epoch_data = {}
             for line in lines[1:]:
                 epoch, value, timestamp = line.split(',')
+                epoch = int(epoch)
+                value = float(value)
+                timestamp = int(timestamp)
                 if int(epoch) not in metric_epoch_data:
-                    metric_epoch_data[int(epoch)] = []
-                metric_epoch_data[int(epoch)].append((value, timestamp))
+                    metric_epoch_data[epoch] = []
+                metric_epoch_data[epoch].append((value, timestamp))
 
     # for (name, ctx), metric in PROV4ML_DATA.metrics.items():
     #     if not doc.get_record(f'{name}_{ctx}'):
@@ -160,20 +163,17 @@ def create_prov_document() -> prov.ProvDocument:
     #     else:
     #         metric_entity = doc.get_record(f'{name}_{ctx}')[0]
 
-            for epoch, metric_per_epoch in metric_epoch_data.items():
+            for epoch in metric_epoch_data.keys():
                 if ctx == Context.TRAINING: 
                     if not doc.get_record(f'epoch_{epoch}'):
                         train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
                         "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution"),
                         # 'prov:level':1,
                         })
-                        doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':1})
+                        doc.wasStartedBy(train_activity,run_activity,
+                                        #  other_attributes={'prov:level':1}
+                                         )
 
-                    for (metric_value, timestamp) in metric_per_epoch:
-                        metric_entity.add_attributes({
-                            'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr_time(epoch, metric_value, timestamp),
-                            'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
-                        })
                     doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',
                                         # identifier=f'{name}_{epoch}_gen',
                                         identifier=f'{name}_train_{epoch}_gen',
@@ -187,13 +187,10 @@ def create_prov_document() -> prov.ProvDocument:
                         "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
                         # 'prov:level':1,
                         })
-                        doc.wasStartedBy(train_activity,run_activity,other_attributes={'prov:level':1})
+                        doc.wasStartedBy(train_activity,run_activity,
+                                        #  other_attributes={'prov:level':1}
+                                         )
 
-                    for (metric_value, timestamp) in metric_per_epoch:
-                        metric_entity.add_attributes({
-                            'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr_time(epoch, metric_value, timestamp),
-                            'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
-                        })
                     doc.wasGeneratedBy(metric_entity,val_name,
                                         # identifier=f'{name}_{epoch}_gen',
                                         identifier=f'{name}_val_{epoch}_gen',
@@ -206,13 +203,10 @@ def create_prov_document() -> prov.ProvDocument:
                         "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution"),
                         # 'prov:level':1,
                         })
-                        doc.wasStartedBy(eval_activity,run_activity,other_attributes={'prov:level':1})
+                        doc.wasStartedBy(eval_activity,run_activity,
+                                        #  other_attributes={'prov:level':1}
+                                         )
 
-                    for (metric_value, timestamp) in metric_per_epoch:
-                        metric_entity.add_attributes({
-                            'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr_time(epoch, metric_value, timestamp),
-                            'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
-                        })
                     doc.wasGeneratedBy(metric_entity,'test',
                                         identifier=f'test_gen',
                                         # other_attributes={'prov:level':1}
@@ -220,6 +214,13 @@ def create_prov_document() -> prov.ProvDocument:
 
                 else: 
                     raise ValueError(f"Context {ctx} not recognized")
+                
+            for epoch, item_ls in metric_epoch_data.items():
+                for metric_value, timestamp in item_ls:
+                    metric_entity.add_attributes({
+                        'prov-ml:step-value':Prov4MLAttribute.get_epoch_attr_time(epoch, metric_value, timestamp),
+                        'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+                    })
 
                         
     for name, param in PROV4ML_DATA.parameters.items():
