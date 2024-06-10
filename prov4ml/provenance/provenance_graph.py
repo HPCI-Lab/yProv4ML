@@ -124,7 +124,7 @@ def create_prov_document() -> prov.ProvDocument:
     for metric_file in all_metrics:
         name = "_".join(metric_file.split('_')[:-1])
         if global_rank: 
-            ctx = metric_file.split('_')[-2].trim()
+            ctx = metric_file.split('_')[-2].strip()
         else: 
             ctx = metric_file.split('_')[-1].replace(".txt","")
         ctx = Context.get_context_from_string(ctx)
