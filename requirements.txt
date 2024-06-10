@@ -10,3 +10,4 @@ fvcore
 codecarbon
 pydot
 pyamdgpuinfo
+gpustat
