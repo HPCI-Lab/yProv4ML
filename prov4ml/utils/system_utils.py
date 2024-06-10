@@ -59,9 +59,9 @@ def get_gpu_power_usage() -> float:
     if sys.platform != 'darwin':
         gpu_power = 0.0
         if torch.cuda.is_available():
-            current_gpu = torch.cuda.current_device()
-            gpu = pyamdgpuinfo.get_gpu(current_gpu)
             try:
+                # current_gpu = torch.cuda.current_device()
+                gpu = pyamdgpuinfo.get_gpu(0)
                 gpu_power = gpu.query_power()
             except:
                 gpu_power = 0.0
@@ -85,9 +85,9 @@ def get_gpu_usage() -> float:
     if sys.platform != 'darwin':
         gpu_utilization = 0.0
         if torch.cuda.is_available():
-            current_gpu = torch.cuda.current_device()
-            gpu = pyamdgpuinfo.get_gpu(current_gpu)
             try: 
+                # current_gpu = torch.cuda.current_device()
+                gpu = pyamdgpuinfo.get_gpu(0)
                 gpu_utilization = gpu.query_utilization()
             except:
                 gpu_utilization = 0.0
