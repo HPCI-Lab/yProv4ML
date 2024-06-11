@@ -123,7 +123,7 @@ def create_prov_document() -> prov.ProvDocument:
     all_metrics = os.listdir(PROV4ML_DATA.TMP_DIR) 
     for metric_file in all_metrics:
         name = "_".join(metric_file.split('_')[:-1])
-        if global_rank: 
+        if global_rank is not None:
             ctx = metric_file.split('_')[-2].strip()
         else: 
             ctx = metric_file.split('_')[-1].replace(".txt","")
