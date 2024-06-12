@@ -25,7 +25,8 @@ class Prov4MLAttribute:
 
     @staticmethod
     def get_attr(value: Any) -> str:
-        return str(Prov4MLAttribute.ATTR(value))
+        return str(value)
+        # return str(Prov4MLAttribute.ATTR(value))
 
     @staticmethod
     def get_epoch_attr(epoch : int, value: Any) -> str:

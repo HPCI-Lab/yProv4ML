@@ -37,7 +37,6 @@ def create_prov_document() -> prov.ProvDocument:
         "prov-ml:run_id":Prov4MLAttribute.get_attr(PROV4ML_DATA.RUN_ID),
         "prov-ml:type": Prov4MLAttribute.get_attr("LearningStage"),
         "prov-ml:user_id": Prov4MLAttribute.get_attr(getpass.getuser()),
-        # "prov:level": 1,
     })
 
     # add python version to run entity
