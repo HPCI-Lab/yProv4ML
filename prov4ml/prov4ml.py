@@ -7,7 +7,8 @@ from contextlib import contextmanager
 from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
-from .provenance.provenance_graph import create_prov_document
+from .provenance.optimized_prov_graph import create_prov_document
+# from .provenance.provenance_graph import create_prov_document
 from .constants import PROV4ML_DATA
 
 @contextmanager
