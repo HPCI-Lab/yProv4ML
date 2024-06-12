@@ -121,11 +121,16 @@ def create_prov_document() -> prov.ProvDocument:
                        )
     
     all_metrics = os.listdir(PROV4ML_DATA.TMP_DIR) 
+
+    if global_rank is not None:
+        all_metrics = [metric for metric in all_metrics if f"_GR{global_rank}_" in metric]
+
     for metric_file in all_metrics:
-        name = "_".join(metric_file.split('_')[:-1])
         if global_rank is not None:
+            name = "_".join(metric_file.split('_')[:-2])
             ctx = metric_file.split('_')[-2].strip()
         else: 
+            name = "_".join(metric_file.split('_')[:-1])
             ctx = metric_file.split('_')[-1].replace(".txt","")
         ctx = Context.get_context_from_string(ctx)
 
