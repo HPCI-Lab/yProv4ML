@@ -144,6 +144,6 @@ def get_gpu_metric_intel(metric):
     current_gpu = torch.cuda.current_device()
     gpus = GPUtil.getGPUs()
     if current_gpu < len(gpus) and hasattr(gpus[current_gpu], metric):
-        return gpus[current_gpu].load
+        return gpus[current_gpu][metric]
     else:
         return None
