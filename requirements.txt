@@ -2,7 +2,6 @@ torch
 torchvision
 torchaudio
 lightning
-mlflow
 prov
 psutil
 GPUtil
