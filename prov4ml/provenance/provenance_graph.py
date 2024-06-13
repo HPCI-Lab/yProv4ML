@@ -168,9 +168,9 @@ def create_prov_document() -> prov.ProvDocument:
                     timestamps.append(time)
 
             metric_entity.add_attributes({
-                'prov-ml:metric_epoch_list': epochs, 
-                'prov-ml:metric_value_list': values,
-                'prov-ml:metric_timestamp_list': timestamps,
+                'prov-ml:metric_epoch_list': Prov4MLAttribute.get_attr(epochs), 
+                'prov-ml:metric_value_list': Prov4MLAttribute.get_attr(values),
+                'prov-ml:metric_timestamp_list': Prov4MLAttribute.get_attr(timestamps),
                 'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
             })
 
