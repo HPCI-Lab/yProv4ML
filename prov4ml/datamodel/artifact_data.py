@@ -1,7 +1,8 @@
 
-from mlflow.tracking.fluent import get_current_time_millis
 from typing import Any, Optional
 import warnings
+
+from ..utils.funcs import get_current_time_millis
 
 class ArtifactInfo:
     """

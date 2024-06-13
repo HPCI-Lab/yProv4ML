@@ -2,8 +2,6 @@ import os
 import torch
 import warnings
 from .datamodel.attribute_type import LoggingItemKind
-from mlflow.tracking.fluent import log_metric, log_param
-from mlflow.utils.async_logging.run_operations import RunOperations
 from typing import Any, Dict, Optional, Tuple, Union
 
 from .utils import energy_utils, flops_utils, system_utils, time_utils, funcs
@@ -13,7 +11,7 @@ from .constants import PROV4ML_DATA
 def log_metrics(
         metrics:Dict[str,Tuple[float,Context]],
         step:Optional[int]=None,
-        ) -> Optional[RunOperations]:
+        ):
     """
     Logs the given metrics and their associated contexts to the active MLflow run.
 
@@ -29,7 +27,7 @@ def log_metrics(
     for key, (value, context) in metrics.items():
         log_metric(key, value, context, step=step)
     
-def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, source: LoggingItemKind = None) -> Optional[RunOperations]:
+def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, source: LoggingItemKind = None):
     """
     Logs a metric with the specified key, value, and context.
 
