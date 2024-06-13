@@ -18,7 +18,7 @@ prov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="experiment_name", 
     provenance_save_dir="prov",
-    mlflow_save_dir="test_runs", 
+    save_after_n_logs=100,
 )
 
 class MNISTModel(nn.Module):
@@ -45,10 +45,12 @@ prov4ml.log_param("dataset transformation", tform)
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
 train_ds = Subset(train_ds, range(BATCH_SIZE*4))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
+prov4ml.log_dataset(train_loader, "train_dataset")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
 test_ds = Subset(test_ds, range(BATCH_SIZE*2))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
+prov4ml.log_dataset(test_loader, "train_dataset")
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.0002)
 prov4ml.log_param("optimizer", "Adam")

@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict, Optional, Union
 from typing_extensions import override
 from typing import List
+from torch.utils.data import DataLoader
 
 from ..logging import *
 from ..provenance.context import Context
@@ -16,7 +17,10 @@ class ProvMLItwinAILogger(Logger):
         prov_user_namespace="www.example.org",
         experiment_name="experiment_name", 
         provenance_save_dir="prov",
-        mlflow_save_dir="test_runs", 
+        collect_all_processes: Optional[bool] = False,
+        save_after_n_logs: Optional[int] = 100,
+        create_graph: Optional[bool] = True,
+        create_svg: Optional[bool] = True,
     ) -> None:
         """
         Initializes a ProvMLLogger instance.
@@ -30,9 +34,12 @@ class ProvMLItwinAILogger(Logger):
         super().__init__()
         self._name = experiment_name
         self._version = None
-        self.save_dir = mlflow_save_dir
         self.prov_user_namespace = prov_user_namespace
         self.provenance_save_dir = provenance_save_dir
+        self.collect_all_processes = collect_all_processes
+        self.save_after_n_logs = save_after_n_logs
+        self.create_graph = create_graph
+        self.create_svg = create_svg
 
     @property
     @override
@@ -95,17 +102,16 @@ class ProvMLItwinAILogger(Logger):
             prov_user_namespace=self.prov_user_namespace,
             experiment_name=self.name,
             provenance_save_dir=self.provenance_save_dir,
-            mlflow_save_dir=self.save_dir,
+            save_after_n_logs=self.save_after_n_logs,
+            collect_all_processes=self.collect_all_processes,
         )
-        pass
 
     @override
     def destroy_logger_context(self):
         """
         Destroys the logger context.
         """
-        end_run(create_graph=True, create_svg=True)
-        pass
+        end_run(create_graph=self.create_graph, create_svg=self.create_svg)
 
     @override
     def save_hyperparameters(self, params: Dict[str, Any]) -> None:
@@ -155,7 +161,12 @@ class ProvMLItwinAILogger(Logger):
         elif kind == LoggingItemKind.FINAL_MODEL_VERSION:
             log_model(item, identifier, log_model_info=True, log_as_artifact=True)
         elif kind == LoggingItemKind.PARAMETER:
-            log_param(identifier, item)
+            
+            if isinstance(item, DataLoader):
+                log_dataset(item, identifier)
+            else:
+                log_param(identifier, item)
+
         else:
             raise ValueError(f"Unknown kind: {kind}")
 
