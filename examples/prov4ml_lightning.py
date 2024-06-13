@@ -1,4 +1,5 @@
 import lightning as L
+from lightning.pytorch import LightningModule
 import torch
 import torch.nn.functional as F
 from torchvision.datasets import MNIST
@@ -16,10 +17,11 @@ prov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="experiment_name", 
     provenance_save_dir="prov",
-    mlflow_save_dir="test_runs", 
+    save_after_n_logs=100,
 )
 
-class MNISTModel(L.LightningModule):
+
+class MNISTModel(LightningModule):
     def __init__(self):
         super().__init__()
         self.model = torch.nn.Sequential(
@@ -29,37 +31,39 @@ class MNISTModel(L.LightningModule):
     def forward(self, x):
         return self.model(x.view(x.size(0), -1))
 
+  
     def training_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        # prov4ml allows logging through the lightning logger --> simply add the logger and use the log method
-        self.log("MSE_train", loss)
-        # or with prov4ml.log_metric
-        prov4ml.log_metric("MSE_train_2", loss, prov4ml.Context.TRAINING, step=self.current_epoch)
-        prov4ml.log_flops_per_batch("train_flops", self, batch, prov4ml.Context.TRAINING,step=self.current_epoch)
+        prov4ml.log_metric("MSE", loss, prov4ml.Context.TRAINING, step=self.current_epoch)
+        return loss
+    
+    def validation_step(self, batch, _):
+        x, y = batch
+        loss = F.cross_entropy(self(x), y)
+        # change the context to VALIDATION to log the metric as evaluation metric
+        prov4ml.log_metric("MSE", loss, prov4ml.Context.VALIDATION, step=self.current_epoch)
         return loss
     
     def test_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
         # change the context to EVALUATION to log the metric as evaluation metric
-        prov4ml.log_metric("MSE_test",loss,prov4ml.Context.EVALUATION,step=self.current_epoch)
+        prov4ml.log_metric("MSE",loss,prov4ml.Context.EVALUATION,step=self.current_epoch)
         return loss
     
     def on_train_epoch_end(self) -> None:
         prov4ml.log_metric("epoch", self.current_epoch, prov4ml.Context.TRAINING, step=self.current_epoch)
-        # save incremental model versions
         prov4ml.save_model_version(self, f"model_version_{self.current_epoch}", prov4ml.Context.TRAINING, step=self.current_epoch)
-  
-        # log system and carbon metrics (once per epoch), as well as the execution time
         prov4ml.log_system_metrics(prov4ml.Context.TRAINING,step=self.current_epoch)
         prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING,step=self.current_epoch)
         prov4ml.log_current_execution_time("train_epoch_time", prov4ml.Context.TRAINING, self.current_epoch)
 
     def configure_optimizers(self):
         optim = torch.optim.Adam(self.parameters(), lr=0.0002)
-        prov4ml.log_param("optimizer", "Adam")
+        prov4ml.log_param("optimizer", optim)
         return optim
+
 
 mnist_model = MNISTModel()
 
@@ -70,30 +74,37 @@ tform = transforms.Compose([
     transforms.ToTensor()
 ])
 # log the dataset transformation as one-time parameter
-prov4ml.log_param("dataset transformation", tform)
+prov4ml.log_param("dataset_transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-train_ds = Subset(train_ds, range(BATCH_SIZE*4))
+val_ds = Subset(train_ds, range(BATCH_SIZE * 1))
+train_ds = Subset(train_ds, range(BATCH_SIZE * 10))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
+val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE)
+
+prov4ml.log_dataset(train_loader, "train_dataset")
+prov4ml.log_dataset(val_loader, "val_dataset")
 
 trainer = L.Trainer(
     accelerator="mps",
     devices=1,
     max_epochs=EPOCHS,
-    log_every_n_steps=1,
-    logger=[prov4ml.ProvMLLogger(name="mnist_model")],
+    logger=[],
     enable_checkpointing=False, 
 )
 
-trainer.fit(mnist_model, train_loader)
+trainer.fit(mnist_model, train_loader, val_dataloaders=val_loader)
 # log final version of the model 
 # it also logs the model architecture as an artifact by default
 prov4ml.log_model(mnist_model, "model_version_final")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-test_ds = Subset(test_ds, range(BATCH_SIZE*2))
+test_ds = Subset(test_ds, range(BATCH_SIZE * 2))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
+
+prov4ml.log_dataset(test_loader, "test_dataset")
+
 result = trainer.test(mnist_model, test_loader)
 
-# save the provenance graph
-prov4ml.end_run()
+# save the provenance graphs
+prov4ml.end_run(create_graph=True, create_svg=True)
