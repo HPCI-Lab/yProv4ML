@@ -6,6 +6,7 @@ import prov.model as prov
 from datetime import datetime
 import getpass
 import subprocess
+import warnings
 
 from ..constants import PROV4ML_DATA
 from ..datamodel.attribute_type import Prov4MLAttribute
@@ -82,7 +83,7 @@ def create_prov_document() -> prov.ProvDocument:
         doc.wasGeneratedBy('source_code','commit')
         doc.wasInformedBy(run_activity,'commit')
     except:
-        print("Git not found, skipping commit hash retrieval")
+        warnings.warn("Git not found, skipping commit hash retrieval")
         doc.used(run_activity,'source_code')
 
 
