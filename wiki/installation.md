@@ -1,7 +1,6 @@
 
 # Installation
 
-
 **Ideally** To install the library, run the following command:
 
 ```bash
@@ -16,3 +15,8 @@ cd ProvML
 pip install -r requirements.txt
 ```
 
+or simply:
+
+```bash
+pip install --no-cache-dir git+https://github.com/HPCI-Lab/ProvML@mlflow_detach
+```
