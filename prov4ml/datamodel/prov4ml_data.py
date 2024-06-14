@@ -48,7 +48,7 @@ class Prov4MLData:
         
         self.global_rank = os.getenv("SLURM_PROCID", None)
         self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name
-        self.is_collecting = self.global_rank is None or self.global_rank == 0 or collect_all_processes
+        self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
         
         if not self.is_collecting: return
 
