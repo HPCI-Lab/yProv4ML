@@ -114,8 +114,8 @@ def get_gpu_usage() -> float:
             gpu_utilization = get_gpu_metric_amd('utilization')
     else:
         statistics = apple_gpu.accelerator_performance_statistics()
-        if 'Device Utilization' in statistics.keys():
-            gpu_utilization = statistics['Device Utilization']
+        if 'Device Utilization %' in statistics.keys():
+            gpu_utilization = statistics['Device Utilization %']
         else:
             gpu_utilization = 0.0
 
