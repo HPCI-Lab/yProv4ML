@@ -63,13 +63,12 @@ def get_gpu_power_usage() -> float:
             gpu_power = get_gpu_metric_intel('power')
 
         if gpu_power is None:
+            gpu_power = get_gpu_metric_nvidia('power')
+
+        if gpu_power is None:
             gpu_power = get_gpu_metric_amd('power')
     else:
-        statistics = apple_gpu.accelerator_performance_statistics()
-        if 'Power Usage' in statistics.keys():
-            gpu_power = statistics['Power Usage']
-        else:
-            gpu_power = 0.0
+        gpu_power = get_gpu_metric_apple('power')
 
     return gpu_power if gpu_power is not None else 0.0
     
@@ -87,14 +86,13 @@ def get_gpu_temperature() -> float:
             gpu_temperature = get_gpu_metric_intel('temperature')
 
         if gpu_temperature is None:
+            gpu_temperature = get_gpu_metric_nvidia('temperature')
+
+        if gpu_temperature is None:
             gpu_temperature = get_gpu_metric_amd('temperature')
 
     else:
-        statistics = apple_gpu.accelerator_performance_statistics()
-        if 'Temperature' in statistics.keys():
-            gpu_temperature = statistics['Temperature']
-        else:
-            gpu_temperature = 0.0
+        gpu_temperature = get_gpu_metric_apple('temperature')
 
     return gpu_temperature if gpu_temperature is not None else 0.0
 
@@ -111,13 +109,12 @@ def get_gpu_usage() -> float:
             gpu_utilization = get_gpu_metric_intel('utilization')
 
         if gpu_utilization is None:
+            gpu_utilization = get_gpu_metric_nvidia('utilization')
+
+        if gpu_utilization is None:
             gpu_utilization = get_gpu_metric_amd('utilization')
     else:
-        statistics = apple_gpu.accelerator_performance_statistics()
-        if 'Device Utilization %' in statistics.keys():
-            gpu_utilization = statistics['Device Utilization %']
-        else:
-            gpu_utilization = 0.0
+        gpu_utilization = get_gpu_metric_apple('utilization')
 
     return gpu_utilization if gpu_utilization is not None else 0.0
 
@@ -134,11 +131,22 @@ def get_gpu_metric_amd(metric):
 
         return m
     except:
+        warnings.warn(f"Could not get metric: {metric}")
         return None
-        warnings.warn("Could not get GPU usage.")
 
 def get_gpu_metric_nvidia(metric):
-    pass
+    return None
+    # try:
+    #     stats = gpustat.new_query()
+    #     if metric == 'power':
+    #         return None
+    #     elif metric == 'temperature':
+    #         return None
+    #     elif metric == 'utilization':
+    #         return stats.gpus[0]['utilization.gpu']
+    # except:
+    #     warnings.warn(f"Could not get metric: {metric}")
+    #     return None
 
 def get_gpu_metric_intel(metric):
     current_gpu = torch.cuda.current_device()
@@ -146,4 +154,18 @@ def get_gpu_metric_intel(metric):
     if current_gpu < len(gpus) and hasattr(gpus[current_gpu], metric):
         return gpus[current_gpu][metric]
     else:
+        warnings.warn(f"Could not get metric: {metric}")
         return None
+
+def get_gpu_metric_apple(metric):
+    statistics = apple_gpu.accelerator_performance_statistics()
+    if metric == 'power':
+        return None
+    elif metric == 'temperature':
+        return None
+    elif metric == 'utilization':
+        return statistics['Device Utilization %']
+    else: 
+        warnings.warn(f"Could not get metric: {metric}")
+        return None
+
