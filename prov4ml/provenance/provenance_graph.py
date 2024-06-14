@@ -92,7 +92,7 @@ def create_prov_document() -> prov.ProvDocument:
     all_metrics = os.listdir(PROV4ML_DATA.TMP_DIR) 
 
     if global_rank is not None:
-        all_metrics = [metric for metric in all_metrics if f"_GR{global_rank}_" in metric]
+        all_metrics = [metric for metric in all_metrics if f"_GR{global_rank}" in metric]
 
     for metric_file in all_metrics:
         if global_rank is not None:
