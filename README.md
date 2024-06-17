@@ -2,9 +2,9 @@
 
 [![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
 
-This library is a wrapper around MLFlow to provide a unified interface for logging and tracking provenance information in machine learning experiments. 
+This library provides a unified interface for logging and tracking provenance information in machine learning experiments. 
 
-It allows users to create provenance graphs from the logged information.
+It allows users to create provenance graphs from the logged information, and save all metrics and parameters to json format.
 
 ## Data Model
 
@@ -43,3 +43,9 @@ For detailed information, please refer to the following documentation files:
 - [Time Metrics](./wiki/time.md)
 - [Usage with PyTorch](./wiki/usage_pytorch.md)
 - [Usage with Lightning](./wiki/usage_lightning.md)
+
+# Contributors
+
+- [Gabriele Padovani](https://github.com/lelepado01)
+- [Luca Davi](https://github.com/lucadavii)
+- [Sandro Luigi Fiore](https://github.com/sandrofioretn)
