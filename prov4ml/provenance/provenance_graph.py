@@ -206,19 +206,24 @@ def create_prov_document() -> prov.ProvDocument:
 
     #model version entities generation
     model_version = PROV4ML_DATA.get_final_model()
-    model_entity_label = model_version.path
-    modv_ent=doc.entity(model_entity_label,{
-        "prov-ml:type": Prov4MLAttribute.get_attr("ModelVersion"),
-        'prov-ml:creation_epoch': Prov4MLAttribute.get_attr(model_version.step),
-        'prov-ml:artifact_uri': Prov4MLAttribute.get_attr(model_version.path),
-        'prov-ml:creation_timestamp': Prov4MLAttribute.get_attr(datetime.fromtimestamp(model_version.creation_timestamp / 1000)),
-        'prov-ml:last_modified_timestamp': Prov4MLAttribute.get_attr(datetime.fromtimestamp(model_version.last_modified_timestamp / 1000)),
-    })
-    doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_entity_label}_gen')
+    if model_version:
+        model_entity_label = model_version.path
+        modv_ent=doc.entity(model_entity_label,{
+            "prov-ml:type": Prov4MLAttribute.get_attr("ModelVersion"),
+            'prov-ml:creation_epoch': Prov4MLAttribute.get_attr(model_version.step),
+            'prov-ml:artifact_uri': Prov4MLAttribute.get_attr(model_version.path),
+            'prov-ml:creation_timestamp': Prov4MLAttribute.get_attr(datetime.fromtimestamp(model_version.creation_timestamp / 1000)),
+            'prov-ml:last_modified_timestamp': Prov4MLAttribute.get_attr(datetime.fromtimestamp(model_version.last_modified_timestamp / 1000)),
+        })
+        doc.wasGeneratedBy(modv_ent,run_activity,identifier=f'{model_entity_label}_gen')
     
-    model_ser = doc.activity(f'prov-ml:ModelRegistration')
+    registration_label = 'prov-ml:ModelRegistration'
+    model_ser = doc.activity(registration_label)
     doc.wasInformedBy(model_ser,run_activity)
-    doc.wasGeneratedBy(model_entity_label,model_ser)
+    if model_version:
+        doc.wasGeneratedBy(model_entity_label,model_ser)
+    else:
+        model_entity_label = registration_label
     
     for artifact in PROV4ML_DATA.get_model_versions()[:-1]: 
         doc.hadMember(model_entity_label,f"{artifact.path}")    
