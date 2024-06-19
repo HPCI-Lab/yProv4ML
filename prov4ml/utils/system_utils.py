@@ -60,10 +60,7 @@ def get_gpu_power_usage() -> float:
     if sys.platform != 'darwin':
         gpu_power = None
         if torch.cuda.is_available():
-            gpu_power = get_gpu_metric_intel('power')
-
-        if gpu_power is None:
-            gpu_power = get_gpu_metric_nvidia('power')
+            gpu_power = get_gpu_metric_gputil('power')
 
         if gpu_power is None:
             gpu_power = get_gpu_metric_amd('power')
@@ -83,10 +80,7 @@ def get_gpu_temperature() -> float:
     if sys.platform != 'darwin':
         gpu_temperature = None
         if torch.cuda.is_available():
-            gpu_temperature = get_gpu_metric_intel('temperature')
-
-        if gpu_temperature is None:
-            gpu_temperature = get_gpu_metric_nvidia('temperature')
+            gpu_temperature = get_gpu_metric_gputil('temperature')
 
         if gpu_temperature is None:
             gpu_temperature = get_gpu_metric_amd('temperature')
@@ -106,10 +100,7 @@ def get_gpu_usage() -> float:
     if sys.platform != 'darwin':
         gpu_utilization = None
         if torch.cuda.is_available():
-            gpu_utilization = get_gpu_metric_intel('utilization')
-
-        if gpu_utilization is None:
-            gpu_utilization = get_gpu_metric_nvidia('utilization')
+            gpu_utilization = get_gpu_metric_gputil('utilization')
 
         if gpu_utilization is None:
             gpu_utilization = get_gpu_metric_amd('utilization')
@@ -134,27 +125,15 @@ def get_gpu_metric_amd(metric):
         warnings.warn(f"Could not get metric: {metric}")
         return None
 
-def get_gpu_metric_nvidia(metric):
-    return None
-    # try:
-    #     stats = gpustat.new_query()
-    #     if metric == 'power':
-    #         return None
-    #     elif metric == 'temperature':
-    #         return None
-    #     elif metric == 'utilization':
-    #         return stats.gpus[0]['utilization.gpu']
-    # except:
-    #     warnings.warn(f"Could not get metric: {metric}")
-    #     return None
-
-def get_gpu_metric_intel(metric):
+def get_gpu_metric_gputil(metric):
     current_gpu = torch.cuda.current_device()
     gpus = GPUtil.getGPUs()
-    if current_gpu < len(gpus) and hasattr(gpus[current_gpu], metric):
-        try:
-            return getattr(gpus[current_gpu], metric)
-        except:
+    if current_gpu < len(gpus):
+        if metric == 'temperature':
+            return gpus[current_gpu].temperature
+        elif metric == "utilization": 
+            return gpus[current_gpu].load
+        else: 
             return None
     else:
         warnings.warn(f"Could not get metric: {metric}")
