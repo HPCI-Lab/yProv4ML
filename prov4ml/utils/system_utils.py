@@ -62,7 +62,7 @@ def get_gpu_power_usage() -> float:
         if torch.cuda.is_available():
             gpu_power = get_gpu_metric_gputil('power')
 
-        if gpu_power is None:
+        if not gpu_power:
             gpu_power = get_gpu_metric_amd('power')
     else:
         gpu_power = get_gpu_metric_apple('power')
@@ -82,7 +82,7 @@ def get_gpu_temperature() -> float:
         if torch.cuda.is_available():
             gpu_temperature = get_gpu_metric_gputil('temperature')
 
-        if gpu_temperature is None:
+        if not gpu_temperature:
             gpu_temperature = get_gpu_metric_amd('temperature')
 
     else:
@@ -102,7 +102,7 @@ def get_gpu_usage() -> float:
         if torch.cuda.is_available():
             gpu_utilization = get_gpu_metric_gputil('utilization')
 
-        if gpu_utilization is None:
+        if not gpu_utilization:
             gpu_utilization = get_gpu_metric_amd('utilization')
     else:
         gpu_utilization = get_gpu_metric_apple('utilization')
@@ -124,6 +124,7 @@ def get_gpu_metric_amd(metric):
     except:
         warnings.warn(f"Could not get metric: {metric}")
         return None
+
 
 def get_gpu_metric_gputil(metric):
     current_gpu = torch.cuda.current_device()
@@ -150,4 +151,3 @@ def get_gpu_metric_apple(metric):
     else: 
         warnings.warn(f"Could not get metric: {metric}")
         return None
-

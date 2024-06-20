@@ -47,4 +47,6 @@ class MetricInfo:
                 for value, timestamp in values:
                     f.write(f"{epoch}, {value}, {timestamp}\n")
 
+        self.epochDataList = {}
+
 
