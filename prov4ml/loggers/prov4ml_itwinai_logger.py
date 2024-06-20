@@ -121,8 +121,8 @@ class ProvMLItwinAILogger(Logger):
         Parameters:
             params (Dict[str, Any]): A dictionary containing the hyperparameters.
         """
-        # prov4ml.log_params(params)
-        pass
+        for key, value in params.items():
+            self.log(value, key, kind=LoggingItemKind.PARAMETER)
 
     @override
     def log(
@@ -166,8 +166,5 @@ class ProvMLItwinAILogger(Logger):
                 log_dataset(item, identifier)
             else:
                 log_param(identifier, item)
-
-        else:
-            raise ValueError(f"Unknown kind: {kind}")
 
 
