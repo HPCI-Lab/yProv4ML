@@ -20,7 +20,7 @@ The image shown above has been generated from the [example](./examples/mlflow_li
 
 |||
 :-------------------------:|:-------------------------:
-![](assets/loss.png) | ![](assets/Emission Rate.pdf) 
+![](assets/loss.png) | ![](assets/Emission Rate.png) 
 ![](assets/cpu.png) | ![](assets/gpu.png)
 
 ## Experiments and Runs
