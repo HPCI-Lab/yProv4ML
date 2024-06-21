@@ -18,10 +18,13 @@ The image shown above has been generated from the [example](./examples/mlflow_li
 
 ## Metrics Visualization
 
-|||
-:-------------------------:|:-------------------------:
-![](assets/loss.png) | ![](assets/Emission Rate.png) 
-![](assets/cpu.png) | ![](assets/gpu.png)
+
+![Loss and GPU Usage](./assets/System_Metrics.png)
+
+
+![Emission Rate](assets/Emission_Rate.png) 
+
+
 
 ## Experiments and Runs
 
