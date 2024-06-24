@@ -90,7 +90,10 @@ def create_prov_document() -> prov.ProvDocument:
     doc.hadMember(experiment,run_entity)
     doc.wasGeneratedBy(run_entity,run_activity)
     
-    all_metrics = os.listdir(PROV4ML_DATA.TMP_DIR) 
+    if os.path.exists(PROV4ML_DATA.TMP_DIR):
+        all_metrics = os.listdir(PROV4ML_DATA.TMP_DIR) 
+    else:
+        all_metrics = []
 
     if global_rank is not None:
         all_metrics = [metric for metric in all_metrics if f"_GR{global_rank}" in metric]
