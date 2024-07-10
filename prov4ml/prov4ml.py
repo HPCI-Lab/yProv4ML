@@ -4,11 +4,12 @@ import prov.dot as dot
 from typing import Optional
 from contextlib import contextmanager
 
+from .constants import PROV4ML_DATA
 from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
 from .provenance.provenance_graph import create_prov_document
-from .constants import PROV4ML_DATA
+from .datamodel.prov4ml_collection import create_prov_collection
 
 @contextmanager
 def start_run_ctx(
@@ -18,7 +19,7 @@ def start_run_ctx(
     collect_all_processes: Optional[bool] = False,
     save_after_n_logs: Optional[int] = 100,
     create_graph: Optional[bool] = False, 
-    create_svg: Optional[bool] = False
+    create_svg: Optional[bool] = False,
     ) -> None: # type: ignore
     """
     Starts an MLflow run and generates provenance information.
@@ -74,6 +75,8 @@ def start_run_ctx(
         path_dot = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, dot_filename)
         with open(path_dot, 'w') as prov_dot:
             prov_dot.write(dot.prov_to_dot(doc).to_string())
+
+    create_prov_collection()
 
 def start_run(
     prov_user_namespace: str,
@@ -144,4 +147,6 @@ def end_run(
 
     if create_svg:
         os.system(f"dot -Tsvg -O {path_dot}")
+
+    create_prov_collection()
 
