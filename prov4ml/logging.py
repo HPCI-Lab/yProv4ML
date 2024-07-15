@@ -129,13 +129,7 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
 
     if log_as_artifact:
         save_model_version(model, model_name, Context.EVALUATION)
-
-    # TODO: Implement model logging as a registered model
-    # return mlflow.pytorch.log_model(
-    #     pytorch_model=model,
-    #     artifact_path=mlflow.active_run().info.run_name.split("/")[-1],
-    #     registered_model_name=model_name
-    # )
+        
 
 def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Context, step: Optional[int] = None) -> None:
     """Logs the number of FLOPs (floating point operations) per epoch for the given model and dataset.
@@ -249,7 +243,7 @@ def save_model_version(
 
 def log_dataset(dataset, label): 
     # handle datasets from torch.utils.data.DataLoader
-    if hasattr(dataset, "dataset"):
+    if isinstance(dataset, torch.utils.data.DataLoader):
         dl = dataset
         dataset = dl.dataset
 
@@ -258,10 +252,10 @@ def log_dataset(dataset, label):
         # log_param(f"{label}_dataset_stat_shuffle", dl.shuffle)
         log_param(f"{label}_dataset_stat_total_steps", len(dl))
 
+    elif isinstance(dataset, torch.utils.data.Subset):
+        dl = dataset
+        dataset = dl.dataset
+        log_param(f"{label}_dataset_stat_total_steps", len(dl))
+
     total_samples = len(dataset)
     log_param(f"{label}_dataset_stat_total_samples", total_samples)
-
- 
-
-
-    

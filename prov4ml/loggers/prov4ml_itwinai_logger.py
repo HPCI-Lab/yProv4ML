@@ -3,13 +3,13 @@ import os
 from typing import Any, Dict, Optional, Union
 from typing_extensions import override
 from typing import List
-from torch.utils.data import DataLoader
 
 from ..logging import *
 from ..provenance.context import Context
 from .itwinai_logger import Logger
 from ..prov4ml import *
 from ..datamodel.attribute_type import LoggingItemKind
+from ..utils.funcs import get_global_rank
 
 class ProvMLItwinAILogger(Logger):
     def __init__(
@@ -121,8 +121,8 @@ class ProvMLItwinAILogger(Logger):
         Parameters:
             params (Dict[str, Any]): A dictionary containing the hyperparameters.
         """
-        for key, value in params.items():
-            self.log(value, key, kind=LoggingItemKind.PARAMETER)
+        # prov4ml.log_params(params)
+        pass
 
     @override
     def log(
@@ -132,6 +132,7 @@ class ProvMLItwinAILogger(Logger):
         kind: Union[str, LoggingItemKind] = 'metric',
         step: Optional[int] = None,
         context: Optional[Context] = None,
+        log_on_processes : List[int] = [],
         **kwargs
         ) -> None:
         """
@@ -142,29 +143,39 @@ class ProvMLItwinAILogger(Logger):
             step (Optional[int]): The step number for the metrics. Defaults to None.
         """
 
-        if kind == LoggingItemKind.METRIC:
+        gr = get_global_rank()
+        if gr not in log_on_processes:
+            return
+
+        if kind == LoggingItemKind.METRIC.value:
             log_metric(identifier, item, context, step=step)
-        elif kind == LoggingItemKind.FLOPS_PER_BATCH:
+        elif kind == LoggingItemKind.FLOPS_PER_BATCH.value:
             model, batch = item
-            log_flops_per_batch(identifier, model=model, batch=batch, context=context, step=step)
-        elif kind == LoggingItemKind.FLOPS_PER_EPOCH:
+            log_flops_per_batch(
+                identifier, model=model,
+                batch=batch, context=context, step=step)
+        elif kind == LoggingItemKind.FLOPS_PER_EPOCH.value:
             model, dataset = item
-            log_flops_per_epoch(identifier, model=model, dataset=dataset, context=context, step=step)
-        elif kind == LoggingItemKind.SYSTEM_METRIC:
+            log_flops_per_epoch(
+                identifier, model=model,
+                dataset=dataset, context=context, step=step)
+        elif kind == LoggingItemKind.SYSTEM_METRIC.value:
             log_system_metrics(context=context, step=step)
-        elif kind == LoggingItemKind.CARBON_METRIC:
+        elif kind == LoggingItemKind.CARBON_METRIC.value:
             log_carbon_metrics(context=context, step=step)
-        elif kind == LoggingItemKind.EXECUTION_TIME:
+        elif kind == LoggingItemKind.EXECUTION_TIME.value:
             log_current_execution_time(identifier, context, step=step)
-        elif kind == LoggingItemKind.MODEL_VERSION:
+        elif kind == 'model':  # LoggingItemKind.MODEL_VERSION.value:
             save_model_version(item, identifier, context, step=step)
-        elif kind == LoggingItemKind.FINAL_MODEL_VERSION:
+        elif kind == 'best_model':
+            # LoggingItemKind.FINAL_MODEL_VERSION.value:
             log_model(item, identifier, log_model_info=True, log_as_artifact=True)
-        elif kind == LoggingItemKind.PARAMETER:
-            
+        elif kind == 'torch':  # LoggingItemKind.PARAMETER.value:
+            from torch.utils.data import DataLoader
             if isinstance(item, DataLoader):
                 log_dataset(item, identifier)
             else:
+                # log_param name is misleading and should be renamed...
                 log_param(identifier, item)
 
 

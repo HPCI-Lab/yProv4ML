@@ -1,6 +1,4 @@
 import os
-import prov.dot as dot
-
 from typing import Optional
 from contextlib import contextmanager
 
@@ -10,6 +8,7 @@ from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
 from .provenance.provenance_graph import create_prov_document
 from .datamodel.prov4ml_collection import create_prov_collection
+from .utils.file_utils import save_prov_file
 
 @contextmanager
 def start_run_ctx(
@@ -19,7 +18,7 @@ def start_run_ctx(
     collect_all_processes: Optional[bool] = False,
     save_after_n_logs: Optional[int] = 100,
     create_graph: Optional[bool] = False, 
-    create_svg: Optional[bool] = False,
+    create_svg: Optional[bool] = False
     ) -> None: # type: ignore
     """
     Starts an MLflow run and generates provenance information.
@@ -61,22 +60,14 @@ def start_run_ctx(
     doc = create_prov_document()
 
     graph_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.json'
-    dot_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.dot'
 
     if not os.path.exists(PROV4ML_DATA.EXPERIMENT_DIR):
         os.makedirs(PROV4ML_DATA.EXPERIMENT_DIR, exist_ok=True)
 
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
+    save_prov_file(doc, path_graph, create_graph, create_svg)
+    create_prov_collection(create_dot=create_graph, create_svg=create_svg)
 
-    with open(path_graph,'w') as prov_graph:
-        doc.serialize(prov_graph)
-
-    if create_graph:
-        path_dot = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, dot_filename)
-        with open(path_dot, 'w') as prov_dot:
-            prov_dot.write(dot.prov_to_dot(doc).to_string())
-
-    create_prov_collection()
 
 def start_run(
     prov_user_namespace: str,
@@ -130,23 +121,11 @@ def end_run(
     doc = create_prov_document()
    
     graph_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.json'
-    dot_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.dot'
     
     if not os.path.exists(PROV4ML_DATA.EXPERIMENT_DIR):
         os.makedirs(PROV4ML_DATA.EXPERIMENT_DIR, exist_ok=True)
     
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
-
-    with open(path_graph,'w') as prov_graph:
-        doc.serialize(prov_graph)
-
-    if create_graph:
-        path_dot = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, dot_filename)
-        with open(path_dot, 'w') as prov_dot:
-            prov_dot.write(dot.prov_to_dot(doc).to_string())
-
-    if create_svg:
-        os.system(f"dot -Tsvg -O {path_dot}")
-
-    create_prov_collection()
+    save_prov_file(doc, path_graph, create_graph, create_svg)
+    create_prov_collection(create_dot=create_graph, create_svg=create_svg)
 

@@ -12,6 +12,7 @@ from ..constants import PROV4ML_DATA
 from ..datamodel.attribute_type import Prov4MLAttribute
 from ..datamodel.artifact_data import artifact_is_pytorch_model
 from ..provenance.context import Context
+from ..utils.funcs import get_global_rank
 
 def create_prov_document() -> prov.ProvDocument:
     """
@@ -49,8 +50,8 @@ def create_prov_document() -> prov.ProvDocument:
         run_entity.add_attributes({"prov-ml:requirements":Prov4MLAttribute.get_attr(env_reqs)})
 
         
-    global_rank = os.getenv("SLURM_PROCID", None)
-    if global_rank:
+    global_rank = get_global_rank()
+    if global_rank is not None and os.getenv("SLURM_PROCID") is not None:
         node_rank = os.getenv("SLURM_NODEID", None)
         local_rank = os.getenv("SLURM_LOCALID", None) 
         run_entity.add_attributes({
