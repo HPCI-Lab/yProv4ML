@@ -144,7 +144,7 @@ class ProvMLItwinAILogger(Logger):
         """
 
         gr = get_global_rank()
-        if gr not in log_on_processes:
+        if gr not in log_on_processes and log_on_processes != []:
             return
 
         if kind == LoggingItemKind.METRIC.value:
