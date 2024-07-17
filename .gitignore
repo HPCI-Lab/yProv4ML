@@ -186,6 +186,7 @@ cython_debug/
 
 # Codecarbon
 powermetrics_log.txt
+.codecarbon.config
 
 # Lib output
 prov/
