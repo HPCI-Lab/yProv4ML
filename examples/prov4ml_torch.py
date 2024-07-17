@@ -21,6 +21,10 @@ prov4ml.start_run(
     save_after_n_logs=100,
 )
 
+prov4ml.register_final_metric("MSE_test", 10, prov4ml.FoldOperation.MIN)
+prov4ml.register_final_metric("MSE_train", 10, prov4ml.FoldOperation.MIN)
+prov4ml.register_final_metric("emissions_rate", 0, prov4ml.FoldOperation.ADD)
+
 class MNISTModel(nn.Module):
     def __init__(self):
         super().__init__()
