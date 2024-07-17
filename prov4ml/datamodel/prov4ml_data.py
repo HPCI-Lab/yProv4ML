@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from .artifact_data import ArtifactInfo
 from .attribute_type import LoggingItemKind
 from .parameter_data import ParameterInfo
+from .cumulative_metrics import CumulativeMetric
 from .metric_data import MetricInfo
 from ..provenance.context import Context
 from ..utils import funcs
@@ -23,6 +24,7 @@ class Prov4MLData:
         self.metrics: Dict[(str, Context), MetricInfo] = {}
         self.parameters: Dict[str, ParameterInfo] = {}
         self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
+        self.cumulative_metrics: Dict[str, CumulativeMetric] = {}
 
         self.PROV_SAVE_PATH = "prov_save_path"
         self.EXPERIMENT_NAME = "test_experiment"
@@ -90,6 +92,20 @@ class Prov4MLData:
         total_metrics_values = self.metrics[(metric, context)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_tmp_file(self.metrics[(metric, context)])
+
+    def add_cumulative_metric(self, label: str, value, fold_operation) -> None:
+        """
+        Adds a cumulative metric to the cumulative metrics dictionary.
+
+        Parameters:
+            label (str): The label of the cumulative metric.
+            value (Any): The value of the cumulative metric.
+            fold_operation (Any): The fold operation of the cumulative metric.
+        """
+        if not self.is_collecting: return
+
+        self.cumulative_metrics[label] = CumulativeMetric(label, value, fold_operation)
+
 
     def add_parameter(self, parameter: str, value: Any) -> None:
         """

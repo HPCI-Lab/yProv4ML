@@ -259,3 +259,6 @@ def log_dataset(dataset, label):
 
     total_samples = len(dataset)
     log_param(f"{label}_dataset_stat_total_samples", total_samples)
+
+def register_final_metric(metric_name, initial_value, fold_operation):
+    PROV4ML_DATA.add_cumulative_metric(metric_name, initial_value, fold_operation)
