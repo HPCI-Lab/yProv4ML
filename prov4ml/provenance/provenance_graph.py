@@ -14,6 +14,101 @@ from ..datamodel.artifact_data import artifact_is_pytorch_model
 from ..provenance.context import Context
 from ..utils.funcs import get_global_rank
 
+def calculate_energy_consumption(doc, ctx, epochs, timestamps, values):
+    energy = 0
+    for i in range(1, len(epochs)):
+        energy += (timestamps[i] - timestamps[i-1]) * values[i]
+
+    if not doc.get_record(f'energy_consumption_{ctx}'):
+        metric_entity = doc.entity(f'energy_consumption_{ctx}',{
+            'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
+            'prov-ml:name':Prov4MLAttribute.get_attr("energy_consumption"),
+            'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
+            'prov-ml:source':Prov4MLAttribute.get_source_from_kind("gpu_power_usage"),
+        })
+    else:
+        metric_entity = doc.get_record(f'energy_consumption_{ctx}')[0]
+
+    for epoch in epochs: 
+        doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',identifier=f'energy_consumption_train_{epoch}_gen')
+    
+    metric_entity.add_attributes({
+        'prov-ml:metric_epoch_list': Prov4MLAttribute.get_attr(epochs), 
+        'prov-ml:metric_value_list': Prov4MLAttribute.get_attr(energy),
+        'prov-ml:metric_timestamp_list': Prov4MLAttribute.get_attr(timestamps),
+        'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+    })
+    
+
+def save_metric_from_file(metric_file, name : str, ctx:Context, doc:prov.ProvDocument, run_activity):
+    with open(os.path.join(PROV4ML_DATA.TMP_DIR, metric_file), 'r') as f:
+            lines = f.readlines()
+            source = lines[0].split(',')[2]
+
+            if not doc.get_record(f'{name}_{ctx}'):
+                metric_entity = doc.entity(f'{name}_{ctx}',{
+                    'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
+                    'prov-ml:name':Prov4MLAttribute.get_attr(name),
+                    'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
+                    'prov-ml:source':Prov4MLAttribute.get_source_from_kind(source),
+                })
+            else:
+                metric_entity = doc.get_record(f'{name}_{ctx}')[0]
+
+            metric_epoch_data = {}
+            for line in lines[1:]:
+                epoch, value, timestamp = line.split(',')
+                epoch = int(epoch)
+                value = float(value)
+                timestamp = int(timestamp)
+                if int(epoch) not in metric_epoch_data:
+                    metric_epoch_data[epoch] = []
+                metric_epoch_data[epoch].append((value, timestamp))
+
+            for epoch in metric_epoch_data.keys():
+                if ctx == Context.TRAINING: 
+                    if not doc.get_record(f'epoch_{epoch}'):
+                        train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
+                            "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution")
+                        })
+                        doc.wasStartedBy(train_activity,run_activity)
+
+                    doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',identifier=f'{name}_train_{epoch}_gen')
+                    
+                elif ctx == Context.VALIDATION:
+                    val_name = f'val_epoch_{epoch}'
+                    if not doc.get_record(val_name):
+                        train_activity=doc.activity(val_name,other_attributes={
+                            "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
+                        })
+                        doc.wasStartedBy(train_activity,run_activity)
+
+                    doc.wasGeneratedBy(metric_entity,val_name,identifier=f'{name}_val_{epoch}_gen')
+                    
+                elif ctx == Context.EVALUATION:
+                    if not doc.get_record('test'):
+                        eval_activity=doc.activity('test',other_attributes={
+                        "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution")})
+                        doc.wasStartedBy(eval_activity,run_activity)
+
+                    doc.wasGeneratedBy(metric_entity,'test',identifier=f'test_gen')
+                
+            epochs = []
+            values = []
+            timestamps = []
+            for epoch, item_ls in metric_epoch_data.items():
+                for (val, time) in item_ls:
+                    epochs.append(epoch)
+                    values.append(val)
+                    timestamps.append(time)
+
+            metric_entity.add_attributes({
+                'prov-ml:metric_epoch_list': Prov4MLAttribute.get_attr(epochs), 
+                'prov-ml:metric_value_list': Prov4MLAttribute.get_attr(values),
+                'prov-ml:metric_timestamp_list': Prov4MLAttribute.get_attr(timestamps),
+                'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+            })
+
 def create_prov_document() -> prov.ProvDocument:
     """
     Generates the first level of provenance for a given run.
@@ -107,78 +202,7 @@ def create_prov_document() -> prov.ProvDocument:
             name = "_".join(metric_file.split('_')[:-1])
             ctx = metric_file.split('_')[-1].replace(".txt","")
         ctx = Context.get_context_from_string(ctx)
-
-        with open(os.path.join(PROV4ML_DATA.TMP_DIR, metric_file), 'r') as f:
-            lines = f.readlines()
-            source = lines[0].split(',')[2]
-
-            if not doc.get_record(f'{name}_{ctx}'):
-                metric_entity = doc.entity(f'{name}_{ctx}',{
-                    'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
-                    'prov-ml:name':Prov4MLAttribute.get_attr(name),
-                    'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
-                    'prov-ml:source':Prov4MLAttribute.get_source_from_kind(source),
-                })
-            else:
-                metric_entity = doc.get_record(f'{name}_{ctx}')[0]
-
-            metric_epoch_data = {}
-            for line in lines[1:]:
-                epoch, value, timestamp = line.split(',')
-                epoch = int(epoch)
-                value = float(value)
-                timestamp = int(timestamp)
-                if int(epoch) not in metric_epoch_data:
-                    metric_epoch_data[epoch] = []
-                metric_epoch_data[epoch].append((value, timestamp))
-
-            for epoch in metric_epoch_data.keys():
-                if ctx == Context.TRAINING: 
-                    if not doc.get_record(f'epoch_{epoch}'):
-                        train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
-                            "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution")
-                        })
-                        doc.wasStartedBy(train_activity,run_activity)
-
-                    doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',identifier=f'{name}_train_{epoch}_gen')
-                    
-                elif ctx == Context.VALIDATION:
-                    val_name = f'val_epoch_{epoch}'
-                    if not doc.get_record(val_name):
-                        train_activity=doc.activity(val_name,other_attributes={
-                            "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
-                        })
-                        doc.wasStartedBy(train_activity,run_activity)
-
-                    doc.wasGeneratedBy(metric_entity,val_name,identifier=f'{name}_val_{epoch}_gen')
-                    
-                elif ctx == Context.EVALUATION:
-                    if not doc.get_record('test'):
-                        eval_activity=doc.activity('test',other_attributes={
-                        "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution")})
-                        doc.wasStartedBy(eval_activity,run_activity)
-
-                    doc.wasGeneratedBy(metric_entity,'test',identifier=f'test_gen')
-
-                else: 
-                    raise ValueError(f"Context {ctx} not recognized")
-                
-            epochs = []
-            values = []
-            timestamps = []
-            for epoch, item_ls in metric_epoch_data.items():
-                for (val, time) in item_ls:
-                    epochs.append(epoch)
-                    values.append(val)
-                    timestamps.append(time)
-
-            metric_entity.add_attributes({
-                'prov-ml:metric_epoch_list': Prov4MLAttribute.get_attr(epochs), 
-                'prov-ml:metric_value_list': Prov4MLAttribute.get_attr(values),
-                'prov-ml:metric_timestamp_list': Prov4MLAttribute.get_attr(timestamps),
-                'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
-            })
-
+        save_metric_from_file(metric_file, name, ctx, doc, run_activity)
                         
     for name, param in PROV4ML_DATA.parameters.items():
         if "dataset" in name: continue

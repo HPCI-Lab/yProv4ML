@@ -130,7 +130,6 @@ def log_model(model: Union[torch.nn.Module, Any], model_name: str = "default", l
     if log_as_artifact:
         save_model_version(model, model_name, Context.EVALUATION)
         
-
 def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Context, step: Optional[int] = None) -> None:
     """Logs the number of FLOPs (floating point operations) per epoch for the given model and dataset.
     
@@ -172,8 +171,8 @@ def log_system_metrics(
     log_metric("disk_usage", system_utils.get_disk_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("gpu_usage", system_utils.get_gpu_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("gpu_temperature", system_utils.get_gpu_temperature(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
+    log_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
 
 def log_carbon_metrics(
     context: Context,
