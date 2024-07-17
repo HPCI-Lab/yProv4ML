@@ -9,7 +9,6 @@ from ..provenance.context import Context
 from .itwinai_logger import Logger
 from ..prov4ml import *
 from ..datamodel.attribute_type import LoggingItemKind
-from ..utils.funcs import get_global_rank
 
 class ProvMLItwinAILogger(Logger):
     def __init__(
@@ -19,6 +18,7 @@ class ProvMLItwinAILogger(Logger):
         provenance_save_dir="prov",
         collect_all_processes: Optional[bool] = False,
         save_after_n_logs: Optional[int] = 100,
+        log_on_processes : List[int] = [],
         create_graph: Optional[bool] = True,
         create_svg: Optional[bool] = True,
     ) -> None:
@@ -40,6 +40,7 @@ class ProvMLItwinAILogger(Logger):
         self.save_after_n_logs = save_after_n_logs
         self.create_graph = create_graph
         self.create_svg = create_svg
+        self.log_on_processes = log_on_processes
 
     @property
     @override
@@ -125,14 +126,31 @@ class ProvMLItwinAILogger(Logger):
         pass
 
     @override
+    def should_log(self, batch_idx: int = None, worker_rank: int = 0) -> bool:
+        worker_ok = (
+            (isinstance(self.log_on_workers, int) and (
+                self.log_on_workers == -1 or
+                self.log_on_workers == worker_rank
+            )
+            )
+            or
+            (isinstance(self.log_on_workers, list)
+             and worker_rank in self.log_on_workers)
+        )
+
+        return super().should_log(batch_idx) and worker_ok
+
+
+    @override
     def log(
         self,
         item: Union[Any, List[Any]],
         identifier: Union[str, List[str]],
         kind: Union[str, LoggingItemKind] = 'metric',
         step: Optional[int] = None,
-        context: Optional[Context] = None,
-        log_on_processes : List[int] = [],
+        batch_idx: Optional[int] = None,
+        context: Optional[Context] = 'training',
+        rank: int = 0,
         **kwargs
         ) -> None:
         """
@@ -143,8 +161,7 @@ class ProvMLItwinAILogger(Logger):
             step (Optional[int]): The step number for the metrics. Defaults to None.
         """
 
-        gr = get_global_rank()
-        if gr not in log_on_processes and log_on_processes != []:
+        if not self.should_log(batch_idx=batch_idx, worker_rank=rank):
             return
 
         if kind == LoggingItemKind.METRIC.value:
