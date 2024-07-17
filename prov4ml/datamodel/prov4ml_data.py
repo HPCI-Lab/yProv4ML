@@ -89,6 +89,9 @@ class Prov4MLData:
         
         self.metrics[(metric, context)].add_metric(value, step, timestamp if timestamp else funcs.get_current_time_millis())
 
+        if metric in self.cumulative_metrics:
+            self.cumulative_metrics[metric].update(value)
+
         total_metrics_values = self.metrics[(metric, context)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_tmp_file(self.metrics[(metric, context)])

@@ -23,7 +23,7 @@ prov4ml.start_run(
 
 prov4ml.register_final_metric("MSE_test", 10, prov4ml.FoldOperation.MIN)
 prov4ml.register_final_metric("MSE_train", 10, prov4ml.FoldOperation.MIN)
-prov4ml.register_final_metric("emissions_rate", 0, prov4ml.FoldOperation.ADD)
+prov4ml.register_final_metric("emissions_rate", 0.0, prov4ml.FoldOperation.ADD)
 
 class MNISTModel(nn.Module):
     def __init__(self):
@@ -85,4 +85,4 @@ for i, (x, y) in tqdm(enumerate(test_loader)):
 prov4ml.log_model(mnist_model, "mnist_model_final")
 
 # save the provenance graph
-prov4ml.end_run()
+prov4ml.end_run(create_graph=True, create_svg=True, create_provenance_collection=True)

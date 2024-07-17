@@ -70,7 +70,6 @@ def start_run_ctx(
     if create_provenance_collection:
         create_prov_collection(create_dot=create_graph, create_svg=create_svg)
 
-
 def start_run(
     prov_user_namespace: str,
     experiment_name: Optional[str] = None,
