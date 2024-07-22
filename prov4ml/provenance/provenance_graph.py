@@ -146,7 +146,7 @@ def create_prov_document() -> prov.ProvDocument:
 
         
     global_rank = get_global_rank()
-    if global_rank is not None and os.getenv("SLURM_PROCID") is not None:
+    if global_rank is not None:
         node_rank = os.getenv("SLURM_NODEID", None)
         local_rank = os.getenv("SLURM_LOCALID", None) 
         run_entity.add_attributes({
