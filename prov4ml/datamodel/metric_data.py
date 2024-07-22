@@ -96,7 +96,7 @@ class MetricInfo:
         --------
         None
         """
-        if process:
+        if process is not None:
             file = os.path.join(path, f"{self.name}_{self.context}_GR{process}.txt")
         else:
             file = os.path.join(path, f"{self.name}_{self.context}.txt")
