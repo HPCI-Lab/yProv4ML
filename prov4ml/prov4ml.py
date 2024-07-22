@@ -17,6 +17,7 @@ def start_run_ctx(
     provenance_save_dir: Optional[str] = None,
     collect_all_processes: Optional[bool] = False,
     save_after_n_logs: Optional[int] = 100,
+    rank : Optional[int] = None, 
     create_graph: Optional[bool] = False, 
     create_svg: Optional[bool] = False, 
     create_provenance_collection: Optional[bool] = False
@@ -46,7 +47,8 @@ def start_run_ctx(
         prov_save_path=provenance_save_dir, 
         user_namespace=prov_user_namespace, 
         collect_all_processes=collect_all_processes, 
-        save_after_n_logs=save_after_n_logs
+        save_after_n_logs=save_after_n_logs, 
+        rank=rank, 
     )
    
     energy_utils._carbon_init()
@@ -76,6 +78,7 @@ def start_run(
     provenance_save_dir: Optional[str] = None,
     collect_all_processes: Optional[bool] = False,
     save_after_n_logs: Optional[int] = 100,
+    rank : Optional[int] = None, 
     ) -> None:
     """Starts an MLflow run with the specified configurations and options.
     
@@ -95,7 +98,8 @@ def start_run(
         prov_save_path=provenance_save_dir, 
         user_namespace=prov_user_namespace, 
         collect_all_processes=collect_all_processes, 
-        save_after_n_logs=save_after_n_logs
+        save_after_n_logs=save_after_n_logs, 
+        rank=rank
     )
 
     energy_utils._carbon_init()

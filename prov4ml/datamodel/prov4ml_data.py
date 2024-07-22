@@ -45,10 +45,11 @@ class Prov4MLData:
             prov_save_path=None, 
             user_namespace=None, 
             collect_all_processes=False, 
-            save_after_n_logs=100
+            save_after_n_logs=100, 
+            rank : Optional[int] = None
         ): 
         
-        self.global_rank = funcs.get_global_rank()
+        self.global_rank = funcs.get_global_rank() if rank is None else rank
         self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name
         self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
         
