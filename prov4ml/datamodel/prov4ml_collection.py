@@ -4,6 +4,7 @@ import prov.model as prov
 
 from ..constants import PROV4ML_DATA
 from ..utils.file_utils import save_prov_file
+from ..utils.funcs import get_global_rank
     
 def create_prov_collection(create_dot=False, create_svg=False): 
     # get all prov files
@@ -22,10 +23,10 @@ def create_prov_collection(create_dot=False, create_svg=False):
         prov_doc = prov.ProvDocument()
         prov_doc = prov_doc.deserialize(f)
 
-        if os.environ.get("SLURM_JOB_ID"):
+        if get_global_rank() is not None:
             gr = f.split("_")[-1].split(".")[0]
         else:
-            gr = None
+            gr = None 
 
         doc.entity(f'{PROV4ML_DATA.EXPERIMENT_NAME}', other_attributes={
             "prov-ml:type": "ProvMLFile",
