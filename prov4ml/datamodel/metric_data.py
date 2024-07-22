@@ -2,17 +2,51 @@
 import os
 from typing import Any, Dict, List
 from .attribute_type import LoggingItemKind
+from typing import Optional
 
 class MetricInfo:
     """
-    Holds information about a metric, including its context and epoch data.
+    A class to store information about a specific metric.
 
     Attributes:
-        name (str): The name of the metric.
-        context (Any): The context of the metric.
-        epochDataList (Dict[int, List[Any]]): A dictionary mapping epochs to lists of metric values.
+    -----------
+    name : str
+        The name of the metric.
+    context : Any
+        The context in which the metric is recorded.
+    source : LoggingItemKind
+        The source of the logging item.
+    total_metric_values : int
+        The total number of metric values recorded.
+    epochDataList : dict
+        A dictionary mapping epoch numbers to lists of metric values recorded in those epochs.
+
+    Methods:
+    --------
+    __init__(name: str, context: Any, source=LoggingItemKind) -> None
+        Initializes the MetricInfo class with the given name, context, and source.
+    add_metric(value: Any, epoch: int, timestamp : int) -> None
+        Adds a metric value for a specific epoch to the MetricInfo object.
+    save_to_file(path : str, process : Optional[int] = None) -> None
+        Saves the metric information to a file.
     """
     def __init__(self, name: str, context: Any, source=LoggingItemKind) -> None:
+        """
+        Initializes the MetricInfo class with the given name, context, and source.
+
+        Parameters:
+        -----------
+        name : str
+            The name of the metric.
+        context : Any
+            The context in which the metric is recorded.
+        source : LoggingItemKind
+            The source of the logging item.
+
+        Returns:
+        --------
+        None
+        """
         self.name = name
         self.context = context
         self.source = source
@@ -21,11 +55,20 @@ class MetricInfo:
 
     def add_metric(self, value: Any, epoch: int, timestamp : int) -> None:
         """
-        Adds a metric value for a specific epoch.
+        Adds a metric value for a specific epoch to the MetricInfo object.
 
         Parameters:
-            value (Any): The metric value to add.
-            epoch (int): The epoch number.
+        -----------
+        value : Any
+            The value of the metric to be added.
+        epoch : int
+            The epoch number in which the metric value is recorded.
+        timestamp : int
+            The timestamp when the metric value was recorded.
+
+        Returns:
+        --------
+        None
         """
         if epoch not in self.epochDataList:
             self.epochDataList[epoch] = []
@@ -33,7 +76,26 @@ class MetricInfo:
         self.epochDataList[epoch].append((value, timestamp))
         self.total_metric_values += 1
 
-    def save_to_file(self, path, process=None) -> None:
+    def save_to_file(
+            self, 
+            path : str, 
+            process : Optional[int] = None
+        ) -> None:
+        """
+        Saves the metric information to a file.
+
+        Parameters:
+        -----------
+        path : str
+            The directory path where the file will be saved.
+        process : Optional[int], optional
+            The process identifier to be included in the filename. If not provided, 
+            the filename will not include a process identifier.
+
+        Returns:
+        --------
+        None
+        """
         if process:
             file = os.path.join(path, f"{self.name}_{self.context}_GR{process}.txt")
         else:

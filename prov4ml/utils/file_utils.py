@@ -1,11 +1,33 @@
 
 import os
 import prov.dot as dot
+import prov.model as prov
 
 from ..constants import PROV4ML_DATA
 
-def save_prov_file(doc, prov_file, create_graph=False, create_svg=False):
-    """Save the provenance document to a file."""
+def save_prov_file(
+        doc : prov.ProvDocument,
+        prov_file : str,
+        create_graph : bool =False, 
+        create_svg : bool =False
+    ) -> None:
+    """
+    Save the provenance document to a file.
+
+    Parameters:
+    -----------
+    doc : prov.ProvDocument
+        The provenance document to save.
+    prov_file : str
+        The path to the file where the provenance document will be saved.
+    create_graph : bool 
+        A flag to indicate if a graph should be created. Defaults to False.
+    create_svg : bool
+        A flag to indicate if an SVG should be created. Defaults to False.
+    
+    Returns:
+        None
+    """
     with open(prov_file, 'w') as prov_graph:
         doc.serialize(prov_graph)
 

@@ -1,10 +1,39 @@
 
 import sys
 from typing import Any
-from collections import namedtuple
 from enum import Enum
 
 class LoggingItemKind(Enum): 
+    """
+    An enumeration representing different kinds of logging items used in provenance data collection.
+
+    Attributes:
+    -----------
+    METRIC : str
+        Represents a custom metric.
+    FLOPS_PER_BATCH : str
+        Represents the FLOPS (floating-point operations per second) calculated per batch.
+    FLOPS_PER_EPOCH : str
+        Represents the FLOPS calculated per epoch.
+    SYSTEM_METRIC : str
+        Represents system metrics related to hardware and system performance.
+    CARBON_METRIC : str
+        Represents carbon emission metrics.
+    EXECUTION_TIME : str
+        Represents the execution time of code segments.
+    MODEL_VERSION : str
+        Represents the version of the machine learning model.
+    FINAL_MODEL_VERSION : str
+        Represents the final version of the machine learning model.
+    PARAMETER : str
+        Represents parameters used in the experiment.
+
+    Notes:
+    ------
+    - This enumeration helps categorize different types of logging items for better organization and management
+      of provenance data.
+    - Each item corresponds to a specific aspect of logging or metrics that might be tracked in an experiment.
+    """
     METRIC = 'metric'
     FLOPS_PER_BATCH = 'flops_pb'
     FLOPS_PER_EPOCH = 'flops_pe'
@@ -17,34 +46,53 @@ class LoggingItemKind(Enum):
 
 
 class Prov4MLAttribute:
-    ATTR = namedtuple('prov4ml_attr', ['value'])
-    EPOCH_ATTR = namedtuple('prov4ml_epoch_attr', ['epoch', 'value'])
-    EPOCH_ATTR_TIME = namedtuple('prov4ml_epoch_attr_time', ['epoch', 'value', 'time'])
-    ATTR_SOURCE = namedtuple('prov4ml_attr_source', ['source', 'value'])
-    EPOCH_ATTR_SOURCE = namedtuple('prov4ml_epoch_attr_source', ['epoch', 'source', 'value'])
+    """
+    A class for managing attributes related to provenance data collection and logging.
+
+    This class provides static methods to retrieve attribute information and sources
+    based on different logging item kinds.
+
+    Methods:
+    --------
+    get_attr(value: Any) -> str
+        Converts a given value to its string representation.
+    get_source_from_kind(kind: LoggingItemKind) -> str
+        Returns a source string based on the type of logging item kind.
+    """
 
     @staticmethod
     def get_attr(value: Any) -> str:
+        """
+        Converts the given value to its string representation.
+
+        Parameters:
+        -----------
+        value : Any
+            The value to be converted to a string.
+
+        Returns:
+        --------
+        str
+            The string representation of the provided value.
+        """
+
         return str(value)
-        # return str(Prov4MLAttribute.ATTR(value))
-
-    @staticmethod
-    def get_epoch_attr(epoch : int, value: Any) -> str:
-        return str(Prov4MLAttribute.EPOCH_ATTR(epoch, value))
-    
-    def get_epoch_attr_time(epoch: int, value: Any, time: float) -> str:
-        return str(Prov4MLAttribute.EPOCH_ATTR_TIME(epoch, value, time))
-    
-    @staticmethod
-    def get_source_attr(source: Any, value: Any) -> str:
-        return str(Prov4MLAttribute.ATTR_SOURCE(source, value))
-
-    @staticmethod
-    def get_epoch_source_attr(epoch: int, source: Any, value: Any) -> str:
-        return str(Prov4MLAttribute.EPOCH_ATTR_SOURCE(epoch, source, value))
     
     @staticmethod
     def get_source_from_kind(kind: LoggingItemKind) -> str:
+        """
+        Returns the source string based on the logging item kind.
+
+        Parameters:
+        -----------
+        kind : LoggingItemKind
+            The type of logging item which determines the source.
+
+        Returns:
+        --------
+        str
+            The source string associated with the provided logging item kind.
+        """
         if kind == LoggingItemKind.METRIC or kind == None:
             return 'custom_metric'
         elif kind == LoggingItemKind.FLOPS_PER_BATCH or kind == LoggingItemKind.FLOPS_PER_EPOCH:

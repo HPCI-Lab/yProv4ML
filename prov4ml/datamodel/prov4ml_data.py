@@ -5,20 +5,87 @@ from typing import Any, Dict, List, Optional
 from .artifact_data import ArtifactInfo
 from .attribute_type import LoggingItemKind
 from .parameter_data import ParameterInfo
-from .cumulative_metrics import CumulativeMetric
+from .cumulative_metrics import CumulativeMetric, FoldOperation
 from .metric_data import MetricInfo
 from ..provenance.context import Context
 from ..utils import funcs
 
 class Prov4MLData:
     """
-    Holds the provenance data for metrics, parameters, and artifacts in a machine learning experiment.
+    A class for managing and storing provenance information for machine learning experiments.
 
     Attributes:
-        metrics (Dict[str, MetricInfo]): A dictionary of metrics.
-        parameters (Dict[str, ParameterInfo]): A dictionary of parameters.
-        artifacts (Dict[str, ArtifactInfo]): A dictionary of artifacts.
-        experiment_name (str): The name of the experiment.
+    -----------
+    metrics : dict
+        A dictionary mapping tuples of (str, Context) to MetricInfo objects, 
+        representing the metrics tracked during the experiment.
+    parameters : dict
+        A dictionary mapping strings to ParameterInfo objects, representing 
+        the parameters used in the experiment.
+    artifacts : dict
+        A dictionary mapping tuples of (str, Context) to ArtifactInfo objects, 
+        representing the artifacts generated during the experiment.
+    cumulative_metrics : dict
+        A dictionary mapping strings to CumulativeMetric objects, representing 
+        cumulative metrics aggregated over the experiment.
+    PROV_SAVE_PATH : str
+        The path where the provenance data will be saved.
+    EXPERIMENT_NAME : str
+        The name of the experiment.
+    EXPERIMENT_DIR : str
+        The directory where the experiment's data is stored.
+    ARTIFACTS_DIR : str
+        The directory where the artifacts are stored.
+    USER_NAMESPACE : str
+        The user namespace for organizing experiments.
+    RUN_ID : int
+        The identifier for the current run of the experiment.
+    global_rank : optional
+        The global rank of the current process in a distributed setting.
+    is_collecting : bool
+        A flag indicating whether the provenance data collection is active.
+    save_metrics_after_n_logs : int
+        The number of logs after which metrics are saved.
+    TMP_DIR : str
+        The temporary directory used during the experiment.
+
+    Methods:
+    --------
+    __init__() -> None
+        Initializes the Prov4MLData class with default values.
+
+    init(experiment_name: str, prov_save_path: Optional[str] = None, user_namespace: Optional[str] = None, 
+         collect_all_processes: bool = False, save_after_n_logs: int = 100, rank: Optional[int] = None) -> None
+        Initializes the experiment with the given parameters and sets up directories and metadata.
+
+    add_metric(metric: str, value: Any, step: int, context: Optional[Any] = None, source: LoggingItemKind = None,
+                timestamp = None) -> None
+        Adds a metric to the provenance data.
+
+    add_cumulative_metric(label: str, value: Any, fold_operation: FoldOperation) -> None
+        Adds a cumulative metric to the provenance data.
+
+    add_parameter(parameter: str, value: Any) -> None
+        Adds a parameter to the provenance data.
+
+    add_artifact(artifact_name: str, value: Any = None, step: Optional[int] = None, context: Optional[Any] = None,
+                timestamp: Optional[int] = None) -> None
+        Adds an artifact to the artifacts dictionary.
+
+    get_artifacts() -> List[ArtifactInfo]
+        Returns a list of all artifacts.
+
+    get_model_versions() -> List[ArtifactInfo]
+        Returns a list of all model version artifacts.
+
+    get_final_model() -> Optional[ArtifactInfo]
+        Returns the most recent model version artifact.
+
+    save_metric_to_tmp_file(metric: MetricInfo) -> None
+        Saves a metric to a temporary file.
+
+    save_all_metrics() -> None
+        Saves all tracked metrics to temporary files.
     """
     def __init__(self) -> None:
         self.metrics: Dict[(str, Context), MetricInfo] = {}
@@ -41,14 +108,35 @@ class Prov4MLData:
 
     def init(
             self, 
-            experiment_name, 
-            prov_save_path=None, 
-            user_namespace=None, 
-            collect_all_processes=False, 
-            save_after_n_logs=100, 
-            rank : Optional[int] = None
-        ): 
-        
+            experiment_name: str, 
+            prov_save_path: Optional[str] = None, 
+            user_namespace: Optional[str] = None, 
+            collect_all_processes: bool = False, 
+            save_after_n_logs: int = 100, 
+            rank: Optional[int] = None
+        ) -> None:
+        """
+        Initializes the experiment with the given parameters and sets up directories and metadata.
+
+        Parameters:
+        -----------
+        experiment_name : str
+            The name of the experiment.
+        prov_save_path : Optional[str], optional
+            The path where the provenance data will be saved. If not provided, uses default.
+        user_namespace : Optional[str], optional
+            The user namespace for organizing experiments. If not provided, uses default.
+        collect_all_processes : bool, optional
+            A flag indicating whether to collect provenance data for all processes in a distributed setting.
+        save_after_n_logs : int, optional
+            The number of logs after which metrics are saved. Default is 100.
+        rank : Optional[int], optional
+            The rank of the current process in a distributed setting. If not provided, determines the global rank.
+
+        Returns:
+        --------
+        None
+        """
         self.global_rank = funcs.get_global_rank() if rank is None else rank
         self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name
         self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
@@ -73,16 +161,37 @@ class Prov4MLData:
         self.ARTIFACTS_DIR = os.path.join(self.EXPERIMENT_DIR, "artifacts")
         self.TMP_DIR = os.path.join(self.EXPERIMENT_DIR, "tmp")
 
-    def add_metric(self, metric: str, value: Any, step: int, context: Optional[Any] = None, source:LoggingItemKind=None, timestamp=None) -> None:
+    def add_metric(
+        self, 
+        metric: str, 
+        value: Any, 
+        step: int, 
+        context: Optional[Any] = None, 
+        source: LoggingItemKind = None, 
+        timestamp = None
+    ) -> None:
         """
-        Adds a metric to the metrics dictionary.
+        Adds a metric to the provenance data.
 
         Parameters:
-            metric (str): The name of the metric.
-            value (Any): The value of the metric.
-            step (int): The step number for the metric.
-            context (Optional[Any]): The context of the metric. Defaults to None.
-        """
+        -----------
+        metric : str
+            The name of the metric to add.
+        value : Any
+            The value of the metric to add.
+        step : int
+            The step or iteration number associated with the metric value.
+        context : Optional[Any], optional
+            The context in which the metric is recorded, default is None.
+        source : LoggingItemKind, optional
+            The source of the logging item, default is None.
+        timestamp : optional
+            The timestamp when the metric is recorded. If not provided, the current time in milliseconds is used.
+
+        Returns:
+        --------
+        None
+        """        
         if not self.is_collecting: return
 
         if (metric, context) not in self.metrics:
@@ -97,27 +206,41 @@ class Prov4MLData:
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_tmp_file(self.metrics[(metric, context)])
 
-    def add_cumulative_metric(self, label: str, value, fold_operation) -> None:
+    def add_cumulative_metric(self, label: str, value: Any, fold_operation: FoldOperation) -> None:
         """
-        Adds a cumulative metric to the cumulative metrics dictionary.
+        Adds a cumulative metric to the provenance data.
 
         Parameters:
-            label (str): The label of the cumulative metric.
-            value (Any): The value of the cumulative metric.
-            fold_operation (Any): The fold operation of the cumulative metric.
+        -----------
+        label : str
+            The label of the cumulative metric.
+        value : Any
+            The initial value of the cumulative metric.
+        fold_operation : FoldOperation
+            The operation used to fold new values into the cumulative metric.
+
+        Returns:
+        --------
+        None
         """
         if not self.is_collecting: return
 
         self.cumulative_metrics[label] = CumulativeMetric(label, value, fold_operation)
 
-
     def add_parameter(self, parameter: str, value: Any) -> None:
         """
-        Adds a parameter to the parameters dictionary.
+        Adds a parameter to the provenance data.
 
         Parameters:
-            parameter (str): The name of the parameter.
-            value (Any): The value of the parameter.
+        -----------
+        parameter : str
+            The name of the parameter to add.
+        value : Any
+            The value of the parameter to add.
+
+        Returns:
+        --------
+        None
         """
         if not self.is_collecting: return
 
@@ -186,7 +309,12 @@ class Prov4MLData:
         Saves a metric to a temporary file.
 
         Parameters:
+        --------
             metric (MetricInfo): The metric to save.
+        
+        Returns:
+        --------
+        None
         """
         if not self.is_collecting: return
 
@@ -196,6 +324,13 @@ class Prov4MLData:
         metric.save_to_file(self.TMP_DIR, process=self.global_rank)
 
     def save_all_metrics(self) -> None:
+        """
+        Saves all tracked metrics to temporary files.
+
+        Returns:
+        --------
+        None
+        """
         if not self.is_collecting: return
 
         for metric in self.metrics.values():
