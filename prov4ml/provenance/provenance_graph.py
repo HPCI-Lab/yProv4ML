@@ -14,7 +14,55 @@ from ..datamodel.artifact_data import artifact_is_pytorch_model
 from ..provenance.context import Context
 from ..utils.funcs import get_global_rank
 
-def calculate_energy_consumption(doc, ctx, epochs, timestamps, values):
+def calculate_energy_consumption(
+    doc: prov.ProvDocument,
+    ctx: Context,
+    epochs: list[int],
+    timestamps: list[int],
+    values: list[float], 
+) -> None:
+    """
+    Calculates energy consumption based on power usage values and updates the provenance document.
+
+    This function computes the total energy consumption from power usage values over specified epochs,
+    and records the result in the given provenance document. It also creates or updates entities and
+    relationships in the document related to energy consumption metrics.
+
+    Parameters:
+    -----------
+    doc : prov.ProvDocument
+        The provenance document to which the energy consumption data will be added.
+    ctx : Context
+        The context in which the energy consumption was measured (e.g., TRAINING, VALIDATION, EVALUATION).
+    epochs : list[int]
+        A list of epochs during which power usage was measured.
+    timestamps : list[int]
+        A list of timestamps corresponding to the epochs, representing the time at which power usage was recorded.
+    values : list[float]
+        A list of power usage values recorded during the specified epochs.
+
+    Returns:
+    --------
+    None
+
+    Notes:
+    ------
+    - The energy consumption is computed by summing the product of the time interval between successive
+      timestamps and the corresponding power usage values.
+    - The function creates or updates an entity in the provenance document to represent the energy consumption metric.
+    - Relationships are established between the energy consumption entity and the epochs during which the measurements were taken.
+    - The provenance document's energy consumption entity is updated with attributes including epochs, values, and timestamps.
+
+    Examples:
+    ---------
+    calculate_energy_consumption(
+        doc=prov_document_instance,
+        ctx=Context.TRAINING,
+        epochs=[1, 2, 3],
+        timestamps=[1000, 2000, 3000],
+        values=[150.0, 160.0, 155.0]
+    )
+    """
     energy = 0
     for i in range(1, len(epochs)):
         energy += (timestamps[i] - timestamps[i-1]) * values[i]
@@ -39,8 +87,58 @@ def calculate_energy_consumption(doc, ctx, epochs, timestamps, values):
         'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
     })
     
+def save_metric_from_file(
+        metric_file : str,
+        name : str, 
+        ctx:Context, 
+        doc:prov.ProvDocument, 
+        run_activity: prov.ProvActivity
+    ) -> None:
+    """
+    Saves metric data from a file to a provenance document.
 
-def save_metric_from_file(metric_file, name : str, ctx:Context, doc:prov.ProvDocument, run_activity):
+    This function reads metric data from a file, processes the data, and updates
+    the provided `prov.ProvDocument` with entities, activities, and relationships
+    related to the metrics. It handles different contexts (training, validation,
+    evaluation) and updates the provenance document accordingly.
+
+    Parameters:
+    -----------
+    metric_file : str
+        The name of the file containing the metric data.
+    name : str
+        The name of the metric.
+    ctx : Context
+        The context in which the metric was collected (e.g., TRAINING, VALIDATION, EVALUATION).
+    doc : prov.ProvDocument
+        The provenance document to which the metric data will be added.
+    run_activity
+        The activity representing the current run or experiment execution.
+
+    Returns:
+    --------
+    None
+
+    Notes:
+    ------
+    - The metric file should be formatted with the source on the first line, followed
+      by metric data in the format `epoch,value,timestamp` on subsequent lines.
+    - The function creates or updates metric entities and activities in the provenance
+      document based on the context and metric data.
+    - Different activities are created for training, validation, and evaluation contexts.
+    - The metric entity's attributes are updated with epoch lists, value lists, and
+      timestamps.
+
+    Examples:
+    ---------
+    save_metric_from_file(
+        metric_file='metric_data.txt',
+        name='accuracy',
+        ctx=Context.TRAINING,
+        doc=prov_document_instance,
+        run_activity=current_run_activity
+    )
+    """
     with open(os.path.join(PROV4ML_DATA.TMP_DIR, metric_file), 'r') as f:
             lines = f.readlines()
             source = lines[0].split(',')[2]
@@ -112,10 +210,6 @@ def save_metric_from_file(metric_file, name : str, ctx:Context, doc:prov.ProvDoc
 def create_prov_document() -> prov.ProvDocument:
     """
     Generates the first level of provenance for a given run.
-
-    Args:
-        run (Run): The run object.
-        doc (prov.ProvDocument): The provenance document.
 
     Returns:
         prov.ProvDocument: The provenance document.

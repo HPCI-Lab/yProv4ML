@@ -1,9 +1,20 @@
 
 from prov.model import ProvDocument
 
-def join_provjson(runs : list, path : str = "."):
+def join_provjson(runs : list, path : str = ".") -> None:
     """
     Join the provenance data of several runs.
+
+    Parameters:
+    -----------
+    runs : list
+        List of the runs to join.
+    path : str, optional
+        Path to the directory containing the provenance data. Default is ".".
+
+    Returns:
+    --------
+    None
     """
     # Load the provenance data of the first run
     prov1 = ProvDocument()

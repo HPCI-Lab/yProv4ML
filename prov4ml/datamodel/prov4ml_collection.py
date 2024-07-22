@@ -6,7 +6,24 @@ from ..constants import PROV4ML_DATA
 from ..utils.file_utils import save_prov_file
 from ..utils.funcs import get_global_rank
     
-def create_prov_collection(create_dot=False, create_svg=False): 
+def create_prov_collection(
+        create_dot : bool = False, 
+        create_svg : bool = False, 
+    ) -> None: 
+    """
+    Creates a collection of provenance data by aggregating all provenance files from the experiment directory.
+
+    Parameters:
+    -----------
+    create_dot : bool, optional
+        Whether to create a DOT file for visualization. Default is False.
+    create_svg : bool, optional
+        Whether to create an SVG file for visualization. Default is False.
+
+    Returns:
+    --------
+    None
+    """
     # get all prov files
     prov_files = [f for f in os.listdir(PROV4ML_DATA.EXPERIMENT_DIR) if f.endswith(".json")]
 
