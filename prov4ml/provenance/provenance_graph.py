@@ -12,7 +12,7 @@ from ..constants import PROV4ML_DATA
 from ..datamodel.attribute_type import Prov4MLAttribute
 from ..datamodel.artifact_data import artifact_is_pytorch_model
 from ..provenance.context import Context
-from ..utils.funcs import get_global_rank
+from ..utils.funcs import get_global_rank, get_runtime_type
 
 def calculate_energy_consumption(
     doc: prov.ProvDocument,
@@ -240,13 +240,18 @@ def create_prov_document() -> prov.ProvDocument:
 
         
     global_rank = get_global_rank()
-    if global_rank is not None:
+    runtime_type = get_runtime_type()
+    if runtime_type == "slurm":
         node_rank = os.getenv("SLURM_NODEID", None)
         local_rank = os.getenv("SLURM_LOCALID", None) 
         run_entity.add_attributes({
             "prov-ml:global_rank":Prov4MLAttribute.get_attr(global_rank),
             "prov-ml:local_rank":Prov4MLAttribute.get_attr(local_rank),
             "prov-ml:node_rank":Prov4MLAttribute.get_attr(node_rank),
+        })
+    elif runtime_type == "single_core":
+        run_entity.add_attributes({
+            "prov-ml:global_rank":Prov4MLAttribute.get_attr(global_rank)
         })
 
     run_activity = doc.activity(f'{PROV4ML_DATA.EXPERIMENT_NAME}_execution', other_attributes={
@@ -263,7 +268,7 @@ def create_prov_document() -> prov.ProvDocument:
     doc.entity('source_code',{
         "prov-ml:type": Prov4MLAttribute.get_attr("SourceCode"),
         "prov-ml:source_name": Prov4MLAttribute.get_attr(__file__.split('/')[-1]),
-        "prov-ml:source_type": Prov4MLAttribute.get_attr("LOCAL") if global_rank is None else Prov4MLAttribute.get_attr("SLURM"),
+        "prov-ml:runtime_type": Prov4MLAttribute.get_attr(runtime_type),
     })
 
     try:
@@ -285,16 +290,13 @@ def create_prov_document() -> prov.ProvDocument:
     else:
         all_metrics = []
 
-    if global_rank is not None:
-        all_metrics = [metric for metric in all_metrics if f"_GR{global_rank}" in metric]
-
     for metric_file in all_metrics:
-        if global_rank is not None:
-            name = "_".join(metric_file.split('_')[:-2])
-            ctx = metric_file.split('_')[-2].strip()
-        else: 
-            name = "_".join(metric_file.split('_')[:-1])
-            ctx = metric_file.split('_')[-1].replace(".txt","")
+        # if global_rank is not None:
+        name = "_".join(metric_file.split('_')[:-2])
+        ctx = metric_file.split('_')[-2].strip()
+        # else: 
+        # name = "_".join(metric_file.split('_')[:-1])
+        # ctx = metric_file.split('_')[-1].replace(".txt","")
         ctx = Context.get_context_from_string(ctx)
         save_metric_from_file(metric_file, name, ctx, doc, run_activity)
                         

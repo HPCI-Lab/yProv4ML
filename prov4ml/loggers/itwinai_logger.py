@@ -3,7 +3,7 @@ import os
 import pickle
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 from typing_extensions import Literal
 
 class LogMixin(metaclass=ABCMeta):
@@ -25,7 +25,7 @@ class LogMixin(metaclass=ABCMeta):
             identifier (Union[str, List[str]]): unique identifier for the
                 element to log(e.g., name of a metric).
             kind (str, optional): type of the item to be logged. Must be one
-                among the list of self.supported_types. Defaults to 'metric'.
+                among the list of self.supported_kinds. Defaults to 'metric'.
             step (Optional[int], optional): logging step. Defaults to None.
             batch_idx (Optional[int], optional): DataLoader batch counter
                 (i.e., batch idx), if available. Defaults to None.
@@ -52,20 +52,29 @@ class Logger(LogMixin, metaclass=ABCMeta):
             - When set to ``'batch'``, the logger logs always.
 
             Defaults to 'epoch'.
+        log_on_workers (Optional[Union[int, List[int]]]): if -1, log on all
+            workers; if int log on worker with rank equal to log_on_workers;
+            if List[int], log on workers which rank is in the list.
+            Defaults to 0 (the global rank of the main worker).
     """
     #: Location on filesystem where to store data.
     savedir: str = None
     #: Supported logging 'kind's.
-    supported_types: List[str]
+    supported_kinds: Tuple[str]
+    #: Current worker global rank
+    worker_rank: int
+
     _log_freq: Union[int, Literal['epoch', 'batch']]
 
     def __init__(
         self,
         savedir: str = 'mllogs',
-        log_freq: Union[int, Literal['epoch', 'batch']] = 'epoch'
+        log_freq: Union[int, Literal['epoch', 'batch']] = 'epoch',
+        log_on_workers: Union[int, List[int]] = 0
     ) -> None:
         self.savedir = savedir
         self.log_freq = log_freq
+        self.log_on_workers = log_on_workers
 
     @property
     def log_freq(self) -> Union[int, Literal['epoch', 'batch']]:
@@ -85,8 +94,12 @@ class Logger(LogMixin, metaclass=ABCMeta):
             )
 
     @contextmanager
-    def start_logging(self):
+    def start_logging(self, rank: Optional[int] = None):
         """Start logging context.
+
+        Args:
+            rank (Optional[int]): global rank of current process,
+                used in distributed environments. Defaults to None.
 
         Example:
 
@@ -97,17 +110,23 @@ class Logger(LogMixin, metaclass=ABCMeta):
 
         """
         try:
-            self.create_logger_context()
+            self.create_logger_context(rank=rank)
             yield
         finally:
             self.destroy_logger_context()
 
     @abstractmethod
-    def create_logger_context(self):
-        """Initialize logger."""
+    def create_logger_context(self, rank: Optional[int] = None) -> Any:
+        """
+        Initializes the logger context.
+
+        Args:
+            rank (Optional[int]): global rank of current process,
+                used in distributed environments. Defaults to None.
+        """
 
     @abstractmethod
-    def destroy_logger_context(self):
+    def destroy_logger_context(self) -> None:
         """Destroy logger."""
 
     @abstractmethod
@@ -149,6 +168,9 @@ class Logger(LogMixin, metaclass=ABCMeta):
 
         - When ``log_freq`` is set to ``'batch'``, the logger logs always.
 
+        It also takes into account whether logging on the current worker
+        rank is allowed by ``self.log_on_workers``.
+
         Args:
             batch_idx (Optional[int]): the dataloader batch idx, if available.
                 Defaults to None.
@@ -156,6 +178,22 @@ class Logger(LogMixin, metaclass=ABCMeta):
         Returns:
             bool: True if the logger should log, False otherwise.
         """
+        # Check worker's global rank
+        worker_ok = (
+            self.worker_rank is None or
+            (isinstance(self.log_on_workers, int) and (
+                self.log_on_workers == -1 or
+                self.log_on_workers == self.worker_rank
+            )
+            )
+            or
+            (isinstance(self.log_on_workers, list)
+             and self.worker_rank in self.log_on_workers)
+        )
+        if not worker_ok:
+            return False
+
+        # Check batch ID
         if batch_idx is not None:
             if isinstance(self.log_freq, int):
                 if batch_idx % self.log_freq == 0:
@@ -165,4 +203,3 @@ class Logger(LogMixin, metaclass=ABCMeta):
                 return True
             return False
         return True
-
