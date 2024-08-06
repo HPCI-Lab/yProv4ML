@@ -7,6 +7,7 @@ from datetime import datetime
 import getpass
 import subprocess
 import warnings
+import pipreqs
 
 from ..constants import PROV4ML_DATA
 from ..datamodel.attribute_type import Prov4MLAttribute
@@ -234,11 +235,14 @@ def create_prov_document() -> prov.ProvDocument:
     run_entity.add_attributes({"prov-ml:python_version":Prov4MLAttribute.get_attr(sys.version)})
 
     # check if requirements.txt exists
-    if os.path.exists("requirements.txt"):
-        env_reqs = open("requirements.txt", "r").read()        
-        run_entity.add_attributes({"prov-ml:requirements":Prov4MLAttribute.get_attr(env_reqs)})
+    if not os.path.exists("requirements.txt"):
+        os.popen("pipreqs --force .")
 
-        
+    env_reqs = open("requirements.txt", "r").readlines()
+    env_reqs = [req.strip() for req in env_reqs]
+    env_reqs = "\n".join(env_reqs)  
+    run_entity.add_attributes({"prov-ml:requirements":Prov4MLAttribute.get_attr(env_reqs)})
+
     global_rank = get_global_rank()
     runtime_type = get_runtime_type()
     if runtime_type == "slurm":
