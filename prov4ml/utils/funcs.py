@@ -73,4 +73,23 @@ def get_global_rank() -> Optional[int]:
     if "SLURM_PROCID" in os.environ:
         return int(os.getenv("SLURM_PROCID", None))
     
-    return None
+    return 0
+
+
+def get_runtime_type(): 
+    """
+    Get the runtime type.
+
+    Returns:
+    --------
+    str
+        The runtime type.
+
+    Examples:
+    ---------
+    >>> get_runtime_type()
+    "single_core"
+    """
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        return "distributed"
+    return "single_core"

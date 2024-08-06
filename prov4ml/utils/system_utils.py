@@ -3,13 +3,13 @@ import psutil
 import torch
 import sys
 import warnings
+from nvitop import Device
 if sys.platform != 'darwin':
     import pyamdgpuinfo
     import GPUtil
     import gpustat
 else: 
     import apple_gpu
-
 
 def get_cpu_usage() -> float:
     """
@@ -45,6 +45,10 @@ def get_gpu_memory_usage() -> float:
     Returns:
         float: The GPU memory usage percentage.
     """
+    gpu_memory = get_gpu_metric_nvidia('memory_total')
+    if gpu_memory is not None:
+        return gpu_memory
+    
     if torch.cuda.is_available():
         return torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
     else:
@@ -69,7 +73,6 @@ def get_gpu_power_usage() -> float:
 
     return gpu_power if gpu_power is not None else 0.0
     
-
 def get_gpu_temperature() -> float:
     """
     Returns the current GPU temperature, if GPU is available.
@@ -79,6 +82,8 @@ def get_gpu_temperature() -> float:
     """
     if sys.platform != 'darwin':
         gpu_temperature = None
+        gpu_utilization = get_gpu_metric_nvidia('temperature')
+
         if torch.cuda.is_available():
             gpu_temperature = get_gpu_metric_gputil('temperature')
 
@@ -99,6 +104,8 @@ def get_gpu_usage() -> float:
     """
     if sys.platform != 'darwin':
         gpu_utilization = None
+        gpu_utilization = get_gpu_metric_nvidia('utilization')
+
         if torch.cuda.is_available():
             gpu_utilization = get_gpu_metric_gputil('utilization')
 
@@ -108,7 +115,6 @@ def get_gpu_usage() -> float:
         gpu_utilization = get_gpu_metric_apple('utilization')
 
     return gpu_utilization if gpu_utilization is not None else 0.0
-
 
 def get_gpu_metric_amd(metric): 
     try: 
@@ -125,6 +131,23 @@ def get_gpu_metric_amd(metric):
         warnings.warn(f"Could not get metric: {metric}")
         return None
 
+def get_gpu_metric_nvidia(metric):
+
+    devices = Device.all()
+    if len(devices) == 0:  
+        return None
+    device = devices[0] 
+
+    if metric == 'temperature':
+        return device.temperature
+    elif metric == "utilization": 
+        return device.gpu_utilization
+    elif metric == 'fan_speed': 
+        return device.fan_speed
+    elif metric == 'memory_total':
+        return device.memory_total_human
+    else: 
+        return None
 
 def get_gpu_metric_gputil(metric):
     current_gpu = torch.cuda.current_device()

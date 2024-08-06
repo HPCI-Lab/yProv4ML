@@ -1,110 +1,91 @@
 
-import os
 from typing import Any, Dict, Optional, Union
 from typing_extensions import override
-from typing import List
+from typing import List, Tuple, Literal
 
 from ..logging import *
-from ..provenance.context import Context
 from .itwinai_logger import Logger
 from ..prov4ml import *
-from ..datamodel.attribute_type import LoggingItemKind
 
 class ProvMLItwinAILogger(Logger):
+    """
+    Abstraction around Prov4ML logger.
+
+    Args:
+        prov_user_namespace (str, optional): location to where provenance
+            files will be uploaded. Defaults to "www.example.org".
+        experiment_name (str, optional): experiment name.
+            Defaults to "experiment_name".
+        provenance_save_dir (str, optional): path where to store provenance
+            files and logs. Defaults to "prov".
+        save_after_n_logs (Optional[int], optional): how often to save
+            logs to disk from main memory. Defaults to 100.
+        create_graph (Optional[bool], optional): whether to create a
+            provenance graph. Defaults to True.
+        create_svg (Optional[bool], optional): whether to create an SVG
+            representation of the provenance graph. Defaults to True.
+        log_freq (Union[int, Literal['epoch', 'batch']], optional):
+            determines whether the logger should fulfill or ignore
+            calls to the `log()` method. See ``Logger.should_log`` method for
+            more details. Defaults to 'epoch'.
+        log_on_workers (Optional[Union[int, List[int]]]): if -1, log on all
+            workers; if int log on worker with rank equal to log_on_workers;
+            if List[int], log on workers which rank is in the list.
+            Defaults to 0 (the global rank of the main worker).
+    """
+
+    #: Supported kinds in the ``log`` method
+    supported_kinds: Tuple[str] = (
+        'metric', 'flops_pb', 'flops_pe', 'system', 'carbon',
+        'execution_time', 'model', 'best_model',
+        'torch')
+
     def __init__(
         self,
         prov_user_namespace="www.example.org",
-        experiment_name="experiment_name", 
-        provenance_save_dir="prov",
-        collect_all_processes: Optional[bool] = False,
+        experiment_name="experiment_name",
+        provenance_save_dir="mllogs/prov_logs",
         save_after_n_logs: Optional[int] = 100,
-        log_on_processes : List[int] = [],
         create_graph: Optional[bool] = True,
         create_svg: Optional[bool] = True,
+        log_freq: Union[int, Literal['epoch', 'batch']] = 'epoch',
+        log_on_workers: Union[int, List[int]] = 0
     ) -> None:
-        """
-        Initializes a ProvMLLogger instance.
-
-        Parameters:
-            name (Optional[str]): The name of the experiment. Defaults to "lightning_logs".
-            version (Optional[Union[int, str]]): The version of the experiment. Defaults to None.
-            prefix (str): The prefix for the experiment. Defaults to an empty string.
-            flush_logs_every_n_steps (int): The number of steps after which logs should be flushed. Defaults to 100.
-        """
-        super().__init__()
-        self._name = experiment_name
-        self._version = None
+        super().__init__(
+            savedir=provenance_save_dir,
+            log_freq=log_freq,
+            log_on_workers=log_on_workers
+        )
+        self.name = experiment_name
+        self.version = None
         self.prov_user_namespace = prov_user_namespace
         self.provenance_save_dir = provenance_save_dir
-        self.collect_all_processes = collect_all_processes
         self.save_after_n_logs = save_after_n_logs
         self.create_graph = create_graph
         self.create_svg = create_svg
-        self.log_on_processes = log_on_processes
 
-    @property
     @override
-    def root_dir(self) -> str:
-        """
-        Parent directory for all checkpoint subdirectories.
-
-        If the experiment name parameter is an empty string, no experiment subdirectory is used and the checkpoint will
-        be saved in "save_dir/version".
-
-        Returns:
-            str: The root directory path.
-        """
-        return os.path.join(self.save_dir, self.name)
-
-    @property
-    @override
-    def log_dir(self) -> str:
-        """
-        The log directory for this run.
-
-        By default, it is named ``'version_${self.version}'`` but it can be overridden by passing a string value for the
-        constructor's version parameter instead of ``None`` or an int.
-
-        Returns:
-            str: The log directory path.
-        """
-        # create a pseudo standard path
-        version = self.version if isinstance(self.version, str) else f"version_{self.version}"
-        return os.path.join(self.root_dir, version)
-
-    @property
-    @override
-    def name(self) -> str:
-        """
-        The name of the experiment.
-
-        Returns:
-            str: The name of the experiment.
-        """
-        return self._name
-    
-    @property
-    @override
-    def version(self) -> Optional[Union[int, str]]:
-        """
-        The version of the experiment.
-
-        Returns:
-            Optional[Union[int, str]]: The version of the experiment.
-        """
-        return self._version
-    
-    @override
-    def create_logger_context(self):
+    def create_logger_context(self, rank: Optional[int] = None):
         """
         Initializes the logger context.
+
+        Args:
+            rank (Optional[int]): global rank of current process,
+                used in distributed environments. Defaults to None.
         """
+        self.worker_rank = rank
+
+        if not self.should_log():
+            return
+
         start_run(
             prov_user_namespace=self.prov_user_namespace,
             experiment_name=self.name,
             provenance_save_dir=self.provenance_save_dir,
             save_after_n_logs=self.save_after_n_logs,
-            collect_all_processes=self.collect_all_processes,
+            # This class will control which workers can log
+            collect_all_processes=True,
+            rank=rank
         )
 
     @override
@@ -112,87 +93,80 @@ class ProvMLItwinAILogger(Logger):
         """
         Destroys the logger context.
         """
-        end_run(create_graph=self.create_graph, create_svg=self.create_svg)
+        if not self.should_log():
+            return
+
+        end_run(
+            create_graph=self.create_graph,
+            create_svg=self.create_svg)
 
     @override
     def save_hyperparameters(self, params: Dict[str, Any]) -> None:
-        """
-        Saves the hyperparameters to the MLflow tracking context.
+        if not self.should_log():
+            return
 
-        Parameters:
-            params (Dict[str, Any]): A dictionary containing the hyperparameters.
-        """
-        # prov4ml.log_params(params)
-        pass
-
-    @override
-    def should_log(self, batch_idx: int = None, worker_rank: int = 0) -> bool:
-        worker_ok = (
-            (isinstance(self.log_on_workers, int) and (
-                self.log_on_workers == -1 or
-                self.log_on_workers == worker_rank
-            )
-            )
-            or
-            (isinstance(self.log_on_workers, list)
-             and worker_rank in self.log_on_workers)
-        )
-
-        return super().should_log(batch_idx) and worker_ok
-
+        # Save hyperparams
+        for param_name, val in params.items():
+            log_param(param_name, val)
 
     @override
     def log(
         self,
         item: Union[Any, List[Any]],
         identifier: Union[str, List[str]],
-        kind: Union[str, LoggingItemKind] = 'metric',
+        kind: str = 'metric',
         step: Optional[int] = None,
         batch_idx: Optional[int] = None,
-        context: Optional[Context] = 'training',
-        rank: int = 0,
+        context: Optional[str] = 'training',
         **kwargs
-        ) -> None:
-        """
-        Logs the provided metrics to the MLflow tracking context.
+    ) -> None:
+        """Logs with Prov4ML.
 
-        Parameters:
-            metrics (Dict[str, Union[Tensor, float]]): A dictionary containing the metrics and their associated values.
-            step (Optional[int]): The step number for the metrics. Defaults to None.
+        Args:
+            item (Union[Any, List[Any]]): element to be logged (e.g., metric).
+            identifier (Union[str, List[str]]): unique identifier for the
+                element to log(e.g., name of a metric).
+            kind (str, optional): type of the item to be logged. Must be
+                one among the list of ``self.supported_kinds``.
+                Defaults to 'metric'.
+            step (Optional[int], optional): logging step. Defaults to None.
+            batch_idx (Optional[int], optional): DataLoader batch counter
+                (i.e., batch idx), if available. Defaults to None.
+            kwargs: keyword arguments to pass to the logger.
         """
 
-        if not self.should_log(batch_idx=batch_idx, worker_rank=rank):
+        if not self.should_log(batch_idx=batch_idx):
             return
 
-        if kind == LoggingItemKind.METRIC.value:
-            log_metric(identifier, item, context, step=step)
-        elif kind == LoggingItemKind.FLOPS_PER_BATCH.value:
+        if kind == "metric":
+            log_metric(key=identifier, value=item,
+                               context=context, step=step)
+        elif kind == "flops_pb":
             model, batch = item
             log_flops_per_batch(
                 identifier, model=model,
                 batch=batch, context=context, step=step)
-        elif kind == LoggingItemKind.FLOPS_PER_EPOCH.value:
+        elif kind == "flops_pe":
             model, dataset = item
             log_flops_per_epoch(
                 identifier, model=model,
                 dataset=dataset, context=context, step=step)
-        elif kind == LoggingItemKind.SYSTEM_METRIC.value:
+        elif kind == "system":
             log_system_metrics(context=context, step=step)
-        elif kind == LoggingItemKind.CARBON_METRIC.value:
+        elif kind == "carbon":
             log_carbon_metrics(context=context, step=step)
-        elif kind == LoggingItemKind.EXECUTION_TIME.value:
-            log_current_execution_time(identifier, context, step=step)
-        elif kind == 'model':  # LoggingItemKind.MODEL_VERSION.value:
-            save_model_version(item, identifier, context, step=step)
+        elif kind == "execution_time":
+            log_current_execution_time(
+                label=identifier, context=context, step=step)
+        elif kind == 'model':
+            save_model_version(
+                model=item, model_name=identifier, context=context, step=step)
         elif kind == 'best_model':
-            # LoggingItemKind.FINAL_MODEL_VERSION.value:
-            log_model(item, identifier, log_model_info=True, log_as_artifact=True)
-        elif kind == 'torch':  # LoggingItemKind.PARAMETER.value:
+            log_model(model=item, model_name=identifier,
+                              log_model_info=True, log_as_artifact=True)
+        elif kind == 'torch':
             from torch.utils.data import DataLoader
             if isinstance(item, DataLoader):
-                log_dataset(item, identifier)
+                log_dataset(dataset=item, label=identifier)
             else:
-                # log_param name is misleading and should be renamed...
-                log_param(identifier, item)
-
-
+                log_param(key=identifier, value=item)

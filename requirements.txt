@@ -10,3 +10,4 @@ codecarbon
 pydot
 pyamdgpuinfo
 gpustat
+nvitop
