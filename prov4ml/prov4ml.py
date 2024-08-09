@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Optional
 from contextlib import contextmanager
 
@@ -144,7 +143,6 @@ def start_run(
 def end_run(
         create_graph: Optional[bool] = False, 
         create_svg: Optional[bool] = False, 
-        create_provenance_collection: Optional[bool] = False
     ):  
     """
     Finalizes the provenance data collection and optionally creates visualization and provenance collection files.
@@ -188,6 +186,4 @@ def end_run(
     
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
     save_prov_file(doc, path_graph, create_graph, create_svg)
-    if create_provenance_collection:
-        create_prov_collection(create_dot=create_graph, create_svg=create_svg)
 

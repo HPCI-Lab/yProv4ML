@@ -5,15 +5,16 @@ The prov4ml.log_carbon_metrics function logs carbon-related system metrics durin
 The information logged is related to the time between the last call to the function and the current call.
 
 ```python
-prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING,step=current_epoch)
+prov4ml.log_carbon_metrics(
+    context: Context,
+    step: Optional[int] = None,
+)
 ```
 
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
 | `context` | `prov4ml.Context` | **Required**. Context of the metric |
 | `step` | `int` | **Optional**. Step of the metric |
-| `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
-| `timestamp` | `int` | **Optional**. Timestamp of the metric |
 
 This function logs the following system metrics:
 
