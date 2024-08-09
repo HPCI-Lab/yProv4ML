@@ -1,22 +1,16 @@
 
 # Installation
 
-**Ideally** To install the library, run the following command:
+Install from the repository:
 
 ```bash
-pip install prov4ml
-```
-
-For now, clone the repository:
-
-```bash
-git clone https://github.com/HPCI-Lab/ProvML.git
-cd ProvML
+git clone https://github.com/HPCI-Lab/yProvML.git
+cd yProvML
 pip install -r requirements.txt
 ```
 
 or simply:
 
 ```bash
-pip install --no-cache-dir git+https://github.com/HPCI-Lab/ProvML@mlflow_detach
+pip install --no-cache-dir git+https://github.com/HPCI-Lab/yProvML
 ```

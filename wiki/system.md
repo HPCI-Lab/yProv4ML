@@ -5,7 +5,10 @@ The prov4ml.log_system_metrics function logs critical system performance metrics
 The information logged is related to the time between the last call to the function and the current call.
 
 ```python
-prov4ml.log_system_metrics(prov4ml.Context.TRAINING,step=current_epoch)
+prov4ml.log_system_metrics(
+    context: Context,
+    step: Optional[int] = None,
+)
 ```
 
 | Parameter | Type     | Description                |
@@ -30,12 +33,19 @@ This function logs the following system metrics:
 The log_flops_per_epoch function logs the number of floating-point operations (FLOPs) performed per epoch for a given model and dataset. 
 
 ```python
-prov4ml.log_flops_per_epoch(label, dataset, context, step):
+prov4ml.log_flops_per_epoch(
+    label: str, 
+    model: Union[torch.nn.Module, Any],
+    dataset: Union[torch.utils.data.Dataset, torch.utils.data.DataLoader, torch.utils.data.Subset], 
+    context: Context, 
+    step: Optional[int] = None
+):
 ```
 
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
 | `label` | `string` | **Required**. Label of the FLOPs |
+| `model` | `Union[torch.nn.Module, Any]` | **Required**. Model used for the FLOPs calculation |
 | `dataset` | `string` | **Required**. Dataset used for the FLOPs calculation |
 | `context` | `prov4ml.Context` | **Required**. Context of the metric |
 | `step` | `int` | **Optional**. Step of the metric |
@@ -45,11 +55,19 @@ prov4ml.log_flops_per_epoch(label, dataset, context, step):
 The log_flops_per_batch function logs the number of floating-point operations (FLOPs) performed per batch for a given model and batch of data. 
 
 ```python
-prov4ml.log_flops_per_batch(label, context, step):
+prov4ml.log_flops_per_batch(
+    label: str, 
+    model: Union[torch.nn.Module, Any],
+    batch: Any, 
+    context: Context, 
+    step: Optional[int] = None, 
+):
 ```
 
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
 | `label` | `string` | **Required**. Label of the FLOPs |
+| `model` | `Union[torch.nn.Module, Any]` | **Required**. Model used for the FLOPs calculation |
+| `batch` | `Any` | **Required**. Batch of data used for the FLOPs calculation |
 | `context` | `prov4ml.Context` | **Required**. Context of the metric |
 | `step` | `int` | **Optional**. Step of the metric |

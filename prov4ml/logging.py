@@ -4,7 +4,7 @@ import warnings
 
 from torch.utils.data import DataLoader, Subset, Dataset
 from .datamodel.attribute_type import LoggingItemKind
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from .utils import energy_utils, flops_utils, system_utils, time_utils, funcs
 from .provenance.context import Context
@@ -209,7 +209,7 @@ def log_artifact(
     PROV4ML_DATA.add_artifact(artifact_path, step=step, context=context, timestamp=timestamp)
 
 def save_model_version(
-        model: torch.nn.Module, 
+        model: Union[torch.nn.Module, Any], 
         model_name: str, 
         context: Context, 
         step: Optional[int] = None, 
