@@ -7,7 +7,6 @@ from .utils import energy_utils
 from .utils import flops_utils
 from .logging import log_execution_start_time, log_execution_end_time
 from .provenance.provenance_graph import create_prov_document
-from .datamodel.prov4ml_collection import create_prov_collection
 from .utils.file_utils import save_prov_file
 
 @contextmanager
@@ -20,7 +19,6 @@ def start_run_ctx(
         rank : Optional[int] = None, 
         create_graph: Optional[bool] = False, 
         create_svg: Optional[bool] = False, 
-        create_provenance_collection: Optional[bool] = False
     ): 
     """
     Context manager for starting and ending a run, initializing provenance data collection and optionally creating visualizations.
@@ -93,8 +91,6 @@ def start_run_ctx(
 
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
     save_prov_file(doc, path_graph, create_graph, create_svg)
-    if create_provenance_collection:
-        create_prov_collection(create_dot=create_graph, create_svg=create_svg)
 
 def start_run(
         prov_user_namespace: str,
