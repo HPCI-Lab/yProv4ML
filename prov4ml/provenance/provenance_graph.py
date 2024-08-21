@@ -7,7 +7,6 @@ from datetime import datetime
 import getpass
 import subprocess
 import warnings
-import pipreqs
 
 from ..constants import PROV4ML_DATA
 from ..datamodel.attribute_type import Prov4MLAttribute
