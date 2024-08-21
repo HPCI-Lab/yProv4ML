@@ -10,7 +10,7 @@ import prov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 64
-EPOCHS = 2
+EPOCHS = 10
 
 # start the run in the same way as with mlflow
 prov4ml.start_run(
@@ -84,4 +84,4 @@ for i, (x, y) in tqdm(enumerate(test_loader)):
 prov4ml.log_model(mnist_model, "mnist_model_final")
 
 # save the provenance graph
-prov4ml.end_run(create_graph=True, create_svg=True, create_provenance_collection=True)
+prov4ml.end_run(create_graph=True, create_svg=True)
