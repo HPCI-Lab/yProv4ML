@@ -6,7 +6,8 @@ Install from the repository:
 ```bash
 git clone https://github.com/HPCI-Lab/yProvML.git
 cd yProvML
-pip install -r requirements.txt
+# Use apple extra if on a Mac
+pip install .[apple]
 ```
 
 or simply:
