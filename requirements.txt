@@ -13,3 +13,4 @@ setuptools==69.5.*
 tqdm==4.66.*
 typing_extensions==4.12.*
 pipreqs
+prov
