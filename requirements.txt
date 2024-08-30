@@ -14,3 +14,4 @@ tqdm==4.66.*
 typing_extensions==4.12.*
 pipreqs
 prov
+pydot
