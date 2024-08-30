@@ -25,3 +25,5 @@ for epoch in tqdm(range(EPOCHS)):
      
 ```
 
+
+[Home](README.md) | [Prev](registering_metrics.md) | [Next](usage_lightning.md)

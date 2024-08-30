@@ -5,10 +5,12 @@ Before using the library, the user must set up the MLFlow execution, as well as 
 
 ```python
 prov4ml.start_run(
-    prov_user_namespace="www.example.org",
-    experiment_name="experiment_name", 
-    provenance_save_dir="prov_dir", 
-    mlflow_save_dir="mlflow_dir", 
+    prov_user_namespace: str,
+    experiment_name: Optional[str] = None,
+    provenance_save_dir: Optional[str] = None,
+    collect_all_processes: Optional[bool] = False,
+    save_after_n_logs: Optional[int] = 100,
+    rank : Optional[int] = None, 
 )
 ```
 
@@ -19,55 +21,24 @@ The parameters are as follows:
 | `prov_user_namespace` | `string` | **Required**. User namespace for the provenance graph |
 | `experiment_name` | `string` | **Required**. Name of the experiment |
 | `provenance_save_dir` | `string` | **Required**. Directory to save the provenance graph |
-| `mlflow_save_dir` | `string` | **Required**. Directory to save the mlflow logs |
-| `nested` | `bool` | **Optional**. Whether to create a nested directory for the experiment |
-| `tags` | `dict` | **Optional**. Tags to add to the experiment |
-| `description` | `string` | **Optional**. Description of the experiment |
-| `log_system_metrics` | `bool` | **Optional**. Whether to log system metrics |
+| `collect_all_processes` | `bool` | **Optional**. Whether to collect all processes |
+| `save_after_n_logs` | `int` | **Optional**. Save the graph after n logs |
+| `rank` | `int` | **Optional**. Rank of the process |
 
 At the end of the experiment, the user must end the run:
 
 ```python
-prov4ml.end_run()
-```
-
-This call allows the library to save the provenance graph in the specified directory. 
-
-The final necessary call to save the graph is the following:
-
-```python
-prov4ml.log_model(model, "model_name")
+prov4ml.end_run(
+    create_graph: Optional[bool] = False, 
+    create_svg: Optional[bool] = False, 
+)
 ```
 
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
-| `model` | `torch.nn.Module` | **Required**. Model to log |
-| `model_name` | `string` | **Required**. Name of the model |
-| `log_model_info` | `bool` | **Optional**. Whether to log model statistics |
+| `create_graph` | `bool` | **Optional**. Whether to create the graph |
+| `create_svg` | `bool` | **Optional**. Whether to create the svg |
 
-It sets the model for the current experiment. It can be called anywhere before the end of the experiment. 
-The same call also logs some model information, such as the number of parameters and the model architecture memory footprint. 
-The saving of these information can be toggled with the ```log_model_info = False``` parameter.
+This call allows the library to save the provenance graph in the specified directory. 
 
-
-## MLFlow and Provenance Graph Creation
-
-To view prov information in mlflow:
-
-```bash
-mlflow server
-```
-
-Or, to specify the backend store uri and port number: 
-
-```bash
-mlflow ui --backend-store-uri ./path_to_mlflow_logs --port free_port
-```
-
-Where `--backend-store-uri` has to point to the subdirectory containing the `models` folder.
-
-To generate the graph svg image: 
-
-```bash
-dot -Tsvg -O prov_graph.dot
-```
+[Home](README.md) | [Prev](installation.md) | [Next](prov_graph.md)
