@@ -9,9 +9,9 @@ pyamdgpuinfo==2.1.*
 pytest==8.3.*
 torch==2.*
 torchvision
-setuptools==69.5.*
 tqdm==4.66.*
 typing_extensions==4.12.*
+setuptools
 pipreqs
 prov
 pydot
