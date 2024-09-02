@@ -234,10 +234,10 @@ def create_prov_document() -> prov.ProvDocument:
     run_entity.add_attributes({"prov-ml:python_version":Prov4MLAttribute.get_attr(sys.version)})
 
     # check if requirements.txt exists
-    if not os.path.exists("requirements.txt"):
+    if not os.path.exists("requirements_execution.txt"):
         os.popen("pipreqs --force .")
 
-    env_reqs = open("requirements.txt", "r").readlines()
+    env_reqs = open("requirements_execution.txt", "r").readlines()
     env_reqs = [req.strip() for req in env_reqs]
     env_reqs = "\n".join(env_reqs)  
     run_entity.add_attributes({"prov-ml:requirements":Prov4MLAttribute.get_attr(env_reqs)})
