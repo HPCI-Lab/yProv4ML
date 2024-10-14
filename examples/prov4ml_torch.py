@@ -47,7 +47,7 @@ tform = transforms.Compose([
 prov4ml.log_param("dataset transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-# train_ds = Subset(train_ds, range(BATCH_SIZE*4))
+# train_ds = Subset(train_ds, range(BATCH_SIZE*900))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(train_loader, "train_dataset")
 
@@ -71,10 +71,10 @@ for epoch in tqdm(range(EPOCHS)):
         loss = loss_fn(y_hat, y)
         loss.backward()
         optim.step()
-        prov4ml.log_metric("MSE_train", loss, context=prov4ml.Context.TRAINING, step=epoch)
         losses.append(loss.item())
     
     # log system and carbon metrics (once per epoch), as well as the execution time
+        prov4ml.log_metric("MSE_train", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
     prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
     prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
@@ -96,7 +96,7 @@ for i, (x, y) in tqdm(enumerate(test_loader)):
     for j in range(y.shape[0]):
         cm[y[j], y_pred[j]] += 1
     # change the context to EVALUATION to log the metric as evaluation metric
-    prov4ml.log_metric("MSE_test", loss, prov4ml.Context.EVALUATION, step=epoch)
+prov4ml.log_metric("MSE_test", loss.item(), prov4ml.Context.EVALUATION, step=epoch)
 
 # log final version of the model 
 # it also logs the model architecture as an artifact by default

@@ -365,7 +365,7 @@ def create_prov_document() -> prov.ProvDocument:
     for artifact in PROV4ML_DATA.get_model_versions()[:-1]: 
         doc.hadMember(model_entity_label,f"{artifact.path}")    
 
-    doc.activity("data_preparation",other_attributes={"prov-ml:type":Prov4MLAttribute.get_attr("FeatureExtractionExecution")})
+    # doc.activity("data_preparation",other_attributes={"prov-ml:type":Prov4MLAttribute.get_attr("FeatureExtractionExecution")})
     
     #artifact entities generation
     for artifact in PROV4ML_DATA.get_artifacts():
