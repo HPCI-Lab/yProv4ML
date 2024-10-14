@@ -75,7 +75,7 @@ for epoch in tqdm(range(EPOCHS)):
     
     # log system and carbon metrics (once per epoch), as well as the execution time
         prov4ml.log_metric("MSE_train", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-    prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
+    # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
     prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
     prov4ml.save_model_version(mnist_model, f"mnist_model_version_{epoch}", prov4ml.Context.TRAINING, epoch)
@@ -106,14 +106,14 @@ prov4ml.log_model(mnist_model, "mnist_model_final")
 prov4ml.end_run(create_graph=True, create_svg=True)
 
 # log the losses as a graph
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
-plt.figure(figsize=(10, 5))
-sns.lineplot(x=range(len(losses)), y=losses)
-plt.savefig("losses.png")
+# plt.figure(figsize=(10, 5))
+# sns.lineplot(x=range(len(losses)), y=losses)
+# plt.savefig("losses.png")
 
-# plot the confusion matrix
-plt.figure(figsize=(10, 10))
-sns.heatmap(cm, annot=True, fmt="g")
-plt.savefig("confusion_matrix.png")
+# # plot the confusion matrix
+# plt.figure(figsize=(10, 10))
+# sns.heatmap(cm, annot=True, fmt="g")
+# plt.savefig("confusion_matrix.png")
