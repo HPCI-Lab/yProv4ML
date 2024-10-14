@@ -163,9 +163,6 @@ def end_run(
     None
     """
 
-    if create_svg and not create_graph:
-        raise ValueError("Cannot create SVG without creating the graph.")
-    
     if not PROV4ML_DATA.is_collecting: return
     
     log_execution_end_time()
