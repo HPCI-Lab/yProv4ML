@@ -9,3 +9,9 @@ def get_time() -> float:
         float: The current time in seconds since the epoch.
     """
     return time.time()
+
+def timestamp_to_minutes(ts):
+    return ts / 60000
+
+def timestamp_to_seconds(ts):
+    return ts / 1000

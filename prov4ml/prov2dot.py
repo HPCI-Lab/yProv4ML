@@ -23,8 +23,8 @@ def main(prov_file : str, out_file : Optional[str]):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert a PROV-JSON file to a DOT file')
-    parser.add_argument('prov_json', type=str, help='The PROV-JSON file to convert')
-    parser.add_argument('output', type=str, help='The output DOT file', default=None)
+    parser.add_argument('--prov_json', type=str, help='The PROV-JSON file to convert')
+    parser.add_argument('--output', type=str, help='The output DOT file', default=None)
     args = parser.parse_args()
     
     main(args.prov_json, args.output)
