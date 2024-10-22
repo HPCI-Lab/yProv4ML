@@ -81,6 +81,8 @@ def get_ce_delta_compared_to_world_avg(energy):
     world_average_CI = 475 # gCO2.eq/KWh
     wce = world_average_CI * energy # gCO2.eq
 
+    if wce == 0:
+        return 0
     # return percentage difference between country and world average
     return ((ce - wce) / wce) * 100
 

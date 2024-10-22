@@ -8,11 +8,11 @@ import getpass
 import subprocess
 import warnings
 
-from ..constants import PROV4ML_DATA
-from ..datamodel.attribute_type import Prov4MLAttribute
-from ..datamodel.artifact_data import artifact_is_pytorch_model
-from ..provenance.context import Context
-from ..utils.funcs import get_global_rank, get_runtime_type
+from prov4ml.constants import PROV4ML_DATA
+from prov4ml.datamodel.attribute_type import Prov4MLAttribute
+from prov4ml.datamodel.artifact_data import artifact_is_pytorch_model
+from prov4ml.provenance.context import Context
+from prov4ml.utils.funcs import get_global_rank, get_runtime_type
 
 def calculate_energy_consumption(
     doc: prov.ProvDocument,

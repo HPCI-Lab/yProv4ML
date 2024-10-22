@@ -1,9 +1,8 @@
 
 import os
-import prov.dot as dot
 import prov.model as prov
 
-from ..constants import PROV4ML_DATA
+from prov4ml.constants import PROV4ML_DATA
 
 def save_prov_file(
         doc : prov.ProvDocument,
