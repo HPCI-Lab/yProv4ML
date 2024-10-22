@@ -1,6 +1,6 @@
 
 import pandas as pd
-from .time_utils import timestamp_to_seconds
+from prov4ml.utils.time_utils import timestamp_to_seconds
 
 def get_metrics(data, keyword=None):
     ms = data["entity"].keys()

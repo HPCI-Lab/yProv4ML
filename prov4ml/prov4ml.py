@@ -2,12 +2,12 @@ import os
 from typing import Optional
 from contextlib import contextmanager
 
-from .constants import PROV4ML_DATA
-from .utils import energy_utils
-from .utils import flops_utils
-from .logging import log_execution_start_time, log_execution_end_time
-from .provenance.provenance_graph import create_prov_document
-from .utils.file_utils import save_prov_file
+from prov4ml.constants import PROV4ML_DATA
+from prov4ml.utils import energy_utils
+from prov4ml.utils import flops_utils
+from prov4ml.logging_aux import log_execution_start_time, log_execution_end_time
+from prov4ml.provenance.provenance_graph import create_prov_document
+from prov4ml.utils.file_utils import save_prov_file
 
 @contextmanager
 def start_run_ctx(

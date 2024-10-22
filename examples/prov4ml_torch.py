@@ -5,12 +5,14 @@ from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
+import sys
+sys.path.append("../ProvML")
 
 import prov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 1
+EPOCHS = 5
 DEVICE = "mps"
 
 # start the run in the same way as with mlflow
@@ -47,7 +49,7 @@ tform = transforms.Compose([
 prov4ml.log_param("dataset transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-# train_ds = Subset(train_ds, range(BATCH_SIZE*900))
+train_ds = Subset(train_ds, range(BATCH_SIZE*2))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(train_loader, "train_dataset")
 
@@ -75,7 +77,7 @@ for epoch in tqdm(range(EPOCHS)):
     
     # log system and carbon metrics (once per epoch), as well as the execution time
         prov4ml.log_metric("MSE_train", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-    # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
+    prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
     prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
     prov4ml.save_model_version(mnist_model, f"mnist_model_version_{epoch}", prov4ml.Context.TRAINING, epoch)
@@ -104,16 +106,3 @@ prov4ml.log_model(mnist_model, "mnist_model_final")
 
 # save the provenance graph
 prov4ml.end_run(create_graph=True, create_svg=True)
-
-# log the losses as a graph
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-
-# plt.figure(figsize=(10, 5))
-# sns.lineplot(x=range(len(losses)), y=losses)
-# plt.savefig("losses.png")
-
-# # plot the confusion matrix
-# plt.figure(figsize=(10, 10))
-# sns.heatmap(cm, annot=True, fmt="g")
-# plt.savefig("confusion_matrix.png")

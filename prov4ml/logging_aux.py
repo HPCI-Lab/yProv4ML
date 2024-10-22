@@ -4,13 +4,13 @@ import warnings
 import time
 
 from torch.utils.data import DataLoader, Subset, Dataset
-from .datamodel.attribute_type import LoggingItemKind
 from typing import Any, Optional, Union
 
-from .utils import energy_utils, flops_utils, system_utils, time_utils, funcs
-from .provenance.context import Context
-from .datamodel.cumulative_metrics import FoldOperation
-from .constants import PROV4ML_DATA
+from prov4ml.datamodel.attribute_type import LoggingItemKind
+from prov4ml.utils import energy_utils, flops_utils, system_utils, time_utils, funcs
+from prov4ml.provenance.context import Context
+from prov4ml.datamodel.cumulative_metrics import FoldOperation
+from prov4ml.constants import PROV4ML_DATA
     
 LAST_SYSTEM_TIME = None
 
@@ -168,12 +168,11 @@ def log_system_metrics(
     log_metric("gpu_temperature", system_utils.get_gpu_temperature(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("gpu_power_usage", power, context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
 
-
     current_time = time.time()
     if LAST_SYSTEM_TIME is not None:
         delta_time = current_time - LAST_SYSTEM_TIME
     else: 
-        delta_time = 0
+        delta_time = 0.0
 
     en = power * delta_time
     emission = energy_utils.get_carbon_emission(en)
@@ -183,7 +182,6 @@ def log_system_metrics(
     log_metric("custom_emission_perc_diff", perc, context, step=step, source=LoggingItemKind.CARBON_METRIC)
     
     LAST_SYSTEM_TIME = current_time
-
 
 def log_carbon_metrics(
     context: Context,
