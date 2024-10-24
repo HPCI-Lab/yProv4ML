@@ -12,6 +12,15 @@ setup(
         'apple': [
             # Optional dependencies for Apple/Mac
             'apple_gpu==0.3.0'
+        ], 
+        'amd': [
+            # Optional dependencies for AMD
+            'amd_gpu==0.3.0', 
+            'pyamdgpuinfo==2.1.6',
+        ], 
+        'nvidia': [
+            # Optional dependencies for NVIDIA
+            'nvitop==1.3.2',
         ]
     }
 )

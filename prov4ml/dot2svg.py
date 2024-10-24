@@ -17,8 +17,8 @@ def main(dot_file : str, out_file : Optional[str]):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert a DOT file to a SVG file')
-    parser.add_argument('dot', type=str, help='The DOT file to convert')
-    parser.add_argument('output', type=str, help='The output SVG file', default=None)
+    parser.add_argument('--dot', type=str, help='The DOT file to convert')
+    parser.add_argument('--output', type=str, help='The output SVG file', default=None)
     args = parser.parse_args()
 
     main(args.dot, args.output)

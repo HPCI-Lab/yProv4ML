@@ -2,8 +2,9 @@
 import os
 import argparse
 from prov.model import ProvDocument
-import prov.dot as dot
 from typing import Optional
+
+from prov4ml.utils.file_utils import custom_prov_to_dot
 
 def main(prov_file : str, out_file : Optional[str]): 
     if not prov_file.endswith(".json"): 
@@ -19,12 +20,12 @@ def main(prov_file : str, out_file : Optional[str]):
 
     path_dot = os.path.join("./", out_file)
     with open(path_dot, 'w') as prov_dot:
-        prov_dot.write(dot.prov_to_dot(doc).to_string())
+        prov_dot.write(custom_prov_to_dot(doc).to_string())
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert a PROV-JSON file to a DOT file')
-    parser.add_argument('prov_json', type=str, help='The PROV-JSON file to convert')
-    parser.add_argument('output', type=str, help='The output DOT file', default=None)
+    parser.add_argument('--prov_json', type=str, help='The PROV-JSON file to convert')
+    parser.add_argument('--output', type=str, help='The output DOT file', default=None)
     args = parser.parse_args()
     
     main(args.prov_json, args.output)

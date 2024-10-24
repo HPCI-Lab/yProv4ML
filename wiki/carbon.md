@@ -55,3 +55,4 @@ After plotting the metrics saved with codecarbon, we can see that the emissions 
 
 This shows that energy is mostly constant over time, while the emissions rate decreases. This is due to the ratio between energy and time, which is decreasing over time.
 
+[Home](README.md) | [Prev](carbon.md) | [Next](system.md)

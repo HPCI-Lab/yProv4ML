@@ -2,13 +2,13 @@
 import os
 from typing import Any, Dict, List, Optional
 
-from .artifact_data import ArtifactInfo
-from .attribute_type import LoggingItemKind
-from .parameter_data import ParameterInfo
-from .cumulative_metrics import CumulativeMetric, FoldOperation
-from .metric_data import MetricInfo
-from ..provenance.context import Context
-from ..utils import funcs
+from prov4ml.datamodel.artifact_data import ArtifactInfo
+from prov4ml.datamodel.attribute_type import LoggingItemKind
+from prov4ml.datamodel.parameter_data import ParameterInfo
+from prov4ml.datamodel.cumulative_metrics import CumulativeMetric, FoldOperation
+from prov4ml.datamodel.metric_data import MetricInfo
+from prov4ml.provenance.context import Context
+from prov4ml.utils import funcs
 
 class Prov4MLData:
     """
