@@ -1,8 +1,9 @@
 
 import os
 from typing import Any, Dict, List
-from .attribute_type import LoggingItemKind
 from typing import Optional
+
+from prov4ml.datamodel.attribute_type import LoggingItemKind
 
 class MetricInfo:
     """

@@ -4,7 +4,7 @@ import json
 import argparse
 import prov.model as prov
 
-from .utils.file_utils import save_prov_file
+from prov4ml.utils.file_utils import save_prov_file
     
 
 class Summarizer(): 
