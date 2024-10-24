@@ -98,7 +98,8 @@ class ProvMLItwinAILogger(Logger):
 
         end_run(
             create_graph=self.create_graph,
-            create_svg=self.create_svg)
+            create_svg=self.create_svg
+        )
 
     @override
     def save_hyperparameters(self, params: Dict[str, Any]) -> None:
