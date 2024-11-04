@@ -235,7 +235,7 @@ def create_prov_document() -> prov.ProvDocument:
 
     # check if requirements.txt exists
     if not os.path.exists("requirements_execution.txt"):
-        os.popen("pipreqs --force .")
+        os.popen("pipreqs --savepath requirements_execution.txt --force .")
 
     env_reqs = open("requirements_execution.txt", "r").readlines()
     env_reqs = [req.strip() for req in env_reqs]
