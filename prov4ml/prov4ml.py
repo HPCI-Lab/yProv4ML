@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Tuple
 from contextlib import contextmanager
 
 from prov4ml.constants import PROV4ML_DATA
@@ -135,6 +135,35 @@ def start_run(
     flops_utils._init_flops_counters()
 
     log_execution_start_time()
+
+
+def log_provenance_documents(
+    create_graph: Optional[bool] = False, 
+    create_svg: Optional[bool] = False,
+    ) -> Tuple[str, Optional[str], Optional[str]]:
+    """Save logs collected so far as a set provenance documents: JSON, DOT, and SVG files.
+        
+    Returns:
+        Tuple[str, Optional[str], Optional[str]]: path to provenance documents:
+            provenance JSON, provenance DOT graph, and proenance SVG.
+    """
+    if not PROV4ML_DATA.is_collecting: return
+    
+    # log_execution_end_time()
+
+    # save remaining metrics
+    PROV4ML_DATA.save_all_metrics()
+
+    doc = create_prov_document()
+   
+    graph_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.json'
+    
+    if not os.path.exists(PROV4ML_DATA.EXPERIMENT_DIR):
+        os.makedirs(PROV4ML_DATA.EXPERIMENT_DIR, exist_ok=True)
+    
+    path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
+    return save_prov_file(doc, path_graph, create_graph, create_svg)
+
 
 def end_run(
         create_graph: Optional[bool] = False, 
