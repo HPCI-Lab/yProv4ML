@@ -6,7 +6,6 @@ GPUtil==1.4.*
 lightning==2.*
 netCDF4==1.7.*
 numpy==1.*
-nvitop==1.3.*
 pandas==2.2.*
 psutil==6.0.*
 pydot
