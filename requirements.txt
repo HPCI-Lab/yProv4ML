@@ -15,3 +15,6 @@ torch==2.*
 torchvision
 tqdm==4.66.*
 typing_extensions==4.12.*
+prov
+pydot
+pipreqs
