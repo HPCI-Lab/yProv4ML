@@ -11,16 +11,16 @@ setup(
     extras_require={
         'apple': [
             # Optional dependencies for Apple/Mac
-            'apple_gpu==0.3.0'
+            'apple_gpu==0.3.*'
         ], 
         'amd': [
             # Optional dependencies for AMD
-            'amd_gpu==0.3.0', 
-            'pyamdgpuinfo==2.1.6',
+            'amd_gpu==0.3.*', 
+            'pyamdgpuinfo==2.1.*',
         ], 
         'nvidia': [
             # Optional dependencies for NVIDIA
-            'nvitop==1.3.2',
+            'nvitop==1.3.*',
         ]
     }
 )
