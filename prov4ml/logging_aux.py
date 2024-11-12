@@ -254,8 +254,11 @@ def save_model_version(
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 
-    torch.save(model.state_dict(), f"{path}/{model_name}.pth")
-    log_artifact(f"{path}/{model_name}.pth", context=context, step=step, timestamp=timestamp)
+    # count all models with the same name stored at "path"
+    num_files = len([file for file in os.listdir(path) if str(file).startswith(model_name)])
+
+    torch.save(model.state_dict(), f"{path}/{model_name}_{num_files}.pth")
+    log_artifact(f"{path}/{model_name}_{num_files}.pth", context=context, step=step, timestamp=timestamp)
 
 def log_dataset(dataset : Union[DataLoader, Subset, Dataset], label : str): 
     """
