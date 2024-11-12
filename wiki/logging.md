@@ -136,10 +136,4 @@ prov4ml.log_dataset(
 
 The function logs the dataset in the current experiment. The dataset can be a DataLoader, a Subset, or a Dataset class from pytorch.
 
-
-<<<<<<< HEAD
-
-```
-=======
 [Home](README.md) | [Prev](prov_graph.md) | [Next](prov_collection.md)
->>>>>>> development
