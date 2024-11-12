@@ -12,6 +12,10 @@ pip install -r requirements.txt
 pip install .
 # Use apple extra if on a Mac
 pip install .[apple]
+
+# or install for specific arch
+pip install .[nvidia] # or .[amd]
+
 ```
 
 or simply:
