@@ -3,10 +3,10 @@ import pandas as pd
 from codecarbon import EmissionsTracker
 from typing import Any, Callable, Tuple
 
-CARBON_INTENSITY = pd.read_csv(
-    'https://raw.githubusercontent.com/matbun/ProvML/refs/heads/new-main/prov4ml/utils/carbon_intensity.csv').set_index("Energy Source").transpose()
-ENERGY_MIX = pd.read_csv(
-    'https://raw.githubusercontent.com/matbun/ProvML/refs/heads/new-main/prov4ml/utils/energy_mix_percs.csv').set_index("Country code")
+#CARBON_INTENSITY = pd.read_csv(
+#    'https://raw.githubusercontent.com/matbun/ProvML/refs/heads/new-main/prov4ml/utils/carbon_intensity.csv').set_index("Energy Source").transpose()
+#ENERGY_MIX = pd.read_csv(
+#    'https://raw.githubusercontent.com/matbun/ProvML/refs/heads/new-main/prov4ml/utils/energy_mix_percs.csv').set_index("Country code")
 
 def carbon_tracked_function(f: Callable, *args, **kwargs) -> Tuple[Any, Any]:
     """
