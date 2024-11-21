@@ -29,10 +29,6 @@ Or by passing a lambda function:
 prov4ml.register_final_metric("my_metric", 0, lambda x, y: x // y) 
 ```
 
-<<<<<<< HEAD
-The output of the aggregated metric is saved in the PROV-JSON file, as an attribute of the current execution. 
-=======
 The output of the aggregated metric is saved in the PROV-JSON file, as an attribute of the current execution. 
 
 [Home](README.md) | [Prev](time.md) | [Next](usage_pytorch.md)
->>>>>>> development

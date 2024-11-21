@@ -10,8 +10,5 @@ python -m prov4ml.prov_collection --experiment_path experiment_path --output_dir
 ```
 
 Where `experiment_path` is the path to the experiment directory containing all the PROV-JSON files, and `output_dir` is the directory where the collection file will be saved. 
-<<<<<<< HEAD
-=======
 
 [Home](README.md) | [Prev](prov_collection.md) | [Next](carbon.md)
->>>>>>> development
