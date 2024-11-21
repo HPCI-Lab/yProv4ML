@@ -8,7 +8,6 @@ CARBON_INTENSITY = pd.read_csv(
 ENERGY_MIX = pd.read_csv(
     'https://raw.githubusercontent.com/matbun/ProvML/refs/heads/new-main/prov4ml/utils/energy_mix_percs.csv').set_index("Country code")
 
-
 def carbon_tracked_function(f: Callable, *args, **kwargs) -> Tuple[Any, Any]:
     """
     Tracks carbon emissions for a given function call.
