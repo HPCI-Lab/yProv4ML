@@ -7,6 +7,8 @@ from datetime import datetime
 import getpass
 import subprocess
 import warnings
+import zarr
+from numpy import array2string, inf
 
 from prov4ml.constants import PROV4ML_DATA
 from prov4ml.datamodel.attribute_type import Prov4MLAttribute
@@ -139,73 +141,125 @@ def save_metric_from_file(
         run_activity=current_run_activity
     )
     """
+
+    """
     with open(os.path.join(PROV4ML_DATA.TMP_DIR, metric_file), 'r') as f:
-            lines = f.readlines()
-            source = lines[0].split(',')[2]
+        lines = f.readlines()
+        source = lines[0].split(',')[2]
 
-            if not doc.get_record(f'{name}_{ctx}'):
-                metric_entity = doc.entity(f'{name}_{ctx}',{
-                    'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
-                    'prov-ml:name':Prov4MLAttribute.get_attr(name),
-                    'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
-                    'prov-ml:source':Prov4MLAttribute.get_source_from_kind(source),
-                })
-            else:
-                metric_entity = doc.get_record(f'{name}_{ctx}')[0]
-
-            metric_epoch_data = {}
-            for line in lines[1:]:
-                epoch, value, timestamp = line.split(',')
-                epoch = int(epoch)
-                value = float(value)
-                timestamp = int(timestamp)
-                if int(epoch) not in metric_epoch_data:
-                    metric_epoch_data[epoch] = []
-                metric_epoch_data[epoch].append((value, timestamp))
-
-            for epoch in metric_epoch_data.keys():
-                if ctx == Context.TRAINING: 
-                    if not doc.get_record(f'epoch_{epoch}'):
-                        train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
-                            "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution")
-                        })
-                        doc.wasStartedBy(train_activity,run_activity)
-
-                    doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',identifier=f'{name}_train_{epoch}_gen')
-                    
-                elif ctx == Context.VALIDATION:
-                    val_name = f'val_epoch_{epoch}'
-                    if not doc.get_record(val_name):
-                        train_activity=doc.activity(val_name,other_attributes={
-                            "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
-                        })
-                        doc.wasStartedBy(train_activity,run_activity)
-
-                    doc.wasGeneratedBy(metric_entity,val_name,identifier=f'{name}_val_{epoch}_gen')
-                    
-                elif ctx == Context.EVALUATION:
-                    if not doc.get_record('test'):
-                        eval_activity=doc.activity('test',other_attributes={
-                        "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution")})
-                        doc.wasStartedBy(eval_activity,run_activity)
-
-                    doc.wasGeneratedBy(metric_entity,'test',identifier=f'test_gen')
-                
-            epochs = []
-            values = []
-            timestamps = []
-            for epoch, item_ls in metric_epoch_data.items():
-                for (val, time) in item_ls:
-                    epochs.append(epoch)
-                    values.append(val)
-                    timestamps.append(time)
-
-            metric_entity.add_attributes({
-                'prov-ml:metric_epoch_list': Prov4MLAttribute.get_attr(epochs), 
-                'prov-ml:metric_value_list': Prov4MLAttribute.get_attr(values),
-                'prov-ml:metric_timestamp_list': Prov4MLAttribute.get_attr(timestamps),
-                'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+        if not doc.get_record(f'{name}_{ctx}'):
+            metric_entity = doc.entity(f'{name}_{ctx}',{
+                'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
+                'prov-ml:name':Prov4MLAttribute.get_attr(name),
+                'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
+                'prov-ml:source':Prov4MLAttribute.get_source_from_kind(source),
             })
+        else:
+            metric_entity = doc.get_record(f'{name}_{ctx}')[0]
+
+        metric_epoch_data = {}
+        for line in lines[1:]:
+            epoch, value, timestamp = line.split(',')
+            epoch = int(epoch)
+            value = float(value)
+            timestamp = int(timestamp)
+            if int(epoch) not in metric_epoch_data:
+                metric_epoch_data[epoch] = []
+            metric_epoch_data[epoch].append((value, timestamp))
+
+        for epoch in metric_epoch_data.keys():
+            if ctx == Context.TRAINING: 
+                if not doc.get_record(f'epoch_{epoch}'):
+                    train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
+                        "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution")
+                    })
+                    doc.wasStartedBy(train_activity,run_activity)
+
+                doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',identifier=f'{name}_train_{epoch}_gen')
+                
+            elif ctx == Context.VALIDATION:
+                val_name = f'val_epoch_{epoch}'
+                if not doc.get_record(val_name):
+                    train_activity=doc.activity(val_name,other_attributes={
+                        "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
+                    })
+                    doc.wasStartedBy(train_activity,run_activity)
+
+                doc.wasGeneratedBy(metric_entity,val_name,identifier=f'{name}_val_{epoch}_gen')
+                
+            elif ctx == Context.EVALUATION:
+                if not doc.get_record('test'):
+                    eval_activity=doc.activity('test',other_attributes={
+                    "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution")})
+                    doc.wasStartedBy(eval_activity,run_activity)
+
+                doc.wasGeneratedBy(metric_entity,'test',identifier=f'test_gen')
+            
+        epochs = []
+        values = []
+        timestamps = []
+        for epoch, item_ls in metric_epoch_data.items():
+            for (val, time) in item_ls:
+                epochs.append(epoch)
+                values.append(val)
+                timestamps.append(time)
+
+        metric_entity.add_attributes({
+            'prov-ml:metric_epoch_list': Prov4MLAttribute.get_attr(epochs), 
+            'prov-ml:metric_value_list': Prov4MLAttribute.get_attr(values),
+            'prov-ml:metric_timestamp_list': Prov4MLAttribute.get_attr(timestamps),
+            'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+        })
+    """
+
+    dataset = zarr.open(os.path.join(PROV4ML_DATA.TMP_DIR, metric_file), 'r')
+    source = ', '.join(dataset.attrs.values())
+
+    if not doc.get_record(f'{name}_{ctx}'):
+        metric_entity = doc.entity(f'{name}_{ctx}',{
+            'prov-ml:type':Prov4MLAttribute.get_attr('Metric'),
+            'prov-ml:name':Prov4MLAttribute.get_attr(name),
+            'prov-ml:context':Prov4MLAttribute.get_attr(ctx),
+            'prov-ml:source':Prov4MLAttribute.get_source_from_kind(source),
+        })
+    else:
+        metric_entity = doc.get_record(f'{name}_{ctx}')[0]
+
+    for epoch in dataset['epochs']:
+        if ctx == Context.TRAINING: 
+            if not doc.get_record(f'epoch_{epoch}'):
+                train_activity=doc.activity(f'epoch_{epoch}',other_attributes={
+                    "prov-ml:type": Prov4MLAttribute.get_attr("TrainingExecution")
+                })
+                doc.wasStartedBy(train_activity,run_activity)
+
+            doc.wasGeneratedBy(metric_entity,f'epoch_{epoch}',identifier=f'{name}_train_{epoch}_gen')
+            
+        elif ctx == Context.VALIDATION:
+            val_name = f'val_epoch_{epoch}'
+            if not doc.get_record(val_name):
+                train_activity=doc.activity(val_name,other_attributes={
+                    "prov-ml:type": Prov4MLAttribute.get_attr("ValidationExecution"),
+                })
+                doc.wasStartedBy(train_activity,run_activity)
+
+            doc.wasGeneratedBy(metric_entity,val_name,identifier=f'{name}_val_{epoch}_gen')
+            
+        elif ctx == Context.EVALUATION:
+            if not doc.get_record('test'):
+                eval_activity=doc.activity('test',other_attributes={
+                "prov-ml:type": Prov4MLAttribute.get_attr("TestingExecution")})
+                doc.wasStartedBy(eval_activity,run_activity)
+
+            doc.wasGeneratedBy(metric_entity,'test',identifier=f'test_gen')
+
+    metric_entity.add_attributes({
+        # array2string is needed because using simply str() with numpy arrays adds '\n' after a certain number of characters to facilitate console view, and these '\n' were being added to the provenance file
+        'prov-ml:metric_epoch_list': Prov4MLAttribute.get_attr(array2string(dataset['epochs'][:], separator=', ', max_line_width=inf)), 
+        'prov-ml:metric_value_list': Prov4MLAttribute.get_attr(array2string(dataset['values'][:], separator=', ', max_line_width=inf)),
+        'prov-ml:metric_timestamp_list': Prov4MLAttribute.get_attr(array2string(dataset['timestamps'][:], separator=', ', max_line_width=inf)),
+        'prov-ml:context': Prov4MLAttribute.get_attr(ctx),
+    })
 
 def create_prov_document() -> prov.ProvDocument:
     """
