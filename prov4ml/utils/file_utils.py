@@ -93,14 +93,19 @@ def custom_prov_to_dot(
     def _bundle_to_dot(dot, bundle):
         def _attach_attribute_annotation(node, record):
             # Adding a node to show all attributes
-            attributes = list(
+            attributes = []
                 # Truncate the value if it is too long
-                (attr_name, str(value[:100]) + "..." if len(value) > 100 else value)
-                for attr_name, value in record.attributes
-                if attr_name not in PROV_ATTRIBUTE_QNAMES
-            )
+            for attr_name, value in record.attributes: 
+                if attr_name not in PROV_ATTRIBUTE_QNAMES:
+                    try: 
+                        if len(value) > 100: 
+                            attributes.append((attr_name, str(value[:100]) + "..."))
+                        else: 
+                            attributes.append((attr_name, value))
+                    except TypeError: 
+                        attributes.append((attr_name, value))
 
-            if not attributes:
+            if not attributes or len(attributes) == 0:
                 return  # No attribute to display
 
             # Sort the attributes.
