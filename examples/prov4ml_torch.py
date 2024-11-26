@@ -79,8 +79,8 @@ for epoch in tqdm(range(EPOCHS)):
     
     # log system and carbon metrics (once per epoch), as well as the execution time
         prov4ml.log_metric("MSE_train", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-    # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
-    # prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
+        prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
+        prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
     prov4ml.save_model_version(mnist_model, f"mnist_model_version_{epoch}", prov4ml.Context.TRAINING, epoch)
 
