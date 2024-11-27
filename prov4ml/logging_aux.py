@@ -1,7 +1,6 @@
 import os
 import torch
 import warnings
-import time
 
 from torch.utils.data import DataLoader, Subset, Dataset
 from typing import Any, Optional, Union
@@ -12,8 +11,6 @@ from prov4ml.provenance.context import Context
 from prov4ml.datamodel.cumulative_metrics import FoldOperation
 from prov4ml.constants import PROV4ML_DATA
     
-LAST_SYSTEM_TIME = None
-
 def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, source: LoggingItemKind = None) -> None:
     """
     Logs a metric with the specified key, value, and context.
@@ -157,31 +154,13 @@ def log_system_metrics(
     Returns:
         None
     """
-    global LAST_SYSTEM_TIME
-
-    power = system_utils.get_gpu_power_usage()
     log_metric("cpu_usage", system_utils.get_cpu_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("memory_usage", system_utils.get_memory_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("disk_usage", system_utils.get_disk_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("gpu_usage", system_utils.get_gpu_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
     log_metric("gpu_temperature", system_utils.get_gpu_temperature(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_power_usage", power, context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-
-    current_time = time.time()
-    if LAST_SYSTEM_TIME is not None:
-        delta_time = current_time - LAST_SYSTEM_TIME
-    else: 
-        delta_time = 0.0
-
-    en = power * delta_time
-    emission = energy_utils.get_carbon_emission(en)
-    perc = energy_utils.get_ce_delta_compared_to_world_avg(en)
-
-    log_metric("custom_emissions", emission, context, step=step, source=LoggingItemKind.CARBON_METRIC)
-    log_metric("custom_emission_perc_diff", perc, context, step=step, source=LoggingItemKind.CARBON_METRIC)
-    
-    LAST_SYSTEM_TIME = current_time
+    log_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
 
 def log_carbon_metrics(
     context: Context,
