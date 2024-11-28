@@ -15,7 +15,6 @@ setup(
         ], 
         'amd': [
             # Optional dependencies for AMD
-            'amd_gpu==0.3.*', 
             'pyamdgpuinfo==2.1.*',
         ], 
         'nvidia': [
