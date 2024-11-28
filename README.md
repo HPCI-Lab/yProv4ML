@@ -32,9 +32,9 @@ Several runs can be executed in the same experiment. All runs will be saved in t
 
 # Documentation
 
-For detailed information, please refer to the following documentation files:
+For detailed information, please refer to the [Documentation](https://hpci-lab.github.io/yProv4ML.github.io/)
 
-- [Installation](./wiki/installation.md)
+<!-- - [Installation](./wiki/installation.md)
 - [Setup](./wiki/setup.md)
 - [Provenance Graph](./wiki/prov_graph.md)
 - [Logging](./wiki/logging.md)
@@ -45,7 +45,7 @@ For detailed information, please refer to the following documentation files:
 - [Registering Metrics](./wiki/registering_metrics.md)
 - [Usage with PyTorch](./wiki/usage_pytorch.md)
 - [Usage with Lightning](./wiki/usage_lightning.md)
-- [Usage with ItwinAI Logger](./wiki/usage_itwinAI_logger.md)
+- [Usage with ItwinAI Logger](./wiki/usage_itwinAI_logger.md) -->
 
 # Contributors
 
