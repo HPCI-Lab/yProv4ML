@@ -1,4 +1,4 @@
-
+import numpy as np
 import psutil
 import torch
 import sys
@@ -56,6 +56,10 @@ def get_gpu_memory_usage() -> float:
     """    
     if sys.platform != 'darwin':
         if torch.cuda.is_available():
+            if torch.cuda.memory_allocated() == 0:
+                return 0
+            if torch.cuda.memory_reserved() == 0:
+                return np.inf
             return torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
         else: 
             if "NVIDIA" in torch.cuda.get_device_name(0):

@@ -1,5 +1,6 @@
 
 import os
+from typing import Tuple, Optional
 import prov.model as prov
 
 from prov4ml.constants import PROV4ML_DATA
@@ -9,7 +10,7 @@ def save_prov_file(
         prov_file : str,
         create_graph : bool =False, 
         create_svg : bool =False
-    ) -> None:
+    ) -> Tuple[str, Optional[str], Optional[str]]:
     """
     Save the provenance document to a file.
 
@@ -25,7 +26,7 @@ def save_prov_file(
         A flag to indicate if an SVG should be created. Defaults to False.
     
     Returns:
-        None
+        Paths to provenance files
     """
 
     with open(prov_file, 'w') as prov_graph:
@@ -34,16 +35,18 @@ def save_prov_file(
     if create_svg and not create_graph:
         raise ValueError("Cannot create SVG without creating the graph.")
 
+    path_dot = None
     if create_graph:
         dot_filename = os.path.basename(prov_file).replace(".json", ".dot")
         path_dot = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, dot_filename)
         with open(path_dot, 'w') as prov_dot:
             prov_dot.write(custom_prov_to_dot(doc).to_string())
-
+    path_svg = None
     if create_svg:
         svg_filename = os.path.basename(prov_file).replace(".json", ".svg")
         path_svg = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, svg_filename)
         os.system(f"dot -Tsvg {path_dot} > {path_svg}")
+    return prov_file, path_dot, path_svg
 
 
 from prov.model import (
