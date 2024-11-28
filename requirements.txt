@@ -6,7 +6,6 @@ GPUtil
 lightning
 netCDF4
 numpy
-nvitop
 pandas
 psutil
 pydot
@@ -14,3 +13,6 @@ torch
 torchvision
 tqdm
 typing_extensions
+prov
+pydot
+pipreqs
