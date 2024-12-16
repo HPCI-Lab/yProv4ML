@@ -12,7 +12,7 @@ import prov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 1
+EPOCHS = 10
 DEVICE = "mps"
 
 # start the run in the same way as with mlflow
@@ -20,14 +20,8 @@ prov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="experiment_name", 
     provenance_save_dir="prov",
-    save_after_n_logs=1,
-    #filetype
-    # chunksize 1000
+    save_after_n_logs=100,
 )
-
-# prov4ml.register_final_metric("MSE_test", 10, prov4ml.FoldOperation.MIN)
-# prov4ml.register_final_metric("MSE_train", 10, prov4ml.FoldOperation.MIN)
-# prov4ml.register_final_metric("emissions_rate", 0.0, prov4ml.FoldOperation.ADD)
 
 class MNISTModel(nn.Module):
     def __init__(self):
@@ -51,12 +45,12 @@ tform = transforms.Compose([
 prov4ml.log_param("dataset transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-train_ds = Subset(train_ds, range(900))
+# train_ds = Subset(train_ds, range(BATCH_SIZE*2000))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(train_loader, "train_dataset")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-# test_ds = Subset(test_ds, range(BATCH_SIZE*2))
+# test_ds = Subset(test_ds, range(BATCH_SIZE*200))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(test_loader, "val_dataset")
 
@@ -66,9 +60,13 @@ prov4ml.log_param("optimizer", "Adam")
 loss_fn = nn.MSELoss().to(DEVICE)
 prov4ml.log_param("loss_fn", "MSELoss")
 
-losses = []
+def tensor2str(t): 
+    return str(t).replace("\n","")
+
 for epoch in range(EPOCHS):
+    print(f"Epoch: {epoch}")
     mnist_model.train()
+    mnist_model.to(DEVICE)
     for i, (x, y) in tqdm(enumerate(train_loader)):
         x, y = x.to(DEVICE), y.to(DEVICE)
         optim.zero_grad()
@@ -77,18 +75,13 @@ for epoch in range(EPOCHS):
         loss = loss_fn(y_hat, y)
         loss.backward()
         optim.step()
-        losses.append(loss.item())
     
-    # log system and carbon metrics (once per epoch), as well as the execution time
         prov4ml.log_metric("MSE_train", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-    prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
-    prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
-    # save incremental model versions
-    prov4ml.save_model_version(mnist_model, f"mnist_model_version_{epoch}", prov4ml.Context.TRAINING, epoch)
-
-# import numpy as np   
-# cm = np.zeros((10, 10))
-# acc = 0
+        prov4ml.log_metric("Sample_Data", tensor2str(x), context=prov4ml.Context.TRAINING, step=epoch)
+        prov4ml.log_metric("Sample_Prediction", tensor2str(y_hat), context=prov4ml.Context.TRAINING, step=epoch)
+        prov4ml.log_metric("Sample_Label", tensor2str(y), context=prov4ml.Context.TRAINING, step=epoch)
+        prov4ml.log_metric("Sample_Gradient", tensor2str(torch.gradient(y_hat, spacing = 2.0)), context=prov4ml.Context.TRAINING, step=epoch)
+        prov4ml.log_metric("Sample_Gradient_ohe", tensor2str(torch.gradient(y, spacing = 2.0)), context=prov4ml.Context.TRAINING, step=epoch)
 
     mnist_model.eval()
     mnist_model.cpu()
@@ -97,19 +90,12 @@ for epoch in range(EPOCHS):
         y2 = F.one_hot(y, 10).float()
         loss = loss_fn(y_hat, y2)
 
-        # add confusion matrix
-        # y_pred = torch.argmax(y_hat, dim=1)
-        # for j in range(y.shape[0]):
-        #     cm[y[j], y_pred[j]] += 1
-        # # change the context to EVALUATION to log the metric as evaluation metric
-    prov4ml.log_metric("MSE_val", loss.item(), prov4ml.Context.VALIDATION, step=epoch)
-
-# log final version of the model 
-# it also logs the model architecture as an artifact by default
-prov4ml.log_model(mnist_model, "mnist_model_final")
+        prov4ml.log_metric("MSE_val", loss.item(), prov4ml.Context.VALIDATION, step=epoch)
+        prov4ml.log_metric("Sample_Data", tensor2str(x), context=prov4ml.Context.VALIDATION, step=epoch)
+        prov4ml.log_metric("Sample_Prediction", tensor2str(y_hat), context=prov4ml.Context.VALIDATION, step=epoch)
+        prov4ml.log_metric("Sample_Label", tensor2str(y2), context=prov4ml.Context.VALIDATION, step=epoch)
+        prov4ml.log_metric("Sample_Gradient", tensor2str(torch.gradient(y_hat)), context=prov4ml.Context.VALIDATION, step=epoch)
+        prov4ml.log_metric("Sample_Gradient_ohe", tensor2str(torch.gradient(y2)), context=prov4ml.Context.VALIDATION, step=epoch)
 
 
-# prendi tempo 
-exit()
-# save the provenance graph
 prov4ml.end_run(create_graph=True, create_svg=True)
