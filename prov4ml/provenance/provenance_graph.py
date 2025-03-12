@@ -337,7 +337,7 @@ def create_prov_document() -> prov.ProvDocument:
 
             ent = doc.get_record(f'{dataset_name}')[0]
 
-            label = name.split('_')[-1]
+            label = name#.split('_')[-1]
             ent.add_attributes({f'prov-ml:{label}': Prov4MLAttribute.get_attr(param.value)})
 
     doc.wasGeneratedBy(ent_ds,run_activity)
