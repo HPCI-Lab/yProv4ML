@@ -255,18 +255,18 @@ def log_dataset(dataset : Union[DataLoader, Subset, Dataset], label : str):
         dl = dataset
         dataset = dl.dataset
 
-        log_param(f"{label}_dataset_stat_batch_size", dl.batch_size)
-        log_param(f"{label}_dataset_stat_num_workers", dl.num_workers)
+        log_param(f"{label}_stat_batch_size", dl.batch_size)
+        log_param(f"{label}_stat_num_workers", dl.num_workers)
         # log_param(f"{label}_dataset_stat_shuffle", dl.shuffle)
-        log_param(f"{label}_dataset_stat_total_steps", len(dl))
+        log_param(f"{label}_stat_total_steps", len(dl))
 
     elif isinstance(dataset, Subset):
         dl = dataset
         dataset = dl.dataset
-        log_param(f"{label}_dataset_stat_total_steps", len(dl))
+        log_param(f"{label}_stat_total_steps", len(dl))
 
     total_samples = len(dataset)
-    log_param(f"{label}_dataset_stat_total_samples", total_samples)
+    log_param(f"{label}_stat_total_samples", total_samples)
 
 def register_final_metric(
         metric_name : str,
