@@ -32,7 +32,6 @@ tform = transforms.Compose([
     transforms.RandomVerticalFlip(),
     transforms.ToTensor()
 ])
-# prov4ml.log_param("dataset transformation", tform)
 
 train_ds = CIFAR10(PATH_DATASETS, train=True, download=True, transform=tform)
 train_ds = Subset(train_ds, range(1000))
@@ -45,7 +44,6 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(test_loader, "val_dataset")
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.1)
-# prov4ml.log_param("optimizer", "Adam")
 
 loss_fn = nn.MSELoss().to(DEVICE)
 prov4ml.log_param("loss_fn", "MSELoss")
@@ -65,10 +63,8 @@ for epoch in range(EPOCHS):
     
     # log system and carbon metrics (once per epoch), as well as the execution time
         prov4ml.log_metric("Loss", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-        prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
+        # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
         prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
-    # save incremental model versions
-    # prov4ml.save_model_version(mnist_model, f"mnist_model_version_{epoch}", prov4ml.Context.TRAINING, epoch)
 
     mnist_model.eval()
     for i, (x, y) in tqdm(enumerate(test_loader)):
@@ -79,9 +75,5 @@ for epoch in range(EPOCHS):
 
         prov4ml.log_metric("Loss", loss.item(), prov4ml.Context.VALIDATION, step=epoch)
 
-# log final version of the model 
-# it also logs the model architecture as an artifact by default
 prov4ml.log_model(mnist_model, "mnist_model_final")
-
-# save the provenance graph
 prov4ml.end_run(create_graph=True, create_svg=True)

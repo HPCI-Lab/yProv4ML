@@ -12,7 +12,7 @@ import prov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 5
+EPOCHS = 2
 DEVICE = "mps"
 
 prov4ml.start_run(
@@ -43,17 +43,17 @@ tform = transforms.Compose([
 # prov4ml.log_param("dataset transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-train_ds = Subset(train_ds, range(900))
+train_ds = Subset(train_ds, range(100))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(train_loader, "train_dataset")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-test_ds = Subset(test_ds, range(BATCH_SIZE*2))
+test_ds = Subset(test_ds, range(10))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(test_loader, "val_dataset")
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
-# prov4ml.log_param("optimizer", "Adam")
+prov4ml.log_param("optimizer", "Adam")
 
 loss_fn = nn.MSELoss().to(DEVICE)
 prov4ml.log_param("loss_fn", "MSELoss")
@@ -71,12 +71,9 @@ for epoch in range(EPOCHS):
         optim.step()
         losses.append(loss.item())
     
-    # log system and carbon metrics (once per epoch), as well as the execution time
         prov4ml.log_metric("Loss", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-        # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
+        prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
         prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
-    # save incremental model versions
-    # prov4ml.save_model_version(mnist_model, f"mnist_model_version_{epoch}", prov4ml.Context.TRAINING, epoch)
 
     mnist_model.eval()
     for i, (x, y) in tqdm(enumerate(test_loader)):
@@ -87,9 +84,5 @@ for epoch in range(EPOCHS):
 
         prov4ml.log_metric("Loss", loss.item(), prov4ml.Context.VALIDATION, step=epoch)
 
-# log final version of the model 
-# it also logs the model architecture as an artifact by default
 prov4ml.log_model(mnist_model, "mnist_model_final")
-
-# save the provenance graph
 prov4ml.end_run(create_graph=True, create_svg=True)
