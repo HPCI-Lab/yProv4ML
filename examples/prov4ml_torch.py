@@ -6,13 +6,13 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
-sys.path.append("../ProvML")
+sys.path.append("../yProvML")
 
 import prov4ml
 
 PATH_DATASETS = "./data"
-BATCH_SIZE = 32
-EPOCHS = 2
+BATCH_SIZE = 4
+EPOCHS = 10
 DEVICE = "mps"
 
 prov4ml.start_run(
@@ -44,7 +44,7 @@ tform = transforms.Compose([
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
 train_ds = Subset(train_ds, range(100))
-train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE*10)
 prov4ml.log_dataset(train_loader, "train_dataset")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
