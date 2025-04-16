@@ -7,19 +7,18 @@ from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
 sys.path.append("../yProvML")
-
 import prov4ml
 
 PATH_DATASETS = "./data"
-BATCH_SIZE = 4
-EPOCHS = 10
+BATCH_SIZE = 32
+EPOCHS = 5
 DEVICE = "mps"
 
 prov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="experiment_name", 
     provenance_save_dir="prov",
-    save_after_n_logs=1,
+    save_after_n_logs=100,
 )
 
 class MNISTModel(nn.Module):
@@ -43,12 +42,12 @@ tform = transforms.Compose([
 # prov4ml.log_param("dataset transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-train_ds = Subset(train_ds, range(100))
-train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE*10)
+train_ds = Subset(train_ds, range(1000 * BATCH_SIZE))
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(train_loader, "train_dataset")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-test_ds = Subset(test_ds, range(10))
+test_ds = Subset(test_ds, range(100 * BATCH_SIZE))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(test_loader, "val_dataset")
 
@@ -59,6 +58,7 @@ loss_fn = nn.MSELoss().to(DEVICE)
 prov4ml.log_param("loss_fn", "MSELoss")
 
 losses = []
+memory = []
 for epoch in range(EPOCHS):
     mnist_model.train()
     for i, (x, y) in tqdm(enumerate(train_loader)):
@@ -72,8 +72,10 @@ for epoch in range(EPOCHS):
         losses.append(loss.item())
     
         prov4ml.log_metric("Loss", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-        prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
+        # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
         prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
+    prov4ml.save_model_version(mnist_model, "mnist_model_version",prov4ml.Context.TRAINING)
+    
 
     mnist_model.eval()
     for i, (x, y) in tqdm(enumerate(test_loader)):

@@ -98,10 +98,7 @@ class MetricInfo:
         --------
         None
         """
-        if process is not None:
-            file = os.path.join(path, f"{self.name}_{self.context}_GR{process}.csv")
-        else:
-            file = os.path.join(path, f"{self.name}_{self.context}.csv")
+        file = os.path.join(path, f"{self.name}_{self.context}_GR{process}.csv")
         file_exists = os.path.exists(file)
 
         with open(file, "a") as f:
@@ -110,7 +107,4 @@ class MetricInfo:
             for epoch, values in self.epochDataList.items():
                 for value, timestamp in values:
                     f.write(f"{epoch}{sep}{value}{sep}{timestamp}\n")
-
-        self.epochDataList = {}
-
 

@@ -206,6 +206,8 @@ class Prov4MLData:
         total_metrics_values = self.metrics[(metric, context)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_tmp_file(self.metrics[(metric, context)])
+            self.metrics[(metric, context)].epochDataList = {}
+
 
     def add_cumulative_metric(self, label: str, value: Any, fold_operation: FoldOperation) -> None:
         """

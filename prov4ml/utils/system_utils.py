@@ -18,7 +18,7 @@ if sys.platform != 'darwin':
     elif "NVIDIA" in torch.cuda.get_device_name(0): 
         from nvitop import Device
 else: 
-    import apple_gpu
+    import prov4ml.utils.apple_gpu as apple_gpu
 
 def get_cpu_usage() -> float:
     """
@@ -82,7 +82,6 @@ def get_gpu_power_usage() -> float:
     """
     if sys.platform != 'darwin':
         if torch.cuda.device_count() == 0:
-            print("RET")
             return 0.0
 
         gpu_power = 0.0
@@ -193,17 +192,22 @@ def get_gpu_metric_gputil(metric):
             warnings.warn(f"Could not get metric: {metric}")
         return 0.0
 
+
 def get_gpu_metric_apple(metric):
     statistics = apple_gpu.accelerator_performance_statistics()
+    data = 0.0
     if metric == 'power':
-        return 0.0
+        data = 0.0
     elif metric == 'temperature':
-        return 0.0
+        data = 0.0
     elif metric == 'utilization':
-        return statistics['Device Utilization %']
+        data = statistics['Device Utilization %']
     elif metric == 'memory':
-        return statistics['Alloc system memory']
+        data = statistics['Alloc system memory']
     else: 
         if not SILENT:
             warnings.warn(f"Could not get metric: {metric}")
-        return 0.0
+        data = 0.0
+
+    # del statistics
+    return data
