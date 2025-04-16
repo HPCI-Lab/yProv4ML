@@ -154,13 +154,13 @@ def log_system_metrics(
     Returns:
         None
     """
-    log_metric("cpu_usage", system_utils.get_cpu_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("memory_usage", system_utils.get_memory_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("disk_usage", system_utils.get_disk_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_usage", system_utils.get_gpu_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_temperature", system_utils.get_gpu_temperature(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("cpu_usage", system_utils.get_cpu_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("memory_usage", system_utils.get_memory_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("disk_usage", system_utils.get_disk_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_usage", system_utils.get_gpu_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_temperature", system_utils.get_gpu_temperature(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
 
 def log_carbon_metrics(
     context: Context,
