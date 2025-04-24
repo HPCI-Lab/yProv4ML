@@ -11,7 +11,7 @@ import prov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 5
+EPOCHS = 2
 DEVICE = "mps"
 
 prov4ml.start_run(
@@ -73,7 +73,7 @@ for epoch in range(EPOCHS):
     
         prov4ml.log_metric("Loss", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
         # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
-        prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
+        # prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
     prov4ml.save_model_version(mnist_model, "mnist_model_version",prov4ml.Context.TRAINING)
     
 
