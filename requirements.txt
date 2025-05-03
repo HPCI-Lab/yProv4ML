@@ -16,3 +16,4 @@ typing_extensions
 prov
 pydot
 pipreqs
+nvitop
