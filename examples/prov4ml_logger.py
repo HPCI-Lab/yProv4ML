@@ -6,9 +6,9 @@ from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
-import sys
-sys.path.append("../ProvML")
 
+import sys
+sys.path.append("../yProvML")
 import prov4ml
 
 PATH_DATASETS = "./data"
