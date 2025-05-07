@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 from prov4ml.datamodel.artifact_data import ArtifactInfo
 from prov4ml.datamodel.attribute_type import LoggingItemKind
 from prov4ml.datamodel.parameter_data import ParameterInfo
-from prov4ml.datamodel.cumulative_metrics import CumulativeMetric, FoldOperation
 from prov4ml.datamodel.metric_data import MetricInfo
 from prov4ml.provenance.context import Context
 from prov4ml.utils import funcs
@@ -91,7 +90,6 @@ class Prov4MLData:
         self.metrics: Dict[(str, Context), MetricInfo] = {}
         self.parameters: Dict[str, ParameterInfo] = {}
         self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
-        self.cumulative_metrics: Dict[str, CumulativeMetric] = {}
 
         self.PROV_SAVE_PATH = "prov_save_path"
         self.EXPERIMENT_NAME = "test_experiment"
@@ -166,7 +164,6 @@ class Prov4MLData:
         self.metrics: Dict[(str, Context), MetricInfo] = {}
         self.parameters: Dict[str, ParameterInfo] = {}
         self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
-        self.cumulative_metrics: Dict[str, CumulativeMetric] = {}
 
     def add_metric(
         self, 
@@ -206,35 +203,11 @@ class Prov4MLData:
         
         self.metrics[(metric, context)].add_metric(value, step, timestamp if timestamp else funcs.get_current_time_millis())
 
-        if metric in self.cumulative_metrics:
-            self.cumulative_metrics[metric].update(value)
-
         total_metrics_values = self.metrics[(metric, context)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_tmp_file(self.metrics[(metric, context)])
             self.metrics[(metric, context)].epochDataList = {}
 
-
-    def add_cumulative_metric(self, label: str, value: Any, fold_operation: FoldOperation) -> None:
-        """
-        Adds a cumulative metric to the provenance data.
-
-        Parameters:
-        -----------
-        label : str
-            The label of the cumulative metric.
-        value : Any
-            The initial value of the cumulative metric.
-        fold_operation : FoldOperation
-            The operation used to fold new values into the cumulative metric.
-
-        Returns:
-        --------
-        None
-        """
-        if not self.is_collecting: return
-
-        self.cumulative_metrics[label] = CumulativeMetric(label, value, fold_operation)
 
     def add_parameter(self, parameter: str, value: Any) -> None:
         """

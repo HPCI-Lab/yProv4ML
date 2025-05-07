@@ -8,7 +8,6 @@ from typing import Any, Optional, Union
 from prov4ml.datamodel.attribute_type import LoggingItemKind
 from prov4ml.utils import energy_utils, flops_utils, system_utils, time_utils, funcs
 from prov4ml.provenance.context import Context
-from prov4ml.datamodel.cumulative_metrics import FoldOperation
 from prov4ml.constants import PROV4ML_DATA
     
 def log_metric(key: str, value: float, context:Context, step: Optional[int] = 0, source: LoggingItemKind = None) -> None:
@@ -267,21 +266,3 @@ def log_dataset(dataset : Union[DataLoader, Subset, Dataset], label : str):
 
     total_samples = len(dataset)
     log_param(f"{label}_stat_total_samples", total_samples)
-
-def register_final_metric(
-        metric_name : str,
-        initial_value : float,
-        fold_operation : FoldOperation
-    ) -> None:
-    """
-    Registers a final metric to be computed at the end of the experiment.
-
-    Args:
-        metric_name (str): The name of the metric.
-        initial_value (float): The initial value of the metric.
-        fold_operation (FoldOperation): The operation to be performed on the metric.
-
-    Returns:
-        None
-    """
-    PROV4ML_DATA.add_cumulative_metric(metric_name, initial_value, fold_operation)
