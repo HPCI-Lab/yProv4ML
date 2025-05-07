@@ -313,16 +313,6 @@ def create_prov_document() -> prov.ProvDocument:
         })
         doc.used(run_activity,ent)
 
-    # create entity for final run statistics
-    final_run_stats = doc.entity('final_run_statistics',{
-        'prov-ml:type': Prov4MLAttribute.get_attr('RunStatistics'),
-    })
-    other_attributes = {}
-    for (name, metric) in PROV4ML_DATA.cumulative_metrics.items():
-        other_attributes[f'prov-ml:{name}'] = Prov4MLAttribute.get_attr(metric.current_value)
-    final_run_stats.add_attributes(other_attributes)
-    doc.wasGeneratedBy(final_run_stats,run_activity)
-
     #dataset entities generation
     ent_ds = doc.entity(f'datasets')
 
