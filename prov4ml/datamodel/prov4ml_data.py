@@ -162,6 +162,12 @@ class Prov4MLData:
         self.ARTIFACTS_DIR = os.path.join(self.EXPERIMENT_DIR, "artifacts")
         self.TMP_DIR = os.path.join(self.EXPERIMENT_DIR, "tmp")
 
+    def reset(self): 
+        self.metrics: Dict[(str, Context), MetricInfo] = {}
+        self.parameters: Dict[str, ParameterInfo] = {}
+        self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
+        self.cumulative_metrics: Dict[str, CumulativeMetric] = {}
+
     def add_metric(
         self, 
         metric: str, 
