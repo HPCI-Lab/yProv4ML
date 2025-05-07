@@ -14,15 +14,6 @@ PATH_DATASETS = "./data"
 BATCH_SIZE = 64
 EPOCHS = 2
 
-# start the run in the same way as with mlflow
-prov4ml.start_run(
-    prov_user_namespace="www.example.org",
-    experiment_name="experiment_name", 
-    provenance_save_dir="prov",
-    save_after_n_logs=100,
-)
-
-
 class MNISTModel(LightningModule):
     def __init__(self):
         super().__init__()
@@ -37,25 +28,23 @@ class MNISTModel(LightningModule):
     def training_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        prov4ml.log_metric("MSE", loss, prov4ml.Context.TRAINING, step=self.current_epoch)
-        return loss
+        self.log("MSE_train", loss.item(), on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        # return loss
     
     def validation_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        # change the context to VALIDATION to log the metric as evaluation metric
-        prov4ml.log_metric("MSE", loss, prov4ml.Context.VALIDATION, step=self.current_epoch)
+        self.log("MSE_val", loss)
         return loss
     
     def test_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        # change the context to EVALUATION to log the metric as evaluation metric
-        prov4ml.log_metric("MSE",loss,prov4ml.Context.EVALUATION,step=self.current_epoch)
+        self.log("MSE_test",loss)
         return loss
     
     def on_train_epoch_end(self) -> None:
-        prov4ml.log_metric("epoch", self.current_epoch, prov4ml.Context.TRAINING, step=self.current_epoch)
+        # prov4ml.log_metric("epoch", self.current_epoch, prov4ml.Context.TRAINING, step=self.current_epoch)
         prov4ml.save_model_version(self, f"model_version_{self.current_epoch}", prov4ml.Context.TRAINING, step=self.current_epoch)
         prov4ml.log_system_metrics(prov4ml.Context.TRAINING,step=self.current_epoch)
         prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING,step=self.current_epoch)
@@ -91,13 +80,12 @@ trainer = L.Trainer(
     accelerator="mps",
     devices=1,
     max_epochs=EPOCHS,
-    logger=[],
+    logger=[prov4ml.ProvMLLogger()],
     enable_checkpointing=False, 
+    log_every_n_steps=1
 )
 
 trainer.fit(mnist_model, train_loader, val_dataloaders=val_loader)
-# log final version of the model 
-# it also logs the model architecture as an artifact by default
 prov4ml.log_model(mnist_model, "model_version_final")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
@@ -107,6 +95,3 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(test_loader, "test_dataset")
 
 result = trainer.test(mnist_model, test_loader)
-
-# save the provenance graphs
-prov4ml.end_run(create_graph=True, create_svg=True)
