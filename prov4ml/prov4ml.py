@@ -91,6 +91,8 @@ def start_run_ctx(
 
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
     save_prov_file(doc, path_graph, create_graph, create_svg)
+    PROV4ML_DATA.reset()
+
 
 def start_run(
         prov_user_namespace: str,
@@ -208,4 +210,6 @@ def end_run(
     
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
     save_prov_file(doc, path_graph, create_graph, create_svg)
+
+    PROV4ML_DATA.reset()
 

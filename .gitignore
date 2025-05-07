@@ -10,6 +10,7 @@ mlruns/
 test/
 
 __pycache__/
+*.pyc
 
 
 build/
