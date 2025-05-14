@@ -49,7 +49,7 @@ prov4ml.log_dataset(train_loader, "train_dataset")
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
 test_ds = Subset(test_ds, range(100 * BATCH_SIZE))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
-prov4ml.log_dataset(test_loader, "val_dataset")
+# prov4ml.log_dataset(test_loader, "val_dataset")
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
 prov4ml.log_param("optimizer", "Adam")
@@ -58,7 +58,6 @@ loss_fn = nn.MSELoss().to(DEVICE)
 prov4ml.log_param("loss_fn", "MSELoss")
 
 losses = []
-memory = []
 for epoch in range(EPOCHS):
     mnist_model.train()
     for i, (x, y) in tqdm(enumerate(train_loader)):
@@ -74,7 +73,7 @@ for epoch in range(EPOCHS):
         prov4ml.log_metric("Loss", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
         # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
         # prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
-    prov4ml.save_model_version(mnist_model, "mnist_model_version",prov4ml.Context.TRAINING)
+    # prov4ml.save_model_version(mnist_model, "mnist_model_version",prov4ml.Context.TRAINING)
     
 
     mnist_model.eval()
