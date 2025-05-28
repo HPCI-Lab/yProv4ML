@@ -1,5 +1,5 @@
 
-# SoftareX Paper Supplementary Material
+# SoftwareX Paper Supplementary Material
 
 ## Example of Provenance JSON
 
@@ -9,6 +9,8 @@ A full example of provenance graph is added in this subdirectory, it can be repr
 - provgraph_experiment_name_GR0.json: the final ProvJSON file, produced with the former script
 - provgraph_experiment_name_GR0.dot: the provenance file converted to GraphViz graph
 - provgraph_experiment_name_GR0.svg: the provenance graph visualization in svg format
+
+![](./imgs/provgraph_experiment_name_GR0.png)
 
 ## Charts in Paper Source Code and Data
 
@@ -35,3 +37,6 @@ In addition, all results are already reported in the following files:
 And can be plotted using these final python script:
 - plot_time.py: creates the time overhead chart;
 - plot_mem.py: creates the memory overhead chart.
+
+![](./imgs/overhead.png)
+![](./imgs/mem.png)
