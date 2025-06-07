@@ -1,5 +1,5 @@
-import os
 import torch
+import os
 import warnings
 
 from torch.utils.data import DataLoader, Subset, Dataset
@@ -139,7 +139,7 @@ def log_flops_per_batch(label: str, model: Any, batch: Any, context: Context, st
         None
     """
     return log_metric(label, flops_utils.get_flops_per_batch(model, batch), context, step=step, source=LoggingItemKind.FLOPS_PER_BATCH)
-
+    
 def log_system_metrics(
     context: Context,
     step: Optional[int] = None,

@@ -15,7 +15,7 @@ import prov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 15
+EPOCHS = 5
 DEVICE = "cpu"
 
 prov4ml.start_run(
@@ -64,8 +64,7 @@ prov4ml.log_param("loss_fn", "MSELoss")
 losses = []
 for epoch in range(EPOCHS):
     mnist_model.train()
-    for i, (x, y) in enumerate(train_loader):
-    # for i, (x, y) in tqdm(enumerate(train_loader)):
+    for i, (x, y) in tqdm(enumerate(train_loader), total=len(train_loader)):
         x, y = x.to(DEVICE), y.to(DEVICE)
         optim.zero_grad()
         y_hat = mnist_model(x)
@@ -76,21 +75,18 @@ for epoch in range(EPOCHS):
         losses.append(loss.item())
     
         prov4ml.log_metric("Loss", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-        # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
         prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
-        print(psutil.virtual_memory().percent)
+    prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
     prov4ml.save_model_version(mnist_model, "mnist_model_version",prov4ml.Context.TRAINING)
     
     mnist_model.eval()
-    for i, (x, y) in enumerate(test_loader):
-    # for i, (x, y) in tqdm(enumerate(test_loader)):
+    for i, (x, y) in tqdm(enumerate(test_loader), total=len(test_loader)):
         x, y = x.to(DEVICE), y.to(DEVICE)
         y_hat = mnist_model(x)
         y2 = F.one_hot(y, 10).float()
         loss = loss_fn(y_hat, y2)
 
         prov4ml.log_metric("Loss", loss.item(), prov4ml.Context.VALIDATION, step=epoch)
-        print(psutil.virtual_memory().percent)
 
 prov4ml.log_model(mnist_model, "mnist_model_final")
 prov4ml.end_run(create_graph=True, create_svg=True)
