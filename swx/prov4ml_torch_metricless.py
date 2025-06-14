@@ -8,13 +8,14 @@ import torch.nn.functional as F
 from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 import sys
 sys.path.append("../yProvML")
 import prov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 15
+EPOCHS = 10
 DEVICE = "cpu"
 
 prov4ml.start_run(
@@ -71,7 +72,7 @@ for epoch in range(EPOCHS):
         losses.append(loss.item())
     
         prov4ml.log_metric("Loss", loss.item(), context=prov4ml.Context.TRAINING, step=epoch)
-        print(psutil.virtual_memory().percent)
+        # print(psutil.virtual_memory().percent)
     prov4ml.save_model_version(mnist_model, "mnist_model_version",prov4ml.Context.TRAINING)
     
     mnist_model.eval()
@@ -82,7 +83,7 @@ for epoch in range(EPOCHS):
         loss = loss_fn(y_hat, y2)
 
         prov4ml.log_metric("Loss", loss.item(), prov4ml.Context.VALIDATION, step=epoch)
-        print(psutil.virtual_memory().percent)
+        # print(psutil.virtual_memory().percent)
 
 prov4ml.log_model(mnist_model, "mnist_model_final")
 prov4ml.end_run(create_graph=True, create_svg=True)

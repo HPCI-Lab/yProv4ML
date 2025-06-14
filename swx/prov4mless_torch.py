@@ -55,7 +55,7 @@ for epoch in range(EPOCHS):
         optim.step()
         losses.append(loss.item())
     
-        print(psutil.virtual_memory().percent)
+        # print(psutil.virtual_memory().percent)
     torch.save(mnist_model, f"mnist_model_version_{epoch}")
     
     mnist_model.eval()
@@ -64,8 +64,7 @@ for epoch in range(EPOCHS):
         y_hat = mnist_model(x)
         y2 = F.one_hot(y, 10).float()
         loss = loss_fn(y_hat, y2)
-
-        print(psutil.virtual_memory().percent)
+        # print(psutil.virtual_memory().percent)
 
 torch.save(mnist_model, "mnist_model_final")
 

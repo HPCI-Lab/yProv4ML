@@ -1,7 +1,3 @@
-# import time
-# start_time = time.time()
-import psutil
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -46,12 +42,12 @@ tform = transforms.Compose([
 prov4ml.log_param("dataset transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-# train_ds = Subset(train_ds, range(1000 * BATCH_SIZE))
+train_ds = Subset(train_ds, range(1000 * BATCH_SIZE))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(train_loader, "train_dataset")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-# test_ds = Subset(test_ds, range(100 * BATCH_SIZE))
+test_ds = Subset(test_ds, range(100 * BATCH_SIZE))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 prov4ml.log_dataset(test_loader, "val_dataset")
 
@@ -90,6 +86,3 @@ for epoch in range(EPOCHS):
 
 prov4ml.log_model(mnist_model, "mnist_model_final")
 prov4ml.end_run(create_graph=True, create_svg=True)
-
-# endtime = time.time()
-# print(f"Total time: {endtime - start_time}")
