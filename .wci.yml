@@ -1,0 +1,14 @@
+name: yProv4ML
+
+icon: https://github.com/HPCI-Lab/yProvML/tree/main/assets/yProv4ML_Logo.png
+
+headline: Part of the yProv suite, provides a unified interface for logging and tracking provenance information in machine learning experiments, both on distributed as well as large scale.
+
+description: It allows users to create provenance graphs from the logged information, and save all metrics and parameters to provjson format.
+
+language: Python
+            
+documentation: # nothing will be used if not provided
+  general: https://hpci-lab.github.io/yProv4ML.github.io/
+  installation: https://hpci-lab.github.io/yProv4ML.github.io/installation.html
+  tutorial: https://hpci-lab.github.io/yProv4ML.github.io/examples.html
