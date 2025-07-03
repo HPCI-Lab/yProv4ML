@@ -1,17 +1,16 @@
-import os
 import torch
+import os
 import warnings
 
 from torch.utils.data import DataLoader, Subset, Dataset
-from .datamodel.attribute_type import LoggingItemKind
 from typing import Any, Optional, Union
 
-from .utils import energy_utils, flops_utils, system_utils, time_utils, funcs
-from .provenance.context import Context
-from .datamodel.cumulative_metrics import FoldOperation
-from .constants import PROV4ML_DATA
+from prov4ml.datamodel.attribute_type import LoggingItemKind
+from prov4ml.utils import energy_utils, flops_utils, system_utils, time_utils, funcs
+from prov4ml.provenance.context import Context
+from prov4ml.constants import PROV4ML_DATA
     
-def log_metric(key: str, value: float, context:Context, step: Optional[int] = None, source: LoggingItemKind = None) -> None:
+def log_metric(key: str, value: float, context:Context, step: Optional[int] = 0, source: LoggingItemKind = None) -> None:
     """
     Logs a metric with the specified key, value, and context.
 
@@ -140,7 +139,7 @@ def log_flops_per_batch(label: str, model: Any, batch: Any, context: Context, st
         None
     """
     return log_metric(label, flops_utils.get_flops_per_batch(model, batch), context, step=step, source=LoggingItemKind.FLOPS_PER_BATCH)
-
+    
 def log_system_metrics(
     context: Context,
     step: Optional[int] = None,
@@ -154,13 +153,13 @@ def log_system_metrics(
     Returns:
         None
     """
-    log_metric("cpu_usage", system_utils.get_cpu_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("memory_usage", system_utils.get_memory_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("disk_usage", system_utils.get_disk_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_usage", system_utils.get_gpu_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_temperature", system_utils.get_gpu_temperature(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
-    log_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), context, step=step, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("cpu_usage", system_utils.get_cpu_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("memory_usage", system_utils.get_memory_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("disk_usage", system_utils.get_disk_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_usage", system_utils.get_gpu_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_temperature", system_utils.get_gpu_temperature(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
+    PROV4ML_DATA.add_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), step=step, context=context, source=LoggingItemKind.SYSTEM_METRIC)
 
 def log_carbon_metrics(
     context: Context,
@@ -233,8 +232,11 @@ def save_model_version(
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 
-    torch.save(model.state_dict(), f"{path}/{model_name}.pth")
-    log_artifact(f"{path}/{model_name}.pth", context=context, step=step, timestamp=timestamp)
+    # count all models with the same name stored at "path"
+    num_files = len([file for file in os.listdir(path) if str(file).startswith(model_name)])
+
+    torch.save(model.state_dict(), f"{path}/{model_name}_{num_files}.pth")
+    log_artifact(f"{path}/{model_name}_{num_files}.pth", context=context, step=step, timestamp=timestamp)
 
 def log_dataset(dataset : Union[DataLoader, Subset, Dataset], label : str): 
     """
@@ -252,33 +254,15 @@ def log_dataset(dataset : Union[DataLoader, Subset, Dataset], label : str):
         dl = dataset
         dataset = dl.dataset
 
-        log_param(f"{label}_dataset_stat_batch_size", dl.batch_size)
-        log_param(f"{label}_dataset_stat_num_workers", dl.num_workers)
+        log_param(f"{label}_stat_batch_size", dl.batch_size)
+        log_param(f"{label}_stat_num_workers", dl.num_workers)
         # log_param(f"{label}_dataset_stat_shuffle", dl.shuffle)
-        log_param(f"{label}_dataset_stat_total_steps", len(dl))
+        log_param(f"{label}_stat_total_steps", len(dl))
 
     elif isinstance(dataset, Subset):
         dl = dataset
         dataset = dl.dataset
-        log_param(f"{label}_dataset_stat_total_steps", len(dl))
+        log_param(f"{label}_stat_total_steps", len(dl))
 
     total_samples = len(dataset)
-    log_param(f"{label}_dataset_stat_total_samples", total_samples)
-
-def register_final_metric(
-        metric_name : str,
-        initial_value : float,
-        fold_operation : FoldOperation
-    ) -> None:
-    """
-    Registers a final metric to be computed at the end of the experiment.
-
-    Args:
-        metric_name (str): The name of the metric.
-        initial_value (float): The initial value of the metric.
-        fold_operation (FoldOperation): The operation to be performed on the metric.
-
-    Returns:
-        None
-    """
-    PROV4ML_DATA.add_cumulative_metric(metric_name, initial_value, fold_operation)
+    log_param(f"{label}_stat_total_samples", total_samples)

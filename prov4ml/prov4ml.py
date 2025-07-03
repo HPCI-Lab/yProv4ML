@@ -1,13 +1,13 @@
 import os
-from typing import Optional
+from typing import Optional, Tuple
 from contextlib import contextmanager
 
-from .constants import PROV4ML_DATA
-from .utils import energy_utils
-from .utils import flops_utils
-from .logging import log_execution_start_time, log_execution_end_time
-from .provenance.provenance_graph import create_prov_document
-from .utils.file_utils import save_prov_file
+from prov4ml.constants import PROV4ML_DATA
+from prov4ml.utils import energy_utils
+from prov4ml.utils import flops_utils
+from prov4ml.logging_aux import log_execution_start_time, log_execution_end_time
+from prov4ml.provenance.provenance_graph import create_prov_document
+from prov4ml.utils.file_utils import save_prov_file
 
 @contextmanager
 def start_run_ctx(
@@ -91,6 +91,8 @@ def start_run_ctx(
 
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
     save_prov_file(doc, path_graph, create_graph, create_svg)
+    PROV4ML_DATA.reset()
+
 
 def start_run(
         prov_user_namespace: str,
@@ -136,6 +138,35 @@ def start_run(
 
     log_execution_start_time()
 
+
+def log_provenance_documents(
+    create_graph: Optional[bool] = False, 
+    create_svg: Optional[bool] = False,
+    ) -> Tuple[str, Optional[str], Optional[str]]:
+    """Save logs collected so far as a set provenance documents: JSON, DOT, and SVG files.
+        
+    Returns:
+        Tuple[str, Optional[str], Optional[str]]: path to provenance documents:
+            provenance JSON, provenance DOT graph, and proenance SVG.
+    """
+    if not PROV4ML_DATA.is_collecting: return
+    
+    # log_execution_end_time()
+
+    # save remaining metrics
+    PROV4ML_DATA.save_all_metrics()
+
+    doc = create_prov_document()
+   
+    graph_filename = f'provgraph_{PROV4ML_DATA.EXPERIMENT_NAME}.json'
+    
+    if not os.path.exists(PROV4ML_DATA.EXPERIMENT_DIR):
+        os.makedirs(PROV4ML_DATA.EXPERIMENT_DIR, exist_ok=True)
+    
+    path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
+    return save_prov_file(doc, path_graph, create_graph, create_svg)
+
+
 def end_run(
         create_graph: Optional[bool] = False, 
         create_svg: Optional[bool] = False, 
@@ -163,9 +194,6 @@ def end_run(
     None
     """
 
-    if create_svg and not create_graph:
-        raise ValueError("Cannot create SVG without creating the graph.")
-    
     if not PROV4ML_DATA.is_collecting: return
     
     log_execution_end_time()
@@ -182,4 +210,6 @@ def end_run(
     
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
     save_prov_file(doc, path_graph, create_graph, create_svg)
+
+    PROV4ML_DATA.reset()
 

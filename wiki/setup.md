@@ -40,3 +40,5 @@ prov4ml.end_run(
 | `create_svg` | `bool` | **Optional**. Whether to create the svg |
 
 This call allows the library to save the provenance graph in the specified directory. 
+
+[Home](README.md) | [Prev](installation.md) | [Next](prov_graph.md)

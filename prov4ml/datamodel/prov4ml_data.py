@@ -2,13 +2,12 @@
 import os
 from typing import Any, Dict, List, Optional
 
-from .artifact_data import ArtifactInfo
-from .attribute_type import LoggingItemKind
-from .parameter_data import ParameterInfo
-from .cumulative_metrics import CumulativeMetric, FoldOperation
-from .metric_data import MetricInfo
-from ..provenance.context import Context
-from ..utils import funcs
+from prov4ml.datamodel.artifact_data import ArtifactInfo
+from prov4ml.datamodel.attribute_type import LoggingItemKind
+from prov4ml.datamodel.parameter_data import ParameterInfo
+from prov4ml.datamodel.metric_data import MetricInfo
+from prov4ml.provenance.context import Context
+from prov4ml.utils import funcs
 
 class Prov4MLData:
     """
@@ -91,7 +90,6 @@ class Prov4MLData:
         self.metrics: Dict[(str, Context), MetricInfo] = {}
         self.parameters: Dict[str, ParameterInfo] = {}
         self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
-        self.cumulative_metrics: Dict[str, CumulativeMetric] = {}
 
         self.PROV_SAVE_PATH = "prov_save_path"
         self.EXPERIMENT_NAME = "test_experiment"
@@ -105,6 +103,7 @@ class Prov4MLData:
 
         self.save_metrics_after_n_logs = 100
         self.TMP_DIR = "tmp"
+        self.TMP_SEP = "\t"
 
     def init(
             self, 
@@ -138,7 +137,7 @@ class Prov4MLData:
         None
         """
         self.global_rank = funcs.get_global_rank() if rank is None else rank
-        self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name
+        self.EXPERIMENT_NAME = experiment_name + f"_GR{self.global_rank}" if self.global_rank else experiment_name + "_GR0"
         self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
         
         if not self.is_collecting: return
@@ -160,6 +159,11 @@ class Prov4MLData:
         self.RUN_ID = run_id
         self.ARTIFACTS_DIR = os.path.join(self.EXPERIMENT_DIR, "artifacts")
         self.TMP_DIR = os.path.join(self.EXPERIMENT_DIR, "tmp")
+
+    def reset(self): 
+        self.metrics: Dict[(str, Context), MetricInfo] = {}
+        self.parameters: Dict[str, ParameterInfo] = {}
+        self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
 
     def add_metric(
         self, 
@@ -199,33 +203,11 @@ class Prov4MLData:
         
         self.metrics[(metric, context)].add_metric(value, step, timestamp if timestamp else funcs.get_current_time_millis())
 
-        if metric in self.cumulative_metrics:
-            self.cumulative_metrics[metric].update(value)
-
         total_metrics_values = self.metrics[(metric, context)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_tmp_file(self.metrics[(metric, context)])
+            self.metrics[(metric, context)].epochDataList = {}
 
-    def add_cumulative_metric(self, label: str, value: Any, fold_operation: FoldOperation) -> None:
-        """
-        Adds a cumulative metric to the provenance data.
-
-        Parameters:
-        -----------
-        label : str
-            The label of the cumulative metric.
-        value : Any
-            The initial value of the cumulative metric.
-        fold_operation : FoldOperation
-            The operation used to fold new values into the cumulative metric.
-
-        Returns:
-        --------
-        None
-        """
-        if not self.is_collecting: return
-
-        self.cumulative_metrics[label] = CumulativeMetric(label, value, fold_operation)
 
     def add_parameter(self, parameter: str, value: Any) -> None:
         """
@@ -321,7 +303,7 @@ class Prov4MLData:
         if not os.path.exists(self.TMP_DIR):
             os.makedirs(self.TMP_DIR, exist_ok=True)
 
-        metric.save_to_file(self.TMP_DIR, process=self.global_rank)
+        metric.save_to_file(self.TMP_DIR, process=self.global_rank, sep=self.TMP_SEP)
 
     def save_all_metrics(self) -> None:
         """

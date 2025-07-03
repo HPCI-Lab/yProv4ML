@@ -71,3 +71,5 @@ prov4ml.log_flops_per_batch(
 | `batch` | `Any` | **Required**. Batch of data used for the FLOPs calculation |
 | `context` | `prov4ml.Context` | **Required**. Context of the metric |
 | `step` | `int` | **Optional**. Step of the metric |
+
+[Home](README.md) | [Prev](carbon.md) | [Next](time.md)

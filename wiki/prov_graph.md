@@ -25,3 +25,5 @@ Or alternatively, using directly the Graphviz suite:
 ```bash
 dot -Tsvg -O prov_graph.dot
 ```
+
+[Home](README.md) | [Prev](setup.md) | [Next](logging.md)
