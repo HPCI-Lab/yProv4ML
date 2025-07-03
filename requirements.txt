@@ -17,3 +17,4 @@ prov
 pydot
 pipreqs
 nvitop
+lxml
