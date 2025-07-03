@@ -1,8 +1,9 @@
 
 import os
 from typing import Any, Dict, List
-from .attribute_type import LoggingItemKind
 from typing import Optional
+
+from prov4ml.datamodel.attribute_type import LoggingItemKind
 
 class MetricInfo:
     """
@@ -79,7 +80,8 @@ class MetricInfo:
     def save_to_file(
             self, 
             path : str, 
-            process : Optional[int] = None
+            process : Optional[int] = None, 
+            sep : str = ","
         ) -> None:
         """
         Saves the metric information to a file.
@@ -96,19 +98,13 @@ class MetricInfo:
         --------
         None
         """
-        if process is not None:
-            file = os.path.join(path, f"{self.name}_{self.context}_GR{process}.txt")
-        else:
-            file = os.path.join(path, f"{self.name}_{self.context}.txt")
+        file = os.path.join(path, f"{self.name}_{self.context}_GR{process}.csv")
         file_exists = os.path.exists(file)
 
         with open(file, "a") as f:
             if not file_exists:
-                f.write(f"{self.name}, {self.context}, {self.source}\n")
+                f.write(f"{self.name}{sep}{self.context}{sep}{self.source}\n")
             for epoch, values in self.epochDataList.items():
                 for value, timestamp in values:
-                    f.write(f"{epoch}, {value}, {timestamp}\n")
-
-        self.epochDataList = {}
-
+                    f.write(f"{epoch}{sep}{value}{sep}{timestamp}\n")
 

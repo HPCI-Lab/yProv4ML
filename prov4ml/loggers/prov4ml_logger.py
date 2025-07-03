@@ -5,8 +5,9 @@ from typing_extensions import override
 from argparse import Namespace
 from torch import Tensor
 
-from ..logging import log_param, log_metric
-from ..provenance.context import Context
+from prov4ml.logging_aux import log_param, log_metric
+from prov4ml import start_run, end_run
+from prov4ml.provenance.context import Context
 
 class ProvMLLogger(Logger):
     def __init__(
@@ -26,11 +27,18 @@ class ProvMLLogger(Logger):
             flush_logs_every_n_steps (int): The number of steps after which logs should be flushed. Defaults to 100.
         """
         super().__init__()
-        self._name = name or ""
+        self._name = name
         self._version = version
         self._prefix = prefix
         self._experiment = None
         self._flush_logs_every_n_steps = flush_logs_every_n_steps
+
+        start_run(
+            prov_user_namespace="www.example.org",
+            experiment_name=self._name, 
+            provenance_save_dir="prov",
+            save_after_n_logs=self._flush_logs_every_n_steps,
+        )
 
     @property
     @override
@@ -98,10 +106,9 @@ class ProvMLLogger(Logger):
             metrics (Dict[str, Union[Tensor, float]]): A dictionary containing the metrics and their associated values.
             step (Optional[int]): The step number for the metrics. Defaults to None.
         """
-        print(metrics)
-        print(step)
-        print(context)
-        log_metric(list(metrics.keys())[0], metrics[list(metrics.keys())[0]], context=Context.TRAINING, step=metrics["epoch"])
+        metrics_k = [k for k in list(metrics.keys()) if k != "epoch"]
+        for metric in metrics_k: 
+            log_metric(metric, metrics[metric], context=Context.TRAINING, step=metrics["epoch"])
     
     @override
     def log_hyperparams(self, params: Union[Dict[str, Any], Namespace]) -> None:
@@ -113,3 +120,8 @@ class ProvMLLogger(Logger):
         """
         for key, value in params.items():
             log_param(key, value)
+
+    @override
+    def finalize(self, status):
+        end_run(create_graph=True, create_svg=True)
+        return super().finalize(status)

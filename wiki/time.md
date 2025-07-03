@@ -31,3 +31,6 @@ prov4ml.log_execution_end_time()
 
 The *log_execution_end_time* function logs the end time of the current execution.
 It is automatically called at the end of the experiment.
+
+
+[Home](README.md) | [Prev](system.md) | [Next](registering_metrics.md)

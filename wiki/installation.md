@@ -7,14 +7,16 @@ Install from the repository:
 git clone https://github.com/HPCI-Lab/yProvML.git
 cd yProvML
 
+pip install -r requirements.txt
 # Install the package
 pip install .
 
 # Use apple extra if on a Mac
 pip install .[apple]
 
-# Use linux extra if on a Linux system
-pip install .[linux]
+# or install for specific arch
+pip install .[nvidia] # or .[amd]
+
 ```
 
 or simply:
@@ -22,3 +24,5 @@ or simply:
 ```bash
 pip install --no-cache-dir git+https://github.com/HPCI-Lab/yProvML
 ```
+
+[Home](README.md) | [Next](setup.md)
