@@ -10,6 +10,7 @@ cd yProvML
 pip install -r requirements.txt
 # Install the package
 pip install .
+
 # Use apple extra if on a Mac
 pip install .[apple]
 
