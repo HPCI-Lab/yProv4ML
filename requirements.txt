@@ -17,3 +17,5 @@ prov
 pydot
 pipreqs
 nvitop
+lxml
+rdflib
