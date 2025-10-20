@@ -22,3 +22,5 @@ lxml
 rdflib
 plotly
 sklearn
+textwrap
+shap
