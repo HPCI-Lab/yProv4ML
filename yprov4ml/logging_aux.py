@@ -2,8 +2,6 @@ import os
 import torch
 import json
 import warnings
-import subprocess
-from pathlib import Path
 import prov.model as prov
 
 from torch.utils.data import DataLoader, Subset, Dataset, RandomSampler
@@ -360,7 +358,7 @@ def log_execution_command(cmd: str, path : str) -> None:
         cmd (str): The command to be logged.
     """
     path = os.path.join("", "workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)
-    log_param("prov-ml:execution_command", cmd + " " + path)
+    log_param("execution_command", cmd + " " + path)
 
 def log_source_code(path: Optional[str] = None) -> None:
     """
