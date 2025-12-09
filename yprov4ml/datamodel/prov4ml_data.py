@@ -148,13 +148,13 @@ class Prov4MLData:
             node_rank = os.getenv("SLURM_NODEID", None)
             local_rank = os.getenv("SLURM_LOCALID", None) 
             rootContext.add_attributes({
-                f"{self.PROV_PREFIX}:global_rank": str(global_rank),
-                f"{self.PROV_PREFIX}:local_rank":str(local_rank),
-                f"{self.PROV_PREFIX}:node_rank":str(node_rank),
+                f"{self.PROV_PREFIX}:global_rank": global_rank,
+                f"{self.PROV_PREFIX}:local_rank": local_rank,
+                f"{self.PROV_PREFIX}:node_rank": node_rank,
             })
         elif runtime_type == "single_core":
             rootContext.add_attributes({
-                f"{self.PROV_PREFIX}:global_rank":str(global_rank)
+                f"{self.PROV_PREFIX}:global_rank": global_rank
             })
 
 
@@ -187,15 +187,15 @@ class Prov4MLData:
             repo = _get_git_remote_url()
             if repo is not None:
                 commit_hash = _get_git_revision_hash()
-                log_param(f"{PROV4ML_DATA.PROV_PREFIX}:source_code", os.path.join(repo, commit_hash))
+                log_param("source_code", os.path.join(repo, commit_hash))
         else:
             p = Path(path)
             if p.is_file():
                 self.add_artifact(p.name.replace(".py", ""), str(p), log_copy_in_prov_directory=True, is_model=False, is_input=True)
-                self.add_parameter(f"{self.PROV_PREFIX}:source_code", os.path.join(self.ARTIFACTS_DIR, p.name))
+                self.add_parameter("source_code", os.path.join(self.ARTIFACTS_DIR, p.name))
             else:
                 self.add_artifact("source_code", str(p), log_copy_in_prov_directory=True, is_model=False, is_input=True)
-                self.add_parameter(f"{self.PROV_PREFIX}:source_code", os.path.join(self.ARTIFACTS_DIR, "source_code"))
+                self.add_parameter("source_code", os.path.join(self.ARTIFACTS_DIR, "source_code"))
 
 
     def add_context(self, context : str, is_subcontext_of: Optional[Context] = None):     
@@ -263,12 +263,19 @@ class Prov4MLData:
             context = self.PROV_JSON_NAME
 
         current_activity = get_activity(self.root_provenance_doc,"context:"+ str(context))
-        current_activity.add_attributes({
-            parameter_name: str({
-                "value:": parameter_value, 
-                "dtype": type(parameter_value).__name__, 
+
+        SUPPORTED_TYPES = [int, float, tuple, str]
+        if type(parameter_value) in SUPPORTED_TYPES: 
+            current_activity.add_attributes({
+                f"{self.PROV_PREFIX}:{parameter_name}": parameter_value
             })
-        })
+        else: 
+            current_activity.add_attributes({
+                f"{self.PROV_PREFIX}:{parameter_name}": str({
+                    "$": str(parameter_value), 
+                    "type": type(parameter_value).__name__, 
+                })
+            })
 
     def add_artifact(
         self, 
