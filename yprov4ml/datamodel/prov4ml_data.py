@@ -264,7 +264,7 @@ class Prov4MLData:
 
         current_activity = get_activity(self.root_provenance_doc,"context:"+ str(context))
 
-        SUPPORTED_TYPES = [int, float, tuple, str]
+        SUPPORTED_TYPES = [int, float, tuple, str, bool]
         if type(parameter_value) in SUPPORTED_TYPES: 
             current_activity.add_attributes({
                 f"{self.PROV_PREFIX}:{parameter_name}": parameter_value
