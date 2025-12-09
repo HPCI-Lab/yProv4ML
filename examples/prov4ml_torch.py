@@ -6,7 +6,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
-sys.path.append("../yProvML")
+sys.path.append("../yProv4ML")
 import yprov4ml
 
 PATH_DATASETS = "./data"
@@ -86,9 +86,9 @@ for epoch in range(EPOCHS):
     
         # log system and carbon metrics (once per epoch), as well as the execution time
         yprov4ml.log_metric("MSE", loss.item(), context=yprov4ml.Context.TRAINING, step=epoch)
-        # prov4ml.log_metric("Indices", indices.tolist(), context=prov4ml.Context.TRAINING_LOD2, step=epoch)
-        # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
-        # prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=epoch)
+        # yprov4ml.log_metric("Indices", indices.tolist(), context=yprov4ml.Context.TRAINING, step=epoch)
+        # yprov4ml.log_carbon_metrics(yprov4ml.Context.TRAINING, step=epoch)
+        # yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
     yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.MODELS, epoch)
 
@@ -101,7 +101,7 @@ for epoch in range(EPOCHS):
         loss = loss_fn(y_hat, y2)
 
         yprov4ml.log_metric("MSE", loss.item(), yprov4ml.Context.VALIDATION, step=epoch)
-        # prov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
+        # yprov4ml.log_metric("Indices", indices, context=yprov4ml.Context.VALIDATION, step=epoch)
 
 yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
 

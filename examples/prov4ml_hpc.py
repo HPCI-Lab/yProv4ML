@@ -5,7 +5,7 @@ from dask import delayed, compute
 from dask.distributed import Client, LocalCluster
 import os
 import sys
-sys.path.append("../yProvML")
+sys.path.append("../yProv4ML")
 
 @delayed
 def run_job(proc): 
