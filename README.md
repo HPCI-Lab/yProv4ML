@@ -39,7 +39,7 @@ Several runs can be executed in the same experiment. All runs will be saved in t
 
 # Documentation
 
-For detailed information, please refer to the [Documentation](https://hpci-lab.github.io/yProvML/)
+For detailed information, please refer to the [Documentation](https://hpci-lab.github.io/yProv4ML/)
 
 # Contributors
 
