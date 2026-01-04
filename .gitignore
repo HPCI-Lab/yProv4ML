@@ -194,6 +194,7 @@ powermetrics_log.txt
 # Lib output
 prov/
 data/
+*/.DS_Store
 lightning_logs/
 
 prov4ml.egg-info/
