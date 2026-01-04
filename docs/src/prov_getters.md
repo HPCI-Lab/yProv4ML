@@ -1,4 +1,4 @@
-# Get Data from Provenance Files
+# Querying from Provenance Files
 
 yProv4ml offers a set of directives to easily extract the information logged from the provenance.json file. 
 
