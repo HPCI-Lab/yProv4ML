@@ -124,7 +124,7 @@ class Prov4MLData:
         self.root_provenance_doc.add_namespace('prov-ml', 'prov-ml')
         # self.provDoc.add_namespace(name,name)
 
-        user_ag = self.root_provenance_doc.agent(f'{gt.getuser()}')
+        user_ag = self.root_provenance_doc.agent(f'{self.PROV_PREFIX}:{gt.getuser()}')
         rootContext = self.root_provenance_doc.activity("context:"+ self.PROV_JSON_NAME)
         rootContext.add_attributes({
             f'{self.PROV_PREFIX}:level':0, 
@@ -301,7 +301,7 @@ class Prov4MLData:
                 path = Path(artifact_path)
 
                 # create original artefact
-                original = self.add_artifact(f"{path.name}_original", str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input)
+                original = self.add_artifact(f"original_{path.name}", str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input)
                 copied = self.add_artifact(f"{path.name}", os.path.join(self.ARTIFACTS_DIR, path.name), log_copy_in_prov_directory=False, is_model=is_model, is_input=True)
                 copied.wasDerivedFrom(original)
 
