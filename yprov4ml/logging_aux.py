@@ -101,9 +101,9 @@ def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, A
     memory_per_grad = total_params * 4 * 1e-6
     memory_per_optim = total_params * 4 * 1e-6
     
-    ret["total_params"] = total_params
-    ret["memory_of_model"] = memory_per_model
-    ret["total_memory_load_of_model"] = memory_per_model + memory_per_grad + memory_per_optim
+    ret[f"{PROV4ML_DATA.PROV_PREFIX}:total_params"] = total_params
+    ret[f"{PROV4ML_DATA.PROV_PREFIX}:memory_of_model"] = memory_per_model
+    ret[f"{PROV4ML_DATA.PROV_PREFIX}:total_memory_load_of_model"] = memory_per_model + memory_per_grad + memory_per_optim
 
     return ret
 
@@ -125,7 +125,7 @@ def _get_nested_model_desc(m: torch.nn.Module):
         return node
     else:
         for name, child in children.items():
-            output[name] = _get_nested_model_desc(child)
+            output[f"{PROV4ML_DATA.PROV_PREFIX}:{name}"] = _get_nested_model_desc(child)
 
     return output
 
@@ -139,7 +139,7 @@ def _get_model_layers_description(model_name : str, model: Union[torch.nn.Module
     with open(path, "w") as fp:
         json.dump(mo , fp) 
 
-    return {"layers_description_path": path}
+    return {f"{PROV4ML_DATA.PROV_PREFIX}:layers_description_path": path}
 
 def log_model(
         model_name: str, 
@@ -332,16 +332,16 @@ def log_dataset(
     
     if not log_dataset_info: return
 
-    e.add_attributes({f"{dataset_label}_stat_total_samples": len(dataset)})
+    e.add_attributes({f"{PROV4ML_DATA.PROV_PREFIX}:{dataset_label}_stat_total_samples": len(dataset)})
     # handle datasets from DataLoader
     if isinstance(dataset, DataLoader):
         dl = dataset
         dataset = dl.dataset
         attrs = {
-            f"{dataset_label}_stat_batch_size": dl.batch_size, 
-            f"{dataset_label}_stat_num_workers": dl.num_workers, 
-            f"{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 
-            f"{dataset_label}_stat_total_steps": len(dl), 
+            f"{PROV4ML_DATA.PROV_PREFIX}:{dataset_label}_stat_batch_size": dl.batch_size, 
+            f"{PROV4ML_DATA.PROV_PREFIX}:{dataset_label}_stat_num_workers": dl.num_workers, 
+            f"{PROV4ML_DATA.PROV_PREFIX}:{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 
+            f"{PROV4ML_DATA.PROV_PREFIX}:{dataset_label}_stat_total_steps": len(dl), 
         }
         e.add_attributes(attrs)
 

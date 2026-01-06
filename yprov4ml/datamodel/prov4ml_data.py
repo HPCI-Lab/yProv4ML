@@ -301,8 +301,8 @@ class Prov4MLData:
                 path = Path(artifact_path)
 
                 # create original artefact
-                original = self.add_artifact("Original " + path.name, str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input)
-                copied = self.add_artifact(path.name, os.path.join(self.ARTIFACTS_DIR, path.name), log_copy_in_prov_directory=False, is_model=is_model, is_input=True)
+                original = self.add_artifact(f"{path.name}_original", str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input)
+                copied = self.add_artifact(f"{path.name}", os.path.join(self.ARTIFACTS_DIR, path.name), log_copy_in_prov_directory=False, is_model=is_model, is_input=True)
                 copied.wasDerivedFrom(original)
 
                 newart_path = os.path.join(self.ARTIFACTS_DIR, path.name)
@@ -316,7 +316,7 @@ class Prov4MLData:
             except: 
                 Exception(f">add_artifact: log_copy_in_prov_directory was True but value is not a valid Path: {artifact_path}")
 
-        self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, is_model=is_model)
+        self.artifacts[(f"{self.PROV_PREFIX}:{artifact_name}", context)] = ArtifactInfo(f"{self.PROV_PREFIX}:{artifact_name}", artifact_path, step, context=context, is_model=is_model)
 
         attributes = {
             f'{self.PROV_PREFIX}:label': artifact_name, 
@@ -325,10 +325,10 @@ class Prov4MLData:
 
         if is_input: 
             attributes.setdefault(f'{self.PROV_PREFIX}:role','input')
-            return self._log_input(artifact_name, context, attributes)
+            return self._log_input(f"{self.PROV_PREFIX}:{artifact_name}", context, attributes)
         else: 
             attributes.setdefault(f'{self.PROV_PREFIX}:role', 'output')
-            return self._log_output(artifact_name, context, attributes)
+            return self._log_output(f"{self.PROV_PREFIX}:{artifact_name}", context, attributes)
 
     def get_artifacts(self) -> List[ArtifactInfo]:
         """
