@@ -144,6 +144,7 @@ def _get_model_layers_description(model_name : str, model: Union[torch.nn.Module
 def log_model(
         model_name: str, 
         model: Union[torch.nn.Module, Any], 
+        context : Optional[Context] = Context.MODELS, 
         log_model_info: bool = True, 
         log_model_layers : bool = False,
         is_input: bool = False,
@@ -157,7 +158,7 @@ def log_model(
         log_model_layers (bool, optional): Whether to log model layers details. Defaults to False.
         log_as_artifact (bool, optional): Whether to log the model as an artifact. Defaults to True.
     """
-    e = save_model_version(model_name, model, Context.MODELS, incremental=False, is_input=is_input)
+    e = save_model_version(model_name, model, context, incremental=False, is_input=is_input)
 
     if log_model_info:
         d = _get_model_memory_footprint(model_name, model)
@@ -315,6 +316,7 @@ def save_model_version(
 def log_dataset(
         dataset_label : str, 
         dataset : Union[DataLoader, Subset, Dataset], 
+        context : Optional[Context] = Context.DATASETS, 
         log_dataset_info : bool = True, 
         ): 
     """
@@ -328,7 +330,7 @@ def log_dataset(
         None
     """
 
-    e = log_artifact(f"{dataset_label}", "", context=Context.DATASETS, log_copy_in_prov_directory=False, is_model=False, is_input=True)
+    e = log_artifact(f"{dataset_label}", "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True)
     
     if not log_dataset_info: return
 
