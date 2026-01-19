@@ -6,7 +6,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
-sys.path.append("../yProvML")
+sys.path.append("../yProv4ML")
 
 import yprov4ml
 
@@ -28,7 +28,7 @@ yprov4ml.start_run(
     use_compressor=COMP, 
 )
 
-yprov4ml.log_source_code("./examples/prov4ml_torch.py")
+yprov4ml.log_source_code()
 yprov4ml.log_execution_command(cmd="python", path="prov4ml_torch.py")
 
 class MNISTModel(nn.Module):
@@ -41,9 +41,9 @@ class MNISTModel(nn.Module):
 
     def forward(self, x):
         return self.model(x.view(x.size(0), -1))
-    
+        
 mnist_model = MNISTModel().to(DEVICE)
-yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING)
+# yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING)
 
 tform = transforms.Compose([
     transforms.RandomRotation(10), 
@@ -91,7 +91,7 @@ for epoch in range(EPOCHS):
         yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
         yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), yprov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
-    yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.TRAINING, epoch)
+    # yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.TRAINING, epoch)
 
     mnist_model.eval()
     # mnist_model.cpu()

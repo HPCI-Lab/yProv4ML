@@ -97,6 +97,7 @@ class Prov4MLData:
         self.use_compressor = use_compressor
         self.csv_separator = csv_separator
         self.codecarbon_is_disabled = disable_codecarbon
+        self.source_code_required = False
 
         self._init_root_context()
 
@@ -192,31 +193,45 @@ class Prov4MLData:
         entity.wasGeneratedBy(activity)
         return entity
     
-    def _get_git_revision_hash() -> str:
+    def _get_git_revision_hash(self) -> str:
         return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
-    def _get_git_remote_url() -> Optional[str]:
+    def _get_git_remote_url(self) -> Optional[str]:
         try:
             remote_url = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url'], stderr=subprocess.DEVNULL).strip().decode()
             return remote_url
         except subprocess.CalledProcessError:
             print("> get_git_remote_url() Repository not found")
             return None  # No remote found
+        
+    def _get_source_files(self): 
+        PROJECT_ROOT = os.path.dirname(os.path.relpath(sys.argv[0]))
 
-    def add_source_code(self, path: str): 
-        if path is None:
-            repo = _get_git_remote_url()
-            if repo is not None:
-                commit_hash = _get_git_revision_hash()
-                log_param(f"{self.PROV_PREFIX}:source_code", f"{repo}/{commit_hash}")
-        else:
-            p = Path(path)
-            if p.is_file():
-                self.add_artifact(p.name.replace(".py", ""), str(p), log_copy_in_prov_directory=True, is_model=False, is_input=True)
-                self.add_parameter(f"{self.PROV_PREFIX}:source_code", os.path.join(self.ARTIFACTS_DIR, p.name))
-            else:
-                self.add_artifact("source_code", str(p), log_copy_in_prov_directory=True, is_model=False, is_input=True)
-                self.add_parameter(f"{self.PROV_PREFIX}:source_code", os.path.join(self.ARTIFACTS_DIR, "source_code"))
+        source_files = [
+            os.path.relpath(m.__file__)
+            for m in sys.modules.values()
+            if hasattr(m, "__file__")
+            and m.__file__
+            and m.__file__.endswith(".py")
+            and os.path.relpath(m.__file__).startswith(PROJECT_ROOT)
+        ]
+
+        return set(source_files)
+
+    def request_source_code(self): 
+        self.source_code_required = True
+
+    def add_source_code(self): 
+        repo = self._get_git_remote_url()
+        if repo is not None:
+            commit_hash = self._get_git_revision_hash()
+            self.add_parameter(f"{self.PROV_PREFIX}:source_code", f"{repo}/{commit_hash}")
+        
+        paths = self._get_source_files()
+        for path in paths: 
+            newpath = os.path.join("src", path)
+            os.makedirs(os.path.join(self.ARTIFACTS_DIR, "src"), exist_ok=True)
+            self.add_artifact(newpath, path, log_copy_in_prov_directory=True, log_copy_subdirectory="src", is_model=False, is_input=True)
 
     def add_metric(
         self, 
@@ -268,11 +283,12 @@ class Prov4MLData:
         current_activity = self._add_ctx(root_ctx, context, source)
         current_activity.add_attributes({parameter_name:str(parameter_value)})
 
-    def _log_artifact_copy(self, artifact_path, is_input, is_model, context, source): 
+    def _log_artifact_copy(self, artifact_path_src, artifact_path_dst, is_input, is_model, context, source): 
         try: 
-            path = Path(artifact_path)
-            newart_path = os.path.join(self.ARTIFACTS_DIR, path.name)
+            path = Path(artifact_path_src)
+            newart_path = os.path.join(self.ARTIFACTS_DIR, artifact_path_dst, path.name)
             if path.is_file():
+                os.makedirs(os.path.dirname(newart_path), exist_ok=True)
                 shutil.copy(path, newart_path)
             else:  
                 shutil.copytree(path, newart_path)
@@ -282,7 +298,7 @@ class Prov4MLData:
             copied.wasDerivedFrom(original)
             return copied
         except: 
-            Exception(f">_log_artifact_copy: log_copy_in_prov_directory was True but value is not a valid Path: {artifact_path}")
+            Exception(f">_log_artifact_copy: log_copy_in_prov_directory was True but value is not a valid Path: {artifact_path_src}, {artifact_path_dst}")
 
 
     def add_artifact(
@@ -294,6 +310,7 @@ class Prov4MLData:
         source: Optional[str] = None,
         is_input : bool = False, 
         log_copy_in_prov_directory : bool = True, 
+        log_copy_subdirectory : Optional[str] = None, 
         is_model = False, 
     ) -> prov.ProvEntity:
         if not self.is_collecting: return
@@ -301,7 +318,8 @@ class Prov4MLData:
         context = self._set_ctx_or_default(context)
 
         if log_copy_in_prov_directory: 
-            return self._log_artifact_copy(artifact_path, is_input, is_model, context, source)
+            new_path = os.path.join(log_copy_subdirectory, artifact_path) if log_copy_subdirectory else artifact_path
+            return self._log_artifact_copy(artifact_path, new_path, is_input, is_model, context, source)
 
         artifact_name = self._format_artifact_name(artifact_name, context, source)
         self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)

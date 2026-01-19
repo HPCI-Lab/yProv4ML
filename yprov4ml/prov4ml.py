@@ -96,6 +96,9 @@ def end_run(
     log_execution_end_time()
     _requirements_lookup("./")
 
+    if PROV4ML_DATA.source_code_required: 
+        PROV4ML_DATA.add_source_code()
+
     PROV4ML_DATA.save_all_metrics()
 
     doc = create_prov_document()

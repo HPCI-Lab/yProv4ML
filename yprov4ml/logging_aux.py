@@ -376,14 +376,14 @@ def log_execution_command(cmd: str, path : str) -> None:
     path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)
     log_param(f"{PROV4ML_DATA.PROV_PREFIX}:execution_command", cmd + " " + path)
 
-def log_source_code(path: Optional[str] = None) -> None:
+def log_source_code() -> None:
     """
     Logs the source code location, either from a Git repository or a specified path.
     
     Args: 
         path (Optional[str]): The path to the source code. If None, attempts to retrieve from Git.
     """
-    PROV4ML_DATA.add_source_code(path)
+    PROV4ML_DATA.request_source_code()
 
 def create_context(context : str, is_subcontext_of=None): 
     PROV4ML_DATA.add_context(context, is_subcontext_of=is_subcontext_of)
