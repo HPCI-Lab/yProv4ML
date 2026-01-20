@@ -5,8 +5,8 @@ from yprov4ml.constants import PROV4ML_DATA
 from yprov4ml.utils import energy_utils
 from yprov4ml.utils import flops_utils
 from yprov4ml.logging_aux import log_execution_start_time, log_execution_end_time
-from yprov4ml.provenance.provenance_graph import create_prov_document, create_rocrate_in_dir
-from yprov4ml.utils.file_utils import save_prov_file, _requirements_lookup
+from yprov4ml.provenance.provenance_graph import create_prov_document, create_rocrate_in_dir, save_prov_file
+from yprov4ml.utils.file_utils import _requirements_lookup
 from yprov4ml.datamodel.metric_type import MetricsType
 from yprov4ml.datamodel.compressor_type import CompressorType
 
@@ -94,7 +94,10 @@ def end_run(
     if not PROV4ML_DATA.is_collecting: return
     
     log_execution_end_time()
-    _requirements_lookup("./")
+
+    filename = _requirements_lookup("./")
+    PROV4ML_DATA.add_artifact("requirements", filename, step=0, context=None, is_input=True)
+    
 
     if PROV4ML_DATA.source_code_required: 
         PROV4ML_DATA.add_source_code()

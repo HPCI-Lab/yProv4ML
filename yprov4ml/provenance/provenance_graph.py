@@ -1,6 +1,5 @@
 
 import os
-import sys
 import prov
 import prov.model as prov
 from rocrate.rocrate import ROCrate
@@ -9,10 +8,14 @@ from pathlib import Path
 from yprov4ml.constants import PROV4ML_DATA
 from yprov4ml.datamodel.metric_type import get_file_type
 
+import os
+import prov.model as prov
+
+from yprov4ml.utils.prov_utils import custom_prov_to_dot
+
 def create_prov_document() -> prov.ProvDocument:
     
     doc = PROV4ML_DATA.root_provenance_doc
-    # run_activity = get_activity(doc, "context:" + PROV4ML_DATA.EXPERIMENT_NAME)
     file_type = get_file_type(PROV4ML_DATA.metrics_file_type)
 
     for (name, ctx) in PROV4ML_DATA.metrics.keys():
@@ -26,6 +29,50 @@ def create_prov_document() -> prov.ProvDocument:
         })
 
     return doc
+
+
+def save_prov_file(
+        doc : prov.ProvDocument,
+        prov_file : str,
+        create_graph : bool =False, 
+        create_svg : bool =False
+    ) -> None:
+    """
+    Save the provenance document to a file.
+
+    Parameters:
+    -----------
+    doc : prov.ProvDocument
+        The provenance document to save.
+    prov_file : str
+        The path to the file where the provenance document will be saved.
+    create_graph : bool 
+        A flag to indicate if a graph should be created. Defaults to False.
+    create_svg : bool
+        A flag to indicate if an SVG should be created. Defaults to False.
+    
+    Returns:
+        None
+    """
+
+    with open(prov_file, 'w') as prov_graph:
+        doc.serialize(prov_graph)
+
+    if create_svg and not create_graph:
+        raise ValueError("Cannot create SVG without creating the graph.")
+
+    if create_graph:
+        dot_filename = os.path.basename(prov_file).replace(".json", ".dot")
+        path_dot = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, dot_filename)
+        with open(path_dot, 'w') as prov_dot:
+            prov_dot.write(custom_prov_to_dot(doc).to_string())
+
+    if create_svg:
+        svg_filename = os.path.basename(prov_file).replace(".json", ".svg")
+        path_svg = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, svg_filename)
+        os.system(f"dot -Tsvg {path_dot} > {path_svg}")
+
+
 
 def get_properties_from_file(file : str):
     if file.endswith(".dot"): 
