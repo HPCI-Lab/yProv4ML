@@ -17,12 +17,12 @@ def create_prov_document() -> prov.ProvDocument:
 
     for (name, ctx) in PROV4ML_DATA.metrics.keys():
         source = PROV4ML_DATA.metrics[(name, ctx)].source
-        metric_file_path = os.path.join(PROV4ML_DATA.METRIC_DIR, f"{name}_{str(ctx)}_{str(source)}_GR{PROV4ML_DATA.global_rank}" + file_type)
+        metric_file_path = os.path.join(PROV4ML_DATA.METRIC_DIR, f"{name}_{str(ctx)}_{str(source)}_GR{PROV4ML_DATA.global_rank}.{file_type}")
         e = PROV4ML_DATA.add_artifact(name,metric_file_path,0,ctx, source, is_input=False, log_copy_in_prov_directory=False)
         
         e.add_attributes({
-            f'{PROV4ML_DATA.PROV_PREFIX}:context': str(ctx),
-            f'{PROV4ML_DATA.PROV_PREFIX}:source': str(source)
+            f'{PROV4ML_DATA.LABEL_PREFIX}:context': str(ctx),
+            f'{PROV4ML_DATA.LABEL_PREFIX}:source': str(source)
         })
 
     return doc
