@@ -117,7 +117,7 @@ class MetricInfo:
         process = process if process is not None else 0
         file = os.path.join(path, f"{self.name}_{self.context}_{self.source}_GR{process}")
 
-        ft = file + get_file_type(file_type)
+        ft = f"{file}.{get_file_type(file_type)}"
         if file_type == MetricsType.ZARR:
             self.save_to_zarr(ft)
         elif file_type == MetricsType.CSV:

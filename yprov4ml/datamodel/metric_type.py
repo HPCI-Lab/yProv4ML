@@ -15,10 +15,10 @@ class MetricsType(Enum):
 
 def get_file_type(metrics_file_type): 
     if metrics_file_type == MetricsType.CSV:
-        return ".csv"
+        return "csv"
     elif metrics_file_type == MetricsType.NETCDF: 
-        return ".nc"
+        return "nc"
     elif metrics_file_type == MetricsType.ZARR: 
-        return ".zarr"
+        return "zarr"
     else: 
         raise NotImplementedError() 

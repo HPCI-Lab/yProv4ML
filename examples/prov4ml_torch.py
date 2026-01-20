@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
 sys.path.append("../yProv4ML")
-
 import yprov4ml
 
 PATH_DATASETS = "./data"
@@ -19,7 +18,7 @@ TYPE = yprov4ml.MetricsType.CSV
 COMP = False
 yprov4ml.start_run(
     prov_user_namespace="www.example.org",
-    experiment_name=f"{TYPE}_{COMP}", 
+    experiment_name="example", 
     provenance_save_dir="prov",
     save_after_n_logs=100,
     collect_all_processes=True, 
@@ -43,7 +42,7 @@ class MNISTModel(nn.Module):
         return self.model(x.view(x.size(0), -1))
         
 mnist_model = MNISTModel().to(DEVICE)
-# yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING)
+yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING, is_input=True)
 
 tform = transforms.Compose([
     transforms.RandomRotation(10), 
@@ -91,7 +90,7 @@ for epoch in range(EPOCHS):
         yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
         yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), yprov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
-    # yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.TRAINING, epoch)
+    yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.TRAINING, epoch)
 
     mnist_model.eval()
     # mnist_model.cpu()
@@ -102,9 +101,9 @@ for epoch in range(EPOCHS):
         loss = val_loss_fn(y_hat, y2)
 
         # yprov4ml.log_metric("MSE", loss.item(), yprov4ml.Context.VALIDATION, step=epoch)
-        # prov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
+        # yprov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
 
-# yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
+yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
 
 yprov4ml.end_run(
     create_graph=True, 
