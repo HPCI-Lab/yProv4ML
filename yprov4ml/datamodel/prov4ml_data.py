@@ -9,7 +9,6 @@ import prov.model as prov
 import pwd
 import warnings
 from aenum import extend_enum
-import subprocess
 import uuid
 
 from yprov4ml.datamodel.artifact_data import ArtifactInfo
@@ -20,6 +19,7 @@ from yprov4ml.datamodel.compressor_type import CompressorType, COMPRESSORS_FOR_Z
 from yprov4ml.utils import funcs
 from yprov4ml.utils.prov_utils import get_or_create_activity
 from yprov4ml.utils.funcs import get_global_rank, get_runtime_type
+from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
 
 class Prov4MLData:
     def __init__(self) -> None:
@@ -140,11 +140,9 @@ class Prov4MLData:
         self.root_provenance_doc.add_namespace(self.PROV_PREFIX, self.PROV_PREFIX)
         self.root_provenance_doc.add_namespace(self.LABEL_PREFIX, self.LABEL_PREFIX)
         self.root_provenance_doc.set_default_namespace(self.PROV_JSON_NAME)
-        # self.root_provenance_doc.set_default_namespace(self.USER_NAMESPACE)
         self.root_provenance_doc.add_namespace('prov','http://www.w3.org/ns/prov#')
         self.root_provenance_doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
         self.root_provenance_doc.add_namespace('prov-ml', 'prov-ml')
-        # self.provDoc.add_namespace(name,name)
 
         user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
         rootContext, _ = get_or_create_activity(self.root_provenance_doc, f"{self.CONTEXT_PREFIX}:{self.PROV_JSON_NAME}")
@@ -199,41 +197,16 @@ class Prov4MLData:
         entity.wasGeneratedBy(activity)
         return entity
     
-    def _get_git_revision_hash(self) -> str:
-        return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
-
-    def _get_git_remote_url(self) -> Optional[str]:
-        try:
-            remote_url = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url'], stderr=subprocess.DEVNULL).strip().decode()
-            return remote_url
-        except subprocess.CalledProcessError:
-            print("> get_git_remote_url() Repository not found")
-            return None  # No remote found
-        
-    def _get_source_files(self): 
-        PROJECT_ROOT = os.path.dirname(os.path.relpath(sys.argv[0]))
-
-        source_files = [
-            os.path.relpath(m.__file__)
-            for m in sys.modules.values()
-            if hasattr(m, "__file__")
-            and m.__file__
-            and m.__file__.endswith(".py")
-            and os.path.relpath(m.__file__).startswith(PROJECT_ROOT)
-        ]
-
-        return set(source_files)
-
     def request_source_code(self): 
         self.source_code_required = True
 
     def add_source_code(self): 
-        repo = self._get_git_remote_url()
+        repo = _get_git_remote_url()
         if repo is not None:
-            commit_hash = self._get_git_revision_hash()
+            commit_hash = _get_git_revision_hash()
             self.add_parameter(f"{self.LABEL_PREFIX}:source_code", f"{repo}/{commit_hash}")
         
-        paths = self._get_source_files()
+        paths = _get_source_files()
         for path in paths: 
             os.makedirs(os.path.join(self.ARTIFACTS_DIR, "src"), exist_ok=True)
             self.add_artifact(path, path, log_copy_in_prov_directory=True, log_copy_subdirectory="src", is_model=False, is_input=True)
