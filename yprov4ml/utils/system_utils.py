@@ -58,12 +58,15 @@ def get_gpu_memory_usage() -> float:
         if torch.cuda.is_available():
             return torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
         else: 
-            if "NVIDIA" in torch.cuda.get_device_name(0):
-                devices = Device.all()
-                if len(devices) == 0:  
-                    return 0.0
-                device = devices[0] 
-                return device.memory_used / device.memory_total
+            try: 
+                if "NVIDIA" in torch.cuda.get_device_name(0):
+                    devices = Device.all()
+                    if len(devices) == 0:  
+                        return 0.0
+                    device = devices[0] 
+                    return device.memory_used / device.memory_total
+            except: 
+                return 0.0
             return 0.0
     else: 
         return get_gpu_metric_apple('memory')
@@ -83,8 +86,11 @@ def get_gpu_power_usage() -> float:
         gpu_power = 0.0
         if torch.cuda.is_available():
             gpu_power = get_gpu_metric_gputil('power')
-        if not gpu_power and "AMD" in torch.cuda.get_device_name(0):
-            gpu_power = get_gpu_metric_amd('power')
+        try: 
+            if not gpu_power and "AMD" in torch.cuda.get_device_name(0):
+                gpu_power = get_gpu_metric_amd('power')
+        except: 
+            return 0.0
     else:
         gpu_power = get_gpu_metric_apple('power')
 
@@ -104,10 +110,14 @@ def get_gpu_temperature() -> float:
         gpu_temperature = 0.0
         if torch.cuda.is_available():
             gpu_temperature = get_gpu_metric_gputil('temperature')
-        if not gpu_temperature and "NVIDIA" in torch.cuda.get_device_name(0): 
-            gpu_utilization = get_gpu_metric_nvidia('temperature')
-        if not gpu_temperature and "AMD" in torch.cuda.get_device_name(0): 
-            gpu_temperature = get_gpu_metric_amd('temperature')
+        
+        try: 
+            if not gpu_temperature and "NVIDIA" in torch.cuda.get_device_name(0): 
+                gpu_utilization = get_gpu_metric_nvidia('temperature')
+            if not gpu_temperature and "AMD" in torch.cuda.get_device_name(0): 
+                gpu_temperature = get_gpu_metric_amd('temperature')
+        except: 
+            gpu_temperature = 0.0
 
     else:
         gpu_temperature = get_gpu_metric_apple('temperature')
@@ -128,10 +138,14 @@ def get_gpu_usage() -> float:
         gpu_utilization = 0.0
         if torch.cuda.is_available():
             gpu_utilization = get_gpu_metric_gputil('utilization')
-        if not gpu_utilization and "NVIDIA" in torch.cuda.get_device_name(0):
-            gpu_utilization = get_gpu_metric_nvidia('utilization')
-        if not gpu_utilization and "AMD" in torch.cuda.get_device_name(0):
-            gpu_utilization = get_gpu_metric_amd('utilization')
+
+        try: 
+            if not gpu_utilization and "NVIDIA" in torch.cuda.get_device_name(0):
+                gpu_utilization = get_gpu_metric_nvidia('utilization')
+            if not gpu_utilization and "AMD" in torch.cuda.get_device_name(0):
+                gpu_utilization = get_gpu_metric_amd('utilization')
+        except: 
+            gpu_utilization = 0.0
     else:
         gpu_utilization = get_gpu_metric_apple('utilization')
 
