@@ -11,7 +11,7 @@ def _get_git_remote_url():
         remote_url = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url'], stderr=subprocess.DEVNULL).strip().decode()
         return remote_url
     except subprocess.CalledProcessError:
-        print("> get_git_remote_url() Repository not found")
+        # print("> get_git_remote_url() Repository not found")
         return None  # No remote found
     
 def _requirements_lookup(path): 
