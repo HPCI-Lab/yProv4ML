@@ -7,10 +7,6 @@ from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
 sys.path.append("../yProv4ML")
-<<<<<<< HEAD
-
-=======
->>>>>>> 9f7d0a3ed5cece376bfaa70ab87b7e23756f04a9
 import yprov4ml
 
 PATH_DATASETS = "./data"
@@ -46,11 +42,7 @@ class MNISTModel(nn.Module):
         return self.model(x.view(x.size(0), -1))
         
 mnist_model = MNISTModel().to(DEVICE)
-<<<<<<< HEAD
 # yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING)
-=======
-yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING, is_input=True)
->>>>>>> 9f7d0a3ed5cece376bfaa70ab87b7e23756f04a9
 
 tform = transforms.Compose([
     transforms.RandomRotation(10), 
