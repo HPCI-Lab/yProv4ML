@@ -224,10 +224,11 @@ def log_system_metrics(
     log_metric("cpu_usage", system_utils.get_cpu_usage(), context, step=step, source=src)
     log_metric("memory_usage", system_utils.get_memory_usage(), context, step=step, source=src)
     log_metric("disk_usage", system_utils.get_disk_usage(), context, step=step, source=src)
+    log_metric("gpu_memory_power", system_utils.get_gpu_memory_power(), context, step=step, source=src)
     log_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), context, step=step, source=src)
     log_metric("gpu_usage", system_utils.get_gpu_usage(), context, step=step, source=src)
+    log_metric("gpu_power_usage", system_utils.get_gpu_power(), context, step=step, source=src)
     log_metric("gpu_temperature", system_utils.get_gpu_temperature(), context, step=step, source=src)
-    log_metric("gpu_power_usage", system_utils.get_gpu_power_usage(), context, step=step, source=src)
 
 def log_carbon_metrics(
     context: Context,
