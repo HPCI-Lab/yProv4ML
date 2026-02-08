@@ -7,7 +7,10 @@ from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
 sys.path.append("../yProv4ML")
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9f7d0a3ed5cece376bfaa70ab87b7e23756f04a9
 import yprov4ml
 
 PATH_DATASETS = "./data"
@@ -19,7 +22,7 @@ TYPE = yprov4ml.MetricsType.CSV
 COMP = False
 yprov4ml.start_run(
     prov_user_namespace="www.example.org",
-    experiment_name=f"{TYPE}_{COMP}", 
+    experiment_name="example", 
     provenance_save_dir="prov",
     save_after_n_logs=100,
     collect_all_processes=True, 
@@ -28,7 +31,7 @@ yprov4ml.start_run(
     use_compressor=COMP, 
 )
 
-yprov4ml.log_source_code("./examples/prov4ml_torch.py")
+yprov4ml.log_source_code()
 yprov4ml.log_execution_command(cmd="python", path="prov4ml_torch.py")
 
 class MNISTModel(nn.Module):
@@ -41,9 +44,13 @@ class MNISTModel(nn.Module):
 
     def forward(self, x):
         return self.model(x.view(x.size(0), -1))
-    
+        
 mnist_model = MNISTModel().to(DEVICE)
+<<<<<<< HEAD
 # yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING)
+=======
+yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING, is_input=True)
+>>>>>>> 9f7d0a3ed5cece376bfaa70ab87b7e23756f04a9
 
 tform = transforms.Compose([
     transforms.RandomRotation(10), 
@@ -102,9 +109,9 @@ for epoch in range(EPOCHS):
         loss = val_loss_fn(y_hat, y2)
 
         # yprov4ml.log_metric("MSE", loss.item(), yprov4ml.Context.VALIDATION, step=epoch)
-        # prov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
+        # yprov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
 
-# yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
+yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
 
 yprov4ml.end_run(
     create_graph=True, 

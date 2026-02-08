@@ -36,11 +36,11 @@ def log_metric(
 
 def log_execution_start_time() -> None:
     """Logs the start time of the current execution. """
-    return log_param(f"{PROV4ML_DATA.PROV_PREFIX}:execution_start_time", time_utils.get_time(), source='std.time')
+    return log_param("execution_start_time", time_utils.get_time(), source='std.time')
 
 def log_execution_end_time() -> None:
     """Logs the end time of the current execution."""
-    return log_param(f"{PROV4ML_DATA.PROV_PREFIX}:execution_end_time", time_utils.get_time(), source='std.time')
+    return log_param("execution_end_time", time_utils.get_time(), source='std.time')
 
 def log_current_execution_time(label: str, context: Context, step: Optional[int] = None) -> None:
     """Logs the current execution time under the given label.
@@ -138,9 +138,7 @@ def _get_model_layers_description(model_name : str, model: Union[torch.nn.Module
     with open(f"{path}/{model_name}_layers_description.json", "w") as fp:
         json.dump(mo , fp) 
 
-    return {
-        "layers_description_path": f"{path}/{model_name}_layers_description.json"
-    }
+    return {"layers_description_path": f"{path}/{model_name}_layers_description.json"}
 
 def log_model(
         model_name: str, 
@@ -265,6 +263,7 @@ def log_artifact(
         source : Optional[str] = None, 
         step: int = 0, 
         log_copy_in_prov_directory : bool = True, 
+        log_copy_subdirectory : Optional[str] = None, 
         is_model : bool = False, 
         is_input : bool = False, 
     ) -> prov.ProvEntity:
@@ -287,6 +286,7 @@ def log_artifact(
         context=context, 
         source=source, 
         log_copy_in_prov_directory=log_copy_in_prov_directory, 
+        log_copy_subdirectory=log_copy_subdirectory,
         is_model=is_model, 
         is_input=is_input, 
     )
@@ -314,19 +314,32 @@ def save_model_version(
         None
     """
 
-    path = os.path.join(PROV4ML_DATA.ARTIFACTS_DIR, model_name)
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok=True)
 
     if incremental: 
+        path = os.path.join(PROV4ML_DATA.ARTIFACTS_DIR, model_name)
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
         num_files = len([file for file in os.listdir(path) if str(file).startswith(model_name)])
-        file_name = f"{path}/{model_name}_{num_files}.pt"
+        file_name = f"{model_name}_{num_files}.pt"
+        
         torch.save(model.state_dict(), file_name)
-        return log_artifact(f"{model_name}_{num_files}", file_name, context=context, source=source, step=step, log_copy_in_prov_directory=False, is_model=True, is_input=is_input)
+        return log_artifact(
+            f"{model_name}_{num_files}", file_name, 
+            context=context, source=source, step=step, 
+            log_copy_in_prov_directory=True, 
+            log_copy_subdirectory=model_name, 
+            is_model=True, is_input=is_input, 
+        )
     else: 
-        file_name = f"{path}/{model_name}.pt"
-        torch.save(model.state_dict(), model_name)
-        return log_artifact(model_name, file_name, context=context, source=source, step=step, log_copy_in_prov_directory=False, is_model=True, is_input=is_input)
+        file_name = f"{model_name}.pt"
+        torch.save(model.state_dict(), file_name)
+        return log_artifact(
+            model_name, file_name, 
+            context=context, source=source, step=step, 
+            log_copy_in_prov_directory=True, 
+            log_copy_subdirectory=model_name, 
+            is_model=True, is_input=is_input
+        )
 
 def log_dataset(
         dataset_label : str, 
@@ -350,22 +363,22 @@ def log_dataset(
     
     if not log_dataset_info: return
 
-    e.add_attributes({f"{dataset_label}_stat_total_samples": len(dataset)})
+    e.add_attributes({f"{PROV4ML_DATA.LABEL_PREFIX}:{dataset_label}_stat_total_samples": len(dataset)})
     if isinstance(dataset, DataLoader):
         dl = dataset
         dataset = dl.dataset
         attrs = {
-            f"{dataset_label}_stat_batch_size": dl.batch_size, 
-            f"{dataset_label}_stat_num_workers": dl.num_workers, 
-            f"{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 
-            f"{dataset_label}_stat_total_steps": len(dl), 
+            f"{PROV4ML_DATA.LABEL_PREFIX}:{dataset_label}_stat_batch_size": dl.batch_size, 
+            f"{PROV4ML_DATA.LABEL_PREFIX}:{dataset_label}_stat_num_workers": dl.num_workers, 
+            f"{PROV4ML_DATA.LABEL_PREFIX}:{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 
+            f"{PROV4ML_DATA.LABEL_PREFIX}:{dataset_label}_stat_total_steps": len(dl), 
         }
         e.add_attributes(attrs)
 
     elif isinstance(dataset, Subset):
         dl = dataset
         dataset = dl.dataset
-        e.add_attributes({f"{dataset_label}_stat_total_steps": len(dl)})
+        e.add_attributes({f"{PROV4ML_DATA.LABEL_PREFIX}:{dataset_label}_stat_total_steps": len(dl)})
 
 def log_execution_command(cmd: str, path : str) -> None:
     """
@@ -375,16 +388,16 @@ def log_execution_command(cmd: str, path : str) -> None:
         cmd (str): The command to be logged.
     """
     path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)
-    log_param(f"{PROV4ML_DATA.PROV_PREFIX}:execution_command", cmd + " " + path)
+    log_param("execution_command", cmd + " " + path)
 
-def log_source_code(path: Optional[str] = None) -> None:
+def log_source_code() -> None:
     """
     Logs the source code location, either from a Git repository or a specified path.
     
     Args: 
         path (Optional[str]): The path to the source code. If None, attempts to retrieve from Git.
     """
-    PROV4ML_DATA.add_source_code(path)
+    PROV4ML_DATA.request_source_code()
 
 def create_context(context : str, is_subcontext_of=None): 
     PROV4ML_DATA.add_context(context, is_subcontext_of=is_subcontext_of)

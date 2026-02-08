@@ -6,6 +6,7 @@ mlruns/
 *.json
 *.dot
 *.svg
+*.pt
 # ignore test folder
 test/
 
