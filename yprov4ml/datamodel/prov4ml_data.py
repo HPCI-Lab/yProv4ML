@@ -4,17 +4,14 @@ import sys
 import time
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 import prov.model as prov
 import pwd
 import warnings
-from aenum import extend_enum
 import uuid
 
 from yprov4ml.datamodel.artifact_data import ArtifactInfo
 from yprov4ml.datamodel.metric_data import MetricInfo
-from yprov4ml.datamodel.context import Context
-from yprov4ml.datamodel.metric_type import MetricsType
 from yprov4ml.datamodel.compressor_type import CompressorType, COMPRESSORS_FOR_ZARR
 from yprov4ml.utils import funcs
 from yprov4ml.utils.prov_utils import get_or_create_activity
@@ -23,8 +20,8 @@ from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_has
 
 class Prov4MLData:
     def __init__(self) -> None:
-        self.metrics: Dict[(str, Context), MetricInfo] = {}
-        self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
+        self.metrics: Dict[(str, str), MetricInfo] = {}
+        self.artifacts: Dict[(str, str), ArtifactInfo] = {}
 
         self.PROV_SAVE_PATH = "prov_save_path"
         self.PROV_JSON_NAME = "test_experiment"
@@ -55,9 +52,9 @@ class Prov4MLData:
             save_after_n_logs: int = 100, 
             rank: Optional[int] = None, 
             disable_codecarbon : bool = False,
-            metrics_file_type: MetricsType = MetricsType.ZARR,
+            metrics_file_type: str = "nc",
             csv_separator:str = ",", 
-            use_compressor: Optional[CompressorType] = None,
+            use_compressor: Optional[Union[CompressorType, bool]] = None,
         ) -> None:
 
         self.global_rank = funcs.get_global_rank() if rank is None else rank
@@ -75,14 +72,14 @@ class Prov4MLData:
         if prov_save_path: self.PROV_SAVE_PATH = prov_save_path
         if user_namespace: self.USER_NAMESPACE = user_namespace
 
-        if use_compressor in COMPRESSORS_FOR_ZARR and metrics_file_type != MetricsType.ZARR: 
-            warnings.warn(f">start_run(): use_compressor chosen is only compatible with MetricsType.ZARR, but saving type is {metrics_file_type}, the compressor chosen will have no effect")
-        if metrics_file_type == MetricsType.ZARR and use_compressor != False and use_compressor not in COMPRESSORS_FOR_ZARR: 
-            raise AttributeError(f">start_run(): use_compressor chosen is only compatible with MetricsType.ZARR")
+        if use_compressor in COMPRESSORS_FOR_ZARR and metrics_file_type != "zarr": 
+            warnings.warn(f">start_run(): use_compressor chosen is only compatible with str.ZARR, but saving type is {metrics_file_type}, the compressor chosen will have no effect")
+        if metrics_file_type == "zarr" and use_compressor != False and use_compressor not in COMPRESSORS_FOR_ZARR: 
+            raise AttributeError(f">start_run(): use_compressor chosen is only compatible with str.ZARR")
 
-        if metrics_file_type == MetricsType.ZARR and use_compressor:
+        if metrics_file_type == "zarr" and use_compressor:
             use_compressor = CompressorType.BLOSC_ZSTD
-        elif metrics_file_type in [MetricsType.NETCDF, MetricsType.CSV] and use_compressor:
+        elif metrics_file_type in ["nc", "csv"] and use_compressor:
             use_compressor = CompressorType.ZIP
         if not use_compressor: 
             use_compressor = CompressorType.NONE
@@ -120,12 +117,13 @@ class Prov4MLData:
         os.makedirs(self.ARTIFACTS_DIR, exist_ok=True)
         os.makedirs(self.METRIC_DIR, exist_ok=True)
 
-    def _add_ctx(self, rootContext, ctx, source):
+    def _add_ctx(self, rootstr : str, ctx : str, source : Optional[str] = None):
+        rootstr = self._format_activity_name(rootstr)
         if source is not None: 
             src_context_name = self._format_activity_name(context=ctx, source=None)
             maybe_src_context, created = get_or_create_activity(self.root_provenance_doc, src_context_name)
             if created: 
-                maybe_src_context.wasInformedBy(rootContext)
+                maybe_src_context.wasInformedBy(rootstr)
 
         context_name = self._format_activity_name(context=ctx, source=source)
         c, created = get_or_create_activity(self.root_provenance_doc, context_name)
@@ -133,11 +131,11 @@ class Prov4MLData:
             if source is not None: 
                 c.wasInformedBy(maybe_src_context)
             else: 
-                c.wasInformedBy(rootContext)
-            c.add_attributes({f'{self.LABEL_PREFIX}:level':1})
+                c.wasInformedBy(rootstr)
+            # c.add_attributes({f'{self.LABEL_PREFIX}:level':1})
         return c
 
-    def _set_ctx_or_default(self, ctx): 
+    def _set_ctx_or_default(self, ctx : str): 
         return ctx or self.PROV_JSON_NAME
 
     def _init_root_context(self): 
@@ -151,8 +149,8 @@ class Prov4MLData:
         self.root_provenance_doc.add_namespace('prov-ml', 'prov-ml')
 
         user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
-        rootContext, _ = get_or_create_activity(self.root_provenance_doc, f"{self.CONTEXT_PREFIX}:{self.PROV_JSON_NAME}")
-        rootContext.add_attributes({
+        rootstr, _ = get_or_create_activity(self.root_provenance_doc, f"{self.CONTEXT_PREFIX}:{self.PROV_JSON_NAME}")
+        rootstr.add_attributes({
             f'{self.LABEL_PREFIX}:level':0, 
             f"{self.LABEL_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
             f"{self.LABEL_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
@@ -162,44 +160,44 @@ class Prov4MLData:
             f"{self.LABEL_PREFIX}:python_version":str(sys.version), 
             f"{self.LABEL_PREFIX}:PID":str(uuid.uuid4()), 
         })
-        rootContext.wasAssociatedWith(user_ag)
+        rootstr.wasAssociatedWith(user_ag)
 
         global_rank = get_global_rank()
         runtime_type = get_runtime_type()
         if runtime_type == "slurm":
             node_rank = os.getenv("SLURM_NODEID", None)
             local_rank = os.getenv("SLURM_LOCALID", None) 
-            rootContext.add_attributes({
+            rootstr.add_attributes({
                 f"{self.LABEL_PREFIX}:global_rank": str(global_rank),
                 f"{self.LABEL_PREFIX}:local_rank":str(local_rank),
                 f"{self.LABEL_PREFIX}:node_rank":str(node_rank),
             })
         elif runtime_type == "single_core":
-            rootContext.add_attributes({
+            rootstr.add_attributes({
                 f"{self.LABEL_PREFIX}:global_rank":str(global_rank)
             })
 
-        self._add_ctx(f"{self.CONTEXT_PREFIX}:{self.PROV_JSON_NAME}", self.PROV_JSON_NAME, 'std.time')
+        self._add_ctx(self.PROV_JSON_NAME, self.PROV_JSON_NAME, 'std.time')
 
-    def _format_activity_name(self, context : Optional[Context] = None, source: Optional[str]=None): 
+    def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
         return f"{self.CONTEXT_PREFIX}:{context}" + (f"-{self.SOURCE_PREFIX}:{source}" if source else "")
 
-    def _format_artifact_name(self, label : str, context : Optional[Context] = None, source: Optional[str]=None): 
+    def _format_artifact_name(self, label : str, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
         return f"{self.PROV_PREFIX}:{label}-{self.CONTEXT_PREFIX}:{context}" + (f"-{self.SOURCE_PREFIX}:{source}" if source else "")
 
-    def _log_input(self, path : str, context : Context, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
+    def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity = self.root_provenance_doc.entity(path, attributes)
-        root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
-        activity = self._add_ctx(root_ctx, context, source)
+        # root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
+        activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
         activity.used(entity)
         return entity
     
-    def _log_output(self, path : str, context : Context, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
+    def _log_output(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity= self.root_provenance_doc.entity(path, attributes)
-        root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
-        activity = self._add_ctx(root_ctx, context, source)
+        # root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
+        activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
         entity.wasGeneratedBy(activity)
         return entity
     
@@ -217,15 +215,7 @@ class Prov4MLData:
             os.makedirs(os.path.join(self.ARTIFACTS_DIR, "src"), exist_ok=True)
             self.add_artifact(path, path, log_copy_in_prov_directory=True, log_copy_subdirectory="src", is_model=False, is_input=True)
 
-    def add_metric(
-        self, 
-        metric: str, 
-        value: Any, 
-        step: int = 0, 
-        context: Optional[Any] = None, 
-        source: Optional[str] = None, 
-        timestamp: int = 0, 
-    ) -> None:
+    def add_metric(self, metric: str, value: Any, step: int = 0, context: Optional[Any] = None, source: Optional[str] = None, timestamp: int = 0) -> None:
         context = self._set_ctx_or_default(context)
 
         if (metric, context) not in self.metrics:
@@ -237,20 +227,14 @@ class Prov4MLData:
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_file(self.metrics[(metric, context)])
 
-    def add_parameter(
-            self, 
-            parameter_name: str, 
-            parameter_value: Any, 
-            context : Optional[Context] = None, 
-            source : Optional[str] = None, 
-        ) -> None:
+    def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None) -> None:
         context = self._set_ctx_or_default(context)
 
         root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
         current_activity = self._add_ctx(root_ctx, context, source)
         current_activity.add_attributes({f"{self.LABEL_PREFIX}:{parameter_name}":str(parameter_value)})
 
-    def _log_artifact_copy(self, artifact_path_src, artifact_path_dst, is_input, is_model, context, source): 
+    def _log_artifact_copy(self, artifact_path_src : str, artifact_path_dst : str, is_input : bool, is_model : bool, context : str, source : str): 
         try: 
             path = Path(artifact_path_src)
         except: 
@@ -280,7 +264,7 @@ class Prov4MLData:
         is_input : bool = False, 
         log_copy_in_prov_directory : bool = True, 
         log_copy_subdirectory : Optional[str] = None, 
-        is_model = False, 
+        is_model : bool = False, 
     ) -> prov.ProvEntity:
         context = self._set_ctx_or_default(context)
 
