@@ -11,6 +11,8 @@ from yprov4ml.datamodel.metric_type import MetricsType, get_file_type
 ZARR_CHUNK_SIZE = 1000
 
 class MetricInfo:
+    __slots__ = ['name', 'context', 'source', 'total_metric_values', 'use_compressor', 'epochDataList']
+    
     def __init__(self, name: str, context: Any, source=str, use_compressor : Optional[str] = None) -> None:
         self.name = name
         self.context = context
@@ -25,7 +27,6 @@ class MetricInfo:
 
         self.epochDataList[epoch].append((value, timestamp))
         self.total_metric_values += 1
-
 
     def save_to_file(
             self, 
@@ -49,7 +50,6 @@ class MetricInfo:
             raise ValueError(f"Unsupported file type: {file_type}")
 
         self.epochDataList = {}
-
 
     def save_to_netCDF(self, netcdf_file: str) -> None:
 
@@ -119,10 +119,13 @@ class MetricInfo:
 
     def save_to_txt(self, txt_file: str,  csv_separator : str = ",") -> None:
         file_exists = os.path.exists(txt_file)
-
+    
         with open(txt_file, "a") as f:
             if not file_exists:
                 f.write(f"{self.name}{csv_separator}{self.context}{csv_separator}{self.source}\n")
+            
+            lines = []
             for epoch, values in self.epochDataList.items():
                 for value, timestamp in values:
-                    f.write(f"{epoch}{csv_separator}{value}{csv_separator}{timestamp}\n")
+                    lines.append(f"{epoch}{csv_separator}{value}{csv_separator}{timestamp}")
+            f.write("\n".join(lines) + "\n")

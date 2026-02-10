@@ -10,7 +10,7 @@ include = [
 
 [project]
 name = "yprov4ml"
-version = "2.0.8"
+version = "3.0.9"
 authors = [
   { name="Gabriele Padovani", email="gabriele.padovani@unitn.it" },
 ]
@@ -31,7 +31,6 @@ dependencies = [
     "lightning",
     "netCDF4",
     "numpy",
-    "nvitop",
     "pandas",
     "psutil",
     "pydot",

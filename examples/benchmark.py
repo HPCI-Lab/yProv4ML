@@ -25,10 +25,10 @@ def run(mode):
             prov_user_namespace="www.example.org",
             experiment_name=f"bench_{mode}", 
             provenance_save_dir="prov",
-            save_after_n_logs=100,
+            save_after_n_logs=1000,
             collect_all_processes=False, 
             disable_codecarbon=False if "CARBON" in mode else True, 
-            metrics_file_type=yprov4ml.MetricsType.CSV,
+            metrics_file_type=yprov4ml.MetricsType.CSV, 
         )
 
     class MNISTModel(nn.Module):

@@ -63,7 +63,13 @@ class Prov4MLData:
         self.global_rank = funcs.get_global_rank() if rank is None else rank
         self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
         
-        if not self.is_collecting: return
+        if not self.is_collecting: 
+            self.add_metric = lambda: None
+            self.add_artifact = lambda: None
+            self.save_metric_to_file = lambda: None
+            self.save_all_metrics = lambda: None
+            self.add_parameter = lambda: None
+            return
 
         self.save_metrics_after_n_logs = save_after_n_logs
         if prov_save_path: self.PROV_SAVE_PATH = prov_save_path
@@ -218,15 +224,14 @@ class Prov4MLData:
         step: int = 0, 
         context: Optional[Any] = None, 
         source: Optional[str] = None, 
+        timestamp: int = 0, 
     ) -> None:
-        if not self.is_collecting: return
-
         context = self._set_ctx_or_default(context)
 
         if (metric, context) not in self.metrics:
             self.metrics[(metric, context)] = MetricInfo(metric, context, source=source, use_compressor=self.use_compressor)
         
-        self.metrics[(metric, context)].add_metric(value, step, funcs.get_current_time_millis())
+        self.metrics[(metric, context)].add_metric(value, step, timestamp)
 
         total_metrics_values = self.metrics[(metric, context)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
@@ -239,22 +244,6 @@ class Prov4MLData:
             context : Optional[Context] = None, 
             source : Optional[str] = None, 
         ) -> None:
-        """
-        Adds a parameter to the provenance data.
-
-        Parameters:
-        -----------
-        parameter : str
-            The name of the parameter to add.
-        value : Any
-            The value of the parameter to add.
-
-        Returns:
-        --------
-        None
-        """
-        if not self.is_collecting: return
-
         context = self._set_ctx_or_default(context)
 
         root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
@@ -293,8 +282,6 @@ class Prov4MLData:
         log_copy_subdirectory : Optional[str] = None, 
         is_model = False, 
     ) -> prov.ProvEntity:
-        if not self.is_collecting: return
-
         context = self._set_ctx_or_default(context)
 
         if log_copy_in_prov_directory: 
@@ -321,12 +308,9 @@ class Prov4MLData:
             return self._log_output(artifact_name, context, source, attributes)
 
     def save_metric_to_file(self, metric: MetricInfo) -> None:
-        if not self.is_collecting: return
         metric.save_to_file(self.METRIC_DIR, file_type=self.metrics_file_type, process=self.global_rank, csv_separator=self.csv_separator)
 
     def save_all_metrics(self) -> None:
-        if not self.is_collecting: return
-
         for metric in self.metrics.values():
             self.save_metric_to_file(metric)
 
