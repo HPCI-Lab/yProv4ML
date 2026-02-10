@@ -15,7 +15,6 @@ torchvision
 tqdm
 typing_extensions
 rocrate
-aenum
 prov
 zarr
 lxml

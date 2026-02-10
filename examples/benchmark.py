@@ -60,7 +60,7 @@ def run(mode):
     # train_ds = Subset(train_ds, range(BATCH_SIZE*5))
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
     if mode != "WITHOUT": 
-        yprov4ml.log_dataset("train_dataset", train_loader, context=yprov4ml.Context.TRAINING)
+        yprov4ml.log_dataset("train_dataset", train_loader, context="Training")
 
     optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
     if mode != "WITHOUT": 
@@ -68,7 +68,7 @@ def run(mode):
 
     loss_fn = nn.MSELoss().to(DEVICE)
     if mode != "WITHOUT": 
-        loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, context=yprov4ml.Context.TRAINING)
+        loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, context="Training")
 
     losses = []
     for epoch in range(EPOCHS):
@@ -85,15 +85,15 @@ def run(mode):
         
             # log system and carbon metrics (once per epoch), as well as the execution time
             if "METRIC" in mode: 
-                yprov4ml.log_metric("MSE", loss.item(), context=yprov4ml.Context.TRAINING, step=epoch)
+                yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
             if "SYSTEM" in mode: 
-                yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
+                yprov4ml.log_system_metrics("Training", step=epoch)
             if "CARBON" in mode: 
-                yprov4ml.log_carbon_metrics(yprov4ml.Context.TRAINING, step=epoch)
-            # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), yprov4ml.Context.TRAINING, step=epoch)
+                yprov4ml.log_carbon_metrics("Training", step=epoch)
+            # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
         # save incremental model versions
         if mode != "WITHOUT": 
-            yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.TRAINING, epoch)
+            yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", epoch)
     if mode != "WITHOUT": 
         yprov4ml.end_run(create_graph=False, create_svg=False, crate_ro_crate=False)
 

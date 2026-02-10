@@ -6,7 +6,6 @@ import zarr
 import netCDF4 as nc
 
 from yprov4ml.datamodel.compressor_type import compressor_to_type
-from yprov4ml.datamodel.metric_type import MetricsType, get_file_type
 
 ZARR_CHUNK_SIZE = 1000
 
@@ -31,20 +30,20 @@ class MetricInfo:
     def save_to_file(
             self, 
             path: str, 
-            file_type: MetricsType,
-            csv_separator = ",", 
+            file_type: str,
+            csv_separator : str = ",", 
             process: Optional[int] = None, 
         ) -> None:
 
         process = process if process is not None else 0
         file = os.path.join(path, f"{self.name}_{self.context}_{self.source}_GR{process}")
 
-        ft = f"{file}.{get_file_type(file_type)}"
-        if file_type == MetricsType.ZARR:
+        ft = f"{file}.{file_type}"
+        if file_type == "zarr":
             self.save_to_zarr(ft)
-        elif file_type == MetricsType.CSV:
+        elif file_type == "csv":
             self.save_to_txt(ft, csv_separator)
-        elif file_type == MetricsType.NETCDF:
+        elif file_type == "nc":
             self.save_to_netCDF(ft)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")

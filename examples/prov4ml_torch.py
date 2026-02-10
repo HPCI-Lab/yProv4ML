@@ -14,8 +14,7 @@ BATCH_SIZE = 16
 EPOCHS = 2
 DEVICE = "cpu"
 
-TYPE = yprov4ml.MetricsType.CSV
-COMP = False
+COMP = True#yprov4ml.CompressorType.LZ4
 yprov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="example", 
@@ -23,7 +22,7 @@ yprov4ml.start_run(
     save_after_n_logs=100,
     collect_all_processes=True, 
     # disable_codecarbon=True, 
-    metrics_file_type=TYPE,
+    metrics_file_type="nc",
     use_compressor=COMP, 
 )
 
@@ -56,18 +55,19 @@ yprov4ml.log_param("dataset transformation", tform)
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
 train_ds = Subset(train_ds, range(BATCH_SIZE*5))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
-yprov4ml.log_dataset("train_dataset", train_loader, context=yprov4ml.Context.TRAINING)
+yprov4ml.log_dataset("train_dataset", train_loader, context="Training")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
 test_ds = Subset(test_ds, range(BATCH_SIZE*5))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
-yprov4ml.log_dataset("val_dataset", test_loader, context=yprov4ml.Context.TESTING)
+yprov4ml.log_dataset("val_dataset", test_loader, context="Validation")
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
 yprov4ml.log_param("optimizer", "Adam")
 
 loss_fn = nn.MSELoss().to(DEVICE)
-loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, context=yprov4ml.Context.TRAINING)
+loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, context="Training")
+yprov4ml.log_context("TrainingButDifferent", "Training")
 val_loss_fn = yprov4ml.ProvenanceTrackedFunction(nn.MSELoss(), context="TrainingButDifferent")
 
 losses = []
@@ -86,11 +86,11 @@ for epoch in range(EPOCHS):
         # log system and carbon metrics (once per epoch), as well as the execution time
         # yprov4ml.log_metric("MSE", loss.item(), context=yprov4ml.Context.TRAINING, step=epoch)
         # yprov4ml.log_metric("Indices", indices.tolist(), context=yprov4ml.Context.TRAINING_LOD2, step=epoch)
-        yprov4ml.log_carbon_metrics(yprov4ml.Context.TRAINING, step=epoch)
-        yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
-        yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), yprov4ml.Context.TRAINING, step=epoch)
+        yprov4ml.log_carbon_metrics("Training", step=epoch)
+        yprov4ml.log_system_metrics("Training", step=epoch)
+        yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
     # save incremental model versions
-    yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.TRAINING, epoch)
+    yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", epoch)
 
     mnist_model.eval()
     # mnist_model.cpu()
@@ -100,7 +100,7 @@ for epoch in range(EPOCHS):
         y2 = F.one_hot(y, 10).float()
         loss = val_loss_fn(y_hat, y2)
 
-        # yprov4ml.log_metric("MSE", loss.item(), yprov4ml.Context.VALIDATION, step=epoch)
+        yprov4ml.log_metric("MSE", loss.item(), "Validation", step=epoch)
         # yprov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
 
 yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)

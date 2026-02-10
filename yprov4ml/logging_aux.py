@@ -9,57 +9,24 @@ from torch.utils.data import DataLoader, Subset, Dataset, RandomSampler
 from typing import Any, Optional, Union
 
 from yprov4ml.utils import energy_utils, flops_utils, system_utils, time_utils, funcs
-from yprov4ml.datamodel.context import Context
 from yprov4ml.constants import PROV4ML_DATA, VERBOSE
 
-def log_metric(key: str, value: float, context: Optional[Context] = None, step: int = 0, source: Optional[str] = None, timestamp : int = 0) -> None:
+def log_metric(key: str, value: float, context: Optional[str] = None, step: int = 0, source: Optional[str] = None, timestamp : int = 0) -> None:
     PROV4ML_DATA.add_metric(key, value, step, context=context, source=source, timestamp=timestamp)
 
 def log_execution_start_time() -> None:
-    """Logs the start time of the current execution. """
     return log_param("execution_start_time", time_utils.get_time(), source='std.time')
 
 def log_execution_end_time() -> None:
-    """Logs the end time of the current execution."""
     return log_param("execution_end_time", time_utils.get_time(), source='std.time')
 
-def log_current_execution_time(label: str, context: Context, step: Optional[int] = None) -> None:
-    """Logs the current execution time under the given label.
-    
-    Args:
-        label (str): The label to associate with the logged execution time.
-        context (mlflow.tracking.Context): The MLflow tracking context.
-        step (Optional[int], optional): The step number for the logged execution time. Defaults to None.
-
-    Returns:
-        None
-    """
+def log_current_execution_time(label: str, context : Optional[str] = None, step: Optional[int] = None) -> None:
     return log_metric(label, time_utils.get_time(), context=context, step=step, source='std.time')
 
-def log_param(key: str, value: Any, context : Optional[Context] = None, source : Optional[str] = None) -> None:
-    """Logs a single parameter key-value pair. 
-    
-    Args:
-        key (str): The key of the parameter.
-        value (Any): The value of the parameter.
-
-    Returns:
-        None
-    """
+def log_param(key: str, value: Any, context : Optional[str] = None, source : Optional[str] = None) -> None:
     PROV4ML_DATA.add_parameter(key,value, context, source)
 
 def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, Any]) -> dict:
-    """Logs the memory footprint of the provided model.
-    
-    Args:
-        model (Union[torch.nn.Module, Any]): The model whose memory footprint is to be logged.
-        model_name (str, optional): Name of the model. Defaults to "default".
-
-    Returns:
-        None
-    """
-    ret = {"model_name": model_name}
-
 
     total_params = sum(p.numel() for p in model.parameters())
     try: 
@@ -82,6 +49,7 @@ def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, A
     memory_per_grad = total_params * 4 * 1e-6
     memory_per_optim = total_params * 4 * 1e-6
     
+    ret = {"model_name": model_name}
     ret["total_params"] = total_params
     ret["memory_of_model"] = memory_per_model
     ret["total_memory_load_of_model"] = memory_per_model + memory_per_grad + memory_per_optim
@@ -124,21 +92,12 @@ def _get_model_layers_description(model_name : str, model: Union[torch.nn.Module
 def log_model(
         model_name: str, 
         model: Union[torch.nn.Module, Any], 
-        context : Optional[Context] = None, 
+        context : Optional[str] = None, 
         source : Optional[str] = None, 
         log_model_info: bool = True, 
         log_model_layers : bool = False,
         is_input: bool = False,
-    ) -> None:
-    """Logs the provided model as artifact and logs memory footprint of the model. 
-    
-    Args:
-        model (Union[torch.nn.Module, Any]): The model to be logged.
-        model_name (str, optional): Name of the model. Defaults to "default".
-        log_model_info (bool, optional): Whether to log model memory footprint. Defaults to True.
-        log_model_layers (bool, optional): Whether to log model layers details. Defaults to False.
-        log_as_artifact (bool, optional): Whether to log the model as an artifact. Defaults to True.
-    """        
+    ) -> None:      
     e = save_model_version(model_name, model, context=context, source=source, incremental=False, is_input=is_input)
 
     if log_model_info:
@@ -148,51 +107,14 @@ def log_model(
     if log_model_layers: 
         d = _get_model_layers_description(model_name, model)
         e.add_attributes(d)
-
-     
-def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Context, step: Optional[int] = None) -> None:
-    """Logs the number of FLOPs (floating point operations) per epoch for the given model and dataset.
     
-    Args:
-        label (str): The label to associate with the logged FLOPs per epoch.
-        model (Any): The model for which FLOPs per epoch are to be logged.
-        dataset (Any): The dataset used for training the model.
-        context (mlflow.tracking.Context): The MLflow tracking context.
-        step (Optional[int], optional): The step number for the logged FLOPs per epoch. Defaults to None.
-
-    Returns:
-        None
-    """
+def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Optional[str] = None, step: Optional[int] = None) -> None:
     return log_metric(label, flops_utils.get_flops_per_epoch(model, dataset), context, step=step, source='fvcore.nn.FlopCountAnalysis')
 
-def log_flops_per_batch(label: str, model: Any, batch: Any, context: Context, step: Optional[int] = None) -> None:
-    """Logs the number of FLOPs (floating point operations) per batch for the given model and batch of data.
-    
-    Args:
-        label (str): The label to associate with the logged FLOPs per batch.
-        model (Any): The model for which FLOPs per batch are to be logged.
-        batch (Any): A batch of data used for inference with the model.
-        context (mlflow.tracking.Context): The MLflow tracking context.
-        step (Optional[int], optional): The step number for the logged FLOPs per batch. Defaults to None.
-
-    Returns:
-        None
-    """
+def log_flops_per_batch(label: str, model: Any, batch: Any, context: Optional[str] = None, step: Optional[int] = None) -> None:
     return log_metric(label, flops_utils.get_flops_per_batch(model, batch), context, step=step, source='fvcore.nn.FlopCountAnalysis')
 
-def log_system_metrics(
-    context: Context,
-    step: int = 0,
-    ) -> None:
-    """Logs system metrics such as CPU usage, memory usage, disk usage, and GPU metrics.
-
-    Args:
-        context (mlflow.tracking.Context): The MLflow tracking context.
-        step (Optional[int], optional): The step number for the logged metrics. Defaults to None.
-
-    Returns:
-        None
-    """
+def log_system_metrics(context: Optional[str] = None, step: int = 0) -> None:
     data, src = system_utils.get_bulk_stats()
     timestamp = funcs.get_current_time_millis()
     log_metric("cpu_usage", data["cpu_usage"], context, step=step, source=src, timestamp=timestamp)
@@ -204,7 +126,7 @@ def log_system_metrics(
     log_metric("gpu_power_usage", data["gpu_power_usage"], context, step=step, source=src, timestamp=timestamp)
     log_metric("gpu_temperature", data["gpu_temperature"], context, step=step, source=src, timestamp=timestamp)
 
-def log_carbon_metrics(context: Context, step: int = 0): 
+def log_carbon_metrics(context: Optional[str] = None, step: int = 0): 
     if PROV4ML_DATA.codecarbon_is_disabled: 
         raise Exception(">log_carbon_metrics(): The log_carbon_metrics function cannot be called if disable_codecarbon=True")
 
@@ -224,7 +146,7 @@ def log_carbon_metrics(context: Context, step: int = 0):
 def log_artifact(
         artifact_name : str, 
         artifact_path : str, 
-        context: Optional[Context] = None,
+        context: Optional[str] = None,
         source : Optional[str] = None, 
         step: int = 0, 
         log_copy_in_prov_directory : bool = True, 
@@ -232,18 +154,6 @@ def log_artifact(
         is_model : bool = False, 
         is_input : bool = False, 
     ) -> prov.ProvEntity:
-    """
-    Logs the specified artifact to the given context.
-
-    Parameters:
-        artifact_path (str): The file path of the artifact to log.
-        context (Context): The context in which the artifact is logged.
-        step (Optional[int]): The step or epoch number associated with the artifact. Defaults to None.
-        timestamp (Optional[int]): The timestamp associated with the artifact. Defaults to None.
-
-    Returns:
-        None
-    """
     return PROV4ML_DATA.add_artifact(
         artifact_name=artifact_name, 
         artifact_path=artifact_path, 
@@ -259,7 +169,7 @@ def log_artifact(
 def save_model_version(
         model_name: str, 
         model: Union[torch.nn.Module, Any], 
-        context: Optional[Context] = None, 
+        context: Optional[str] = None, 
         source: Optional[str] = None, 
         step: Optional[int] = None, 
         incremental : bool = True, 
@@ -295,7 +205,7 @@ def save_model_version(
 def log_dataset(
         dataset_label : str, 
         dataset : Union[DataLoader, Subset, Dataset], 
-        context : Optional[Context] = None, 
+        context : Optional[str] = None, 
         source : Optional[str] = None, 
         log_dataset_info : bool = True, 
         ): 
@@ -328,5 +238,5 @@ def log_execution_command(cmd: str, path : str) -> None:
 def log_source_code() -> None:
     PROV4ML_DATA.request_source_code()
 
-def create_context(context : str, is_subcontext_of=None): 
-    PROV4ML_DATA.add_context(context, is_subcontext_of=is_subcontext_of)
+def log_context(context : str, is_subcontext_of : Optional[str] = None, source_of_data : Optional[str] = None): 
+    PROV4ML_DATA._add_ctx(is_subcontext_of, context, source=source_of_data)
