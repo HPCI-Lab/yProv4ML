@@ -48,7 +48,6 @@ def end_run(create_graph: Optional[bool] = False, create_svg: Optional[bool] = F
     filename = _requirements_lookup("./")
     PROV4ML_DATA.add_artifact("requirements", filename, step=0, context=None, is_input=True)
     
-
     if PROV4ML_DATA.source_code_required: 
         PROV4ML_DATA.add_source_code()
 
