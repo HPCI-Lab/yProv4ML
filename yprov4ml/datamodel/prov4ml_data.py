@@ -150,7 +150,6 @@ class Prov4MLData:
         user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
         rootstr, _ = get_or_create_activity(self.root_provenance_doc, f"{self.CONTEXT_PREFIX}:{self.PROV_JSON_NAME}")
         rootstr.add_attributes({
-            f'{self.LABEL_PREFIX}:level':0, 
             f"{self.LABEL_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
             f"{self.LABEL_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
             f"{self.LABEL_PREFIX}:experiment_dir":self.EXPERIMENT_DIR,
