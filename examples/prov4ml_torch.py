@@ -6,13 +6,13 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 import sys
-sys.path.append("../yProv4ML")
+sys.path.append("./yProv4ML")
 import yprov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 16
 EPOCHS = 2
-DEVICE = "cpu"
+DEVICE = "cuda"
 
 COMP = True#yprov4ml.CompressorType.LZ4
 yprov4ml.start_run(
