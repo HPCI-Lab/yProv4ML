@@ -210,7 +210,7 @@ def log_dataset(
         log_dataset_info : bool = True, 
         ): 
 
-    e = log_artifact(f"{dataset_label}", "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True, source=source)
+    e = log_artifact(dataset_label, "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True, source=source)
     
     if not log_dataset_info: return
 

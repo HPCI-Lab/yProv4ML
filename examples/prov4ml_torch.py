@@ -41,7 +41,7 @@ class MNISTModel(nn.Module):
         return self.model(x.view(x.size(0), -1))
         
 mnist_model = MNISTModel().to(DEVICE)
-# yprov4ml.log_model("mnist_model", mnist_model, context=yprov4ml.Context.TRAINING)
+yprov4ml.log_model("mnist_model", mnist_model, context="Training")
 
 tform = transforms.Compose([
     transforms.RandomRotation(10), 
