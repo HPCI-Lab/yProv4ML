@@ -132,7 +132,6 @@ class Prov4MLData:
                 c.wasInformedBy(maybe_src_context)
             else: 
                 c.wasInformedBy(rootstr)
-            # c.add_attributes({f'{self.LABEL_PREFIX}:level':1})
         return c
 
     def _set_ctx_or_default(self, ctx : str): 
@@ -189,14 +188,12 @@ class Prov4MLData:
 
     def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity = self.root_provenance_doc.entity(path, attributes)
-        # root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
         activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
         activity.used(entity)
         return entity
     
     def _log_output(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity= self.root_provenance_doc.entity(path, attributes)
-        # root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
         activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
         entity.wasGeneratedBy(activity)
         return entity
@@ -242,7 +239,6 @@ class Prov4MLData:
         
         newart_path = os.path.join(self.ARTIFACTS_DIR, artifact_path_dst)
         if path.is_file():
-            # print(newart_path, "\n", os.path.dirname(newart_path))
             os.makedirs(os.path.dirname(newart_path), exist_ok=True)
             shutil.copy(path, newart_path)
         else:  
