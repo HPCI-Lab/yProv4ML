@@ -56,7 +56,7 @@ if sys.platform != 'darwin':
 
         elif "NVIDIA" in torch.cuda.get_device_name(0): 
             import pynvml
-            from nvtop import Device
+            from nvitop import Device
             pynvml.nvmlInit()
             
             def nvidia_get_gpu_usage(): 
