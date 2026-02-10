@@ -12,27 +12,8 @@ from yprov4ml.utils import energy_utils, flops_utils, system_utils, time_utils, 
 from yprov4ml.datamodel.context import Context
 from yprov4ml.constants import PROV4ML_DATA, VERBOSE
 
-def log_metric(
-        key: str, 
-        value: float, 
-        context: Optional[Context] = None, 
-        step: int = 0, 
-        source: Optional[str] = None, 
-    ) -> None:
-    """
-    Logs a metric with the specified key, value, and context.
-
-    Args:
-        key (str): The key of the metric.
-        value (float): The value of the metric.
-        context (Context): The context in which the metric is recorded.
-        step (Optional[int], optional): The step number for the metric. Defaults to None.
-        source (str, optional): The source of the logging item. Defaults to None.
-
-    Returns:
-        None
-    """
-    PROV4ML_DATA.add_metric(key, value, step, context=context, source=source)
+def log_metric(key: str, value: float, context: Optional[Context] = None, step: int = 0, source: Optional[str] = None, timestamp : int = 0) -> None:
+    PROV4ML_DATA.add_metric(key, value, step, context=context, source=source, timestamp=timestamp)
 
 def log_execution_start_time() -> None:
     """Logs the start time of the current execution. """
@@ -212,49 +193,33 @@ def log_system_metrics(
     Returns:
         None
     """
+    data, src = system_utils.get_bulk_stats()
+    timestamp = funcs.get_current_time_millis()
+    log_metric("cpu_usage", data["cpu_usage"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("memory_usage", data["memory_usage"], context, step=step, source=src,timestamp=timestamp)
+    log_metric("disk_usage", data["disk_usage"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_memory_power", data["gpu_memory_power"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_memory_usage", data["gpu_memory_usage"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_usage", data["gpu_usage"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_power_usage", data["gpu_power_usage"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_temperature", data["gpu_temperature"], context, step=step, source=src, timestamp=timestamp)
 
-    
-    if sys.platform != 'darwin':
-        src = 'pyamdgpuinfo'
-    else: 
-        src = "apple_gpu"
-
-    log_metric("cpu_usage", system_utils.get_cpu_usage(), context, step=step, source=src)
-    log_metric("memory_usage", system_utils.get_memory_usage(), context, step=step, source=src)
-    log_metric("disk_usage", system_utils.get_disk_usage(), context, step=step, source=src)
-    log_metric("gpu_memory_power", system_utils.get_gpu_memory_power(), context, step=step, source=src)
-    log_metric("gpu_memory_usage", system_utils.get_gpu_memory_usage(), context, step=step, source=src)
-    log_metric("gpu_usage", system_utils.get_gpu_usage(), context, step=step, source=src)
-    log_metric("gpu_power_usage", system_utils.get_gpu_power(), context, step=step, source=src)
-    log_metric("gpu_temperature", system_utils.get_gpu_temperature(), context, step=step, source=src)
-
-def log_carbon_metrics(
-    context: Context,
-    step: int = 0,
-    ):
-    """Logs carbon emissions metrics such as energy consumed, emissions rate, and power consumption.
-    
-    Args:
-        context (mlflow.tracking.Context): The MLflow tracking context.
-        step (Optional[int], optional): The step number for the logged metrics. Defaults to None.
-    
-    Returns:
-        None
-    """    
+def log_carbon_metrics(context: Context, step: int = 0): 
     if PROV4ML_DATA.codecarbon_is_disabled: 
         raise Exception(">log_carbon_metrics(): The log_carbon_metrics function cannot be called if disable_codecarbon=True")
 
     emissions = energy_utils.stop_carbon_tracked_block()
+    timestamp = funcs.get_current_time_millis()
    
-    log_metric("emissions", emissions.energy_consumed, context, step=step, source='codecarbon')
-    log_metric("emissions_rate", emissions.emissions_rate, context, step=step, source='codecarbon')
-    log_metric("cpu_power", emissions.cpu_power, context, step=step, source='codecarbon')
-    log_metric("gpu_power", emissions.gpu_power, context, step=step, source='codecarbon')
-    log_metric("ram_power", emissions.ram_power, context, step=step, source='codecarbon')
-    log_metric("cpu_energy", emissions.cpu_energy, context, step=step, source='codecarbon')
-    log_metric("gpu_energy", emissions.gpu_energy, context, step=step, source='codecarbon')
-    log_metric("ram_energy", emissions.ram_energy, context, step=step, source='codecarbon')
-    log_metric("energy_consumed", emissions.energy_consumed, context, step=step, source='codecarbon')
+    log_metric("emissions", emissions.energy_consumed, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("emissions_rate", emissions.emissions_rate, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("cpu_power", emissions.cpu_power, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("gpu_power", emissions.gpu_power, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("ram_power", emissions.ram_power, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("cpu_energy", emissions.cpu_energy, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("gpu_energy", emissions.gpu_energy, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("ram_energy", emissions.ram_energy, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("energy_consumed", emissions.energy_consumed, context, step=step, source='codecarbon', timestamp=timestamp)
 
 def log_artifact(
         artifact_name : str, 
@@ -300,20 +265,6 @@ def save_model_version(
         incremental : bool = True, 
         is_input : bool =False, 
     ) -> prov.ProvEntity:
-    """
-    Saves the state dictionary of the provided model and logs it as an artifact.
-    
-    Parameters:
-        model (torch.nn.Module): The PyTorch model to be saved.
-        model_name (str): The name under which to save the model.
-        context (Context): The context in which the model is saved.
-        step (Optional[int]): The step or epoch number associated with the saved model. Defaults to None.
-        timestamp (Optional[int]): The timestamp associated with the saved model. Defaults to None.
-
-    Returns:
-        None
-    """
-
 
     if incremental: 
         path = os.path.join(PROV4ML_DATA.ARTIFACTS_DIR, model_name)
@@ -348,16 +299,6 @@ def log_dataset(
         source : Optional[str] = None, 
         log_dataset_info : bool = True, 
         ): 
-    """
-    Logs dataset statistics such as total samples and total steps.
-
-    Args:
-        dataset (Union[DataLoader, Subset, Dataset]): The dataset for which statistics are to be logged.
-        label (str): The label to associate with the logged dataset statistics.
-
-    Returns:
-        None
-    """
 
     e = log_artifact(f"{dataset_label}", "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True, source=source)
     
@@ -381,22 +322,10 @@ def log_dataset(
         e.add_attributes({f"{PROV4ML_DATA.LABEL_PREFIX}:{dataset_label}_stat_total_steps": len(dl)})
 
 def log_execution_command(cmd: str, path : str) -> None:
-    """
-    Logs the execution command.
-    
-    Args:
-        cmd (str): The command to be logged.
-    """
     path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)
     log_param("execution_command", cmd + " " + path)
 
 def log_source_code() -> None:
-    """
-    Logs the source code location, either from a Git repository or a specified path.
-    
-    Args: 
-        path (Optional[str]): The path to the source code. If None, attempts to retrieve from Git.
-    """
     PROV4ML_DATA.request_source_code()
 
 def create_context(context : str, is_subcontext_of=None): 
