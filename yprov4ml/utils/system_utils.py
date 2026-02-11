@@ -2,6 +2,7 @@
 import psutil
 import torch
 import sys
+import time
 
 get_gpu_usage = lambda: 0.0
 get_gpu_memory_usage = lambda: 0.0
@@ -13,44 +14,45 @@ if sys.platform != 'darwin':
     if torch.cuda.is_available() and torch.cuda.device_count() > 0:
         if "AMD" in torch.cuda.get_device_name(0): 
             import pyamdgpuinfo
-            import amdsmi
-            amdsmi.amdsmi_init()
+            first_gpu = pyamdgpuinfo.get_gpu(0)
+            first_gpu.start_utilisation_polling()
+            time.sleep(1)
             def amd_get_gpu_usage(): 
-                first_gpu = pyamdgpuinfo.get_gpu(0)
-                return first_gpu.query_utilization()
+                return first_gpu.query_utilisation()["graphics_pipe"]
             def amd_get_gpu_memory_usage(): 
                 return torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
             def amd_get_gpu_power(): 
                 first_gpu = pyamdgpuinfo.get_gpu(0)
                 return first_gpu.query_power()
-            def amd_get_gpu_memory_power(): 
-                processors = amdsmi.amdsmi_get_processor_handles()
-                power_info = amdsmi.amdsmi_get_power_info(processors[0])
-                return power_info['average_socket_power']
             def amd_get_gpu_temperature(): 
                 first_gpu = pyamdgpuinfo.get_gpu(0)
                 return first_gpu.query_temperature()
             get_gpu_usage = amd_get_gpu_usage
             get_gpu_memory_usage = amd_get_gpu_memory_usage
             get_gpu_power = amd_get_gpu_power
-            get_gpu_memory_power = amd_get_gpu_memory_power
             get_gpu_temperature = amd_get_gpu_temperature
+            try: 
+                import amdsmi
+                amdsmi.amdsmi_init()
+                def amd_get_gpu_memory_power(): 
+                    processors = amdsmi.amdsmi_get_processor_handles()
+                    power_info = amdsmi.amdsmi_get_power_info(processors[0])
+                    return power_info['average_socket_power']
+            except: 
+                def amd_get_gpu_memory_power(): 
+                    return 0.0
+            get_gpu_memory_power = amd_get_gpu_memory_power
 
             def get_bulk_stats(): 
-                first_gpu = pyamdgpuinfo.get_gpu(0)
-                processors = amdsmi.amdsmi_get_processor_handles()
-                power_info = amdsmi.amdsmi_get_power_info(processors[0])
-
                 d = {}
                 d["cpu_usage"] = get_cpu_usage()
                 d["memory_usage"] = get_memory_usage()
                 d["disk_usage"] = get_disk_usage()
                 d["gpu_memory_usage"] = torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
-                d["gpu_usage"] = first_gpu.query_utilization()
-                d["gpu_memory_power"] = power_info['average_socket_power']
+                d["gpu_usage"] = first_gpu.query_utilisation()["graphics_pipe"]
+                d["gpu_memory_power"] = get_gpu_memory_power()
                 d["gpu_power_usage"] = first_gpu.query_power()
                 d["gpu_temperature"] = first_gpu.query_temperature()
-
                 return d, "pyamdgpuinfo"
 
 
@@ -58,7 +60,6 @@ if sys.platform != 'darwin':
             import pynvml
             from nvitop import Device
             pynvml.nvmlInit()
-            
             def nvidia_get_gpu_usage(): 
                 devices = Device.all()
                 device = devices[0] 
@@ -98,7 +99,6 @@ if sys.platform != 'darwin':
                 d["gpu_memory_power"] = power_mw / 1000.0 
                 d["gpu_power_usage"] = power_mw / 1000.0 
                 d["gpu_temperature"] = device.temperature()
-
                 return d, "pynvml"
 
 else: 
