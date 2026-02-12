@@ -1,12 +1,8 @@
 codecarbon
 fvcore
-geocoder
-gpustat
-GPUtil
 lightning
 netCDF4
 numpy
-nvitop
 pandas
 psutil
 pydot
@@ -16,7 +12,6 @@ tqdm
 typing_extensions
 rocrate
 prov
-zarr
+zarr<3
 lxml
 rdflib
-nvidia-ml-py
