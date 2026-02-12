@@ -14,7 +14,7 @@ BATCH_SIZE = 32
 EPOCHS = 5
 DEVICE = "mps"
 
-COMP = True#yprov4ml.CompressorType.LZ4
+COMP = False#yprov4ml.CompressorType.LZ4
 yprov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="example", 
@@ -22,7 +22,7 @@ yprov4ml.start_run(
     save_after_n_logs=100,
     collect_all_processes=True, 
     # disable_codecarbon=True, 
-    metrics_file_type="nc",
+    metrics_file_type="csv",
     use_compressor=COMP, 
 )
 
@@ -33,6 +33,10 @@ class MNISTModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = torch.nn.Sequential(
+            torch.nn.Linear(28 * 28, 28 * 28), 
+            torch.nn.ReLU(),
+            torch.nn.Linear(28 * 28, 28 * 28), 
+            torch.nn.ReLU(),
             torch.nn.Linear(28 * 28, 10), 
             torch.nn.ReLU(),
         )
@@ -59,7 +63,7 @@ train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 yprov4ml.log_dataset("train_dataset", train_loader, context="Training")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-test_ds = Subset(test_ds, range(BATCH_SIZE*5))
+# test_ds = Subset(test_ds, range(BATCH_SIZE*5))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 yprov4ml.log_dataset("val_dataset", test_loader, context="Validation")
 
@@ -107,8 +111,4 @@ for epoch in range(EPOCHS):
 
 # yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
 
-yprov4ml.end_run(
-    create_graph=True, 
-    create_svg=True, 
-    crate_ro_crate=True
-)
+yprov4ml.end_run(create_graph=False, create_svg=False, crate_ro_crate=True)
