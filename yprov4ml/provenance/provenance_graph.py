@@ -22,8 +22,8 @@ def create_prov_document() -> prov.ProvDocument:
         e = PROV4ML_DATA.add_artifact(name,metric_file_path,0,ctx, source, is_input=False, log_copy_in_prov_directory=False)
         
         e.add_attributes({
-            f'{PROV4ML_DATA.LABEL_PREFIX}:context': str(ctx),
-            f'{PROV4ML_DATA.LABEL_PREFIX}:source': str(source)
+            f'{PROV4ML_DATA.yProv_PREFIX}:context': str(ctx),
+            f'{PROV4ML_DATA.yProv_PREFIX}:source': str(source)
         })
 
     return doc

@@ -30,10 +30,12 @@ class Prov4MLData:
         self.METRIC_DIR = "metric_dir"
 
         self.USER_NAMESPACE = "user_namespace"
-        self.PROV_PREFIX = "yProv4ML_Entity"
-        self.LABEL_PREFIX = "yProv4ML_Label"
-        self.CONTEXT_PREFIX = "yProv4ML_Activity"
-        self.SOURCE_PREFIX = "yProv4ML_Source"
+        self.PROV_PREFIX = "prov"#"yProv4ML_Entity"
+        self.XSD_PREFIX = "xsd"
+        self.PROVML_PREFIX = "provml"
+        self.yProv_PREFIX = "yProv4ML"
+        self.RDF_PREFIX = "dcterms"
+        # self.SOURCE_PREFIX = "yProv4ML_Source"
 
         self.RUN_ID = 0
 
@@ -139,24 +141,24 @@ class Prov4MLData:
 
     def _init_root_context(self): 
         self.root_provenance_doc = prov.ProvDocument()
-        self.root_provenance_doc.add_namespace(self.CONTEXT_PREFIX, self.CONTEXT_PREFIX)
-        self.root_provenance_doc.add_namespace(self.PROV_PREFIX, self.PROV_PREFIX)
-        self.root_provenance_doc.add_namespace(self.LABEL_PREFIX, self.LABEL_PREFIX)
+        self.root_provenance_doc.add_namespace(self.yProv_PREFIX, "https://github.com/HPCI-Lab/yProv4ML")
         self.root_provenance_doc.set_default_namespace(self.PROV_JSON_NAME)
-        self.root_provenance_doc.add_namespace('prov','http://www.w3.org/ns/prov#')
-        self.root_provenance_doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
-        self.root_provenance_doc.add_namespace('prov-ml', 'prov-ml')
+        # self.root_provenance_doc.add_namespace('prov','http://www.w3.org/ns/prov#')
+        self.root_provenance_doc.add_namespace(self.PROV_PREFIX, "http://www.w3.org/ns/prov#")
+        self.root_provenance_doc.add_namespace(self.XSD_PREFIX,'http://www.w3.org/2000/10/XMLSchema#')
+        self.root_provenance_doc.add_namespace(self.PROVML_PREFIX, 'prov-ml')
+        self.root_provenance_doc.add_namespace(self.RDF_PREFIX, 'http://purl.org/dc/terms/')
 
         user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
-        rootstr, _ = get_or_create_activity(self.root_provenance_doc, f"{self.CONTEXT_PREFIX}:{self.PROV_JSON_NAME}")
+        rootstr, _ = get_or_create_activity(self.root_provenance_doc, self.PROV_JSON_NAME)
         rootstr.add_attributes({
-            f"{self.LABEL_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
-            f"{self.LABEL_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
-            f"{self.LABEL_PREFIX}:experiment_dir":self.EXPERIMENT_DIR,
-            f"{self.LABEL_PREFIX}:experiment_name":self.PROV_JSON_NAME,
-            f"{self.LABEL_PREFIX}:run_id":self.RUN_ID,
-            f"{self.LABEL_PREFIX}:python_version":str(sys.version), 
-            f"{self.LABEL_PREFIX}:PID":str(uuid.uuid4()), 
+            f"{self.yProv_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
+            f"{self.yProv_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
+            f"{self.yProv_PREFIX}:experiment_dir":self.EXPERIMENT_DIR,
+            f"{self.yProv_PREFIX}:experiment_name":self.PROV_JSON_NAME,
+            f"{self.yProv_PREFIX}:run_id":self.RUN_ID,
+            f"{self.yProv_PREFIX}:python_version":str(sys.version), 
+            f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
         })
         rootstr.wasAssociatedWith(user_ag)
 
@@ -166,24 +168,26 @@ class Prov4MLData:
             node_rank = os.getenv("SLURM_NODEID", None)
             local_rank = os.getenv("SLURM_LOCALID", None) 
             rootstr.add_attributes({
-                f"{self.LABEL_PREFIX}:global_rank": str(global_rank),
-                f"{self.LABEL_PREFIX}:local_rank":str(local_rank),
-                f"{self.LABEL_PREFIX}:node_rank":str(node_rank),
+                f"{self.yProv_PREFIX}:global_rank": str(global_rank),
+                f"{self.yProv_PREFIX}:local_rank":str(local_rank),
+                f"{self.yProv_PREFIX}:node_rank":str(node_rank),
             })
         elif runtime_type == "single_core":
             rootstr.add_attributes({
-                f"{self.LABEL_PREFIX}:global_rank":str(global_rank)
+                f"{self.yProv_PREFIX}:global_rank":str(global_rank)
             })
 
         self._add_ctx(self.PROV_JSON_NAME, self.PROV_JSON_NAME, 'std.time')
 
     def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
-        return f"{self.CONTEXT_PREFIX}:{context}" + (f"-{self.SOURCE_PREFIX}:{source}" if source else "")
+        return f"{(f"{source}/" if source else "")}{context}"
+        # return f"{self.CONTEXT_PREFIX}:{context}" + (f"-{self.SOURCE_PREFIX}:{source}" if source else "")
 
     def _format_artifact_name(self, label : str, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
-        return f"{self.PROV_PREFIX}:{label}-{self.CONTEXT_PREFIX}:{context}" + (f"-{self.SOURCE_PREFIX}:{source}" if source else "")
+        return f"{(f"{source}/" if source else "")}{label}/{context}"
+        # return f"{self.PROV_PREFIX}:{label}-{self.CONTEXT_PREFIX}:{context}" + (f"-{self.yProv_PREFIX}:{source}" if source else "")
 
     def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity = self.root_provenance_doc.entity(path, attributes)
@@ -204,7 +208,7 @@ class Prov4MLData:
         repo = _get_git_remote_url()
         if repo is not None:
             commit_hash = _get_git_revision_hash()
-            self.add_parameter(f"{self.LABEL_PREFIX}:source_code", f"{repo}/{commit_hash}")
+            self.add_parameter("source_code", f"{repo}/{commit_hash}")
         
         paths = _get_source_files()
         for path in paths: 
@@ -223,12 +227,24 @@ class Prov4MLData:
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_file(self.metrics[(metric, context)])
 
-    def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None) -> None:
+    def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input : bool = True, prefix : str = None) -> None:
         context = self._set_ctx_or_default(context)
+        # root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
 
-        root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
-        current_activity = self._add_ctx(root_ctx, context, source)
-        current_activity.add_attributes({f"{self.LABEL_PREFIX}:{parameter_name}":str(parameter_value)})
+        if prefix is None: 
+            prefix = self.yProv_PREFIX
+
+        if is_input: 
+            e = self._log_input(parameter_name, context, source, {})
+        else: 
+            e = self._log_output(parameter_name, context, source, {})
+
+        e.add_attributes({
+            "prov:type": "provml:HyperParameter", 
+            "prov:label": str(parameter_name),
+            "provml:paramName": str(parameter_name),
+            "prov:value": str(parameter_value),
+        })
 
     def _log_artifact_copy(self, artifact_path_src : str, artifact_path_dst : str, is_input : bool, is_model : bool, context : str, source : str): 
         try: 
@@ -271,19 +287,19 @@ class Prov4MLData:
         self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)
 
         attributes = {
-            f'{self.LABEL_PREFIX}:label': artifact_name, 
-            f'{self.LABEL_PREFIX}:path': artifact_path,
+            f'{self.PROV_PREFIX}:label': artifact_name, 
+            f'{self.RDF_PREFIX}:identifier': artifact_path,
         }
 
         if artifact_path: 
             file_size = os.path.getsize(artifact_path) / (1024*1024)
-            attributes.setdefault(f'{self.LABEL_PREFIX}:file_size_in_mb', file_size)
+            attributes.setdefault(f'{self.yProv_PREFIX}:file_size_in_mb', file_size)
 
         if is_input: 
-            attributes.setdefault(f'{self.LABEL_PREFIX}:role','input')
+            attributes.setdefault(f'{self.PROV_PREFIX}:role','input')
             return self._log_input(artifact_name, context, source, attributes)
         else: 
-            attributes.setdefault(f'{self.LABEL_PREFIX}:role', 'output')
+            attributes.setdefault(f'{self.PROV_PREFIX}:role', 'output')
             return self._log_output(artifact_name, context, source, attributes)
 
     def save_metric_to_file(self, metric: MetricInfo) -> None:

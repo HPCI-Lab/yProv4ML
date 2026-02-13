@@ -11,8 +11,8 @@ import yprov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 5
-DEVICE = "mps"
+EPOCHS = 1
+DEVICE = "cpu"
 
 COMP = False#yprov4ml.CompressorType.LZ4
 yprov4ml.start_run(
@@ -20,7 +20,7 @@ yprov4ml.start_run(
     experiment_name="example", 
     provenance_save_dir="prov",
     save_after_n_logs=100,
-    collect_all_processes=True, 
+    collect_all_processes=False, 
     # disable_codecarbon=True, 
     metrics_file_type="csv",
     use_compressor=COMP, 
@@ -45,8 +45,8 @@ class MNISTModel(nn.Module):
         return self.model(x.view(x.size(0), -1))
         
 mnist_model = MNISTModel().to(DEVICE)
-mnist_model = yprov4ml.ProvenanceTrackedModel(mnist_model)
-# yprov4ml.log_model("mnist_model", mnist_model, context="Training")
+# mnist_model = yprov4ml.ProvenanceTrackedModel(mnist_model)
+yprov4ml.log_model("mnist_model", mnist_model, context="Training")
 
 tform = transforms.Compose([
     # transforms.RandomRotation(10), 
@@ -58,12 +58,12 @@ tform = transforms.Compose([
 yprov4ml.log_param("dataset transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-# train_ds = Subset(train_ds, range(BATCH_SIZE*15))
+train_ds = Subset(train_ds, range(BATCH_SIZE*15))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 yprov4ml.log_dataset("train_dataset", train_loader, context="Training")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-# test_ds = Subset(test_ds, range(BATCH_SIZE*5))
+test_ds = Subset(test_ds, range(BATCH_SIZE*5))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 yprov4ml.log_dataset("val_dataset", test_loader, context="Validation")
 
@@ -88,27 +88,27 @@ for epoch in range(EPOCHS):
         optim.step()
         losses.append(loss.item())
     
-#         # log system and carbon metrics (once per epoch), as well as the execution time
-#         # yprov4ml.log_metric("MSE", loss.item(), context=yprov4ml.Context.TRAINING, step=epoch)
-#         # yprov4ml.log_metric("Indices", indices.tolist(), context=yprov4ml.Context.TRAINING_LOD2, step=epoch)
-#         yprov4ml.log_carbon_metrics("Training", step=epoch)
-#         yprov4ml.log_system_metrics("Training", step=epoch)
+        # log system and carbon metrics (once per epoch), as well as the execution time
+        yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
+        # yprov4ml.log_metric("Indices", indices.tolist(), context="Training", step=epoch)
+        yprov4ml.log_carbon_metrics("Training", step=epoch)
+        yprov4ml.log_system_metrics("Training", step=epoch)
         # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
-    # save incremental model versions
-    # yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", epoch)
 
-    # mnist_model.eval()
-    # with torch.no_grad(): 
-    #     # mnist_model.cpu()
-    #     for (x, y) in tqdm(test_loader):
-    #         x, y = x.to(DEVICE), y.to(DEVICE)
-    #         y_hat = mnist_model(x)
-    #         y2 = F.one_hot(y, 10).float()
-    #         loss = val_loss_fn(y_hat, y2)
+    yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", epoch)
 
-        # yprov4ml.log_metric("MSE", loss.item(), "Validation", step=epoch)
+    mnist_model.eval()
+    with torch.no_grad(): 
+        # mnist_model.cpu()
+        for (x, y) in tqdm(test_loader):
+            x, y = x.to(DEVICE), y.to(DEVICE)
+            y_hat = mnist_model(x)
+            y2 = F.one_hot(y, 10).float()
+            loss = val_loss_fn(y_hat, y2)
+
+        yprov4ml.log_metric("MSE", loss.item(), "TrainingButDifferent", step=epoch)
         # yprov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
 
-# yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
+yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
 
-yprov4ml.end_run(create_graph=False, create_svg=False, crate_ro_crate=True)
+yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)
