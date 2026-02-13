@@ -1,11 +1,12 @@
 
 import time
+import datetime
 import pandas as pd
 
 DATA = {}
 
 def get_time() -> float:
-    return time.time()
+    return datetime.datetime.now().isoformat()
 
 def timestamp_to_minutes(ts):
     return ts / 60000

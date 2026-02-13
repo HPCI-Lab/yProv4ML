@@ -8,10 +8,10 @@ class ZarrWriterThread(threading.Thread):
     def __init__(self, zarr_wrapper):
         super().__init__(daemon=True)
 
-        try: 
-            import torch
-            torch.set_num_threads(1)
-        except: pass
+        # try: 
+        #     import torch
+        #     torch.set_num_threads(1)
+        # except: pass
 
         self.wrapper = zarr_wrapper
         self.queue = queue.Queue(maxsize=1024)
@@ -24,8 +24,8 @@ class ZarrWriterThread(threading.Thread):
                 break
 
             name, inp, out = item
-            inp = inp.cpu().numpy().astype(np.float32)
-            out = out.cpu().numpy().astype(np.float32)
+            inp = inp.cpu().numpy().astype(np.float16)
+            out = out.cpu().numpy().astype(np.float16)
             self.wrapper._buffer_numpy(name, inp, out)
 
 class ProvenanceTrackedModel(nn.Module):
@@ -53,7 +53,7 @@ class ProvenanceTrackedModel(nn.Module):
             f"{name}/input",
             shape=(self.initial_size, *in_shape),
             chunks=(self.chunk_size, *in_shape),
-            dtype='f4',
+            dtype='f2',
             overwrite=True,
         )
 
@@ -61,7 +61,7 @@ class ProvenanceTrackedModel(nn.Module):
             f"{name}/output",
             shape=(self.initial_size, *out_shape),
             chunks=(self.chunk_size, *out_shape),
-            dtype='f4',
+            dtype='f2',
             overwrite=True,
         )
 
@@ -86,10 +86,7 @@ class ProvenanceTrackedModel(nn.Module):
 
     def _hook_fn(self, name):
         def hook(module, inputs, output):
-            inp = inputs[0].detach()
-            out = output.detach()
-
-            self.writer.queue.put((name, inp, out))
+            self.writer.queue.put((name, inputs[0].detach(), output.detach()))
         return hook
 
     def _register_hooks(self):
@@ -102,5 +99,6 @@ class ProvenanceTrackedModel(nn.Module):
         return self.model(x)
 
     def close(self):
+        self.flush()
         for h in self.handles:
             h.remove()
