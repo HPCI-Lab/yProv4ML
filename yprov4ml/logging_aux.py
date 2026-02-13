@@ -15,10 +15,10 @@ def log_metric(key: str, value: float, context: Optional[str] = None, step: int 
     PROV4ML_DATA.add_metric(key, value, step, context=context, source=source, timestamp=timestamp)
 
 def _log_execution_start_time() -> None:
-    PROV4ML_DATA.add_parameter("startedAtTime", time_utils.get_time(), source='std.time', prefix="prov:", is_input=False)
+    PROV4ML_DATA.add_parameter("startedAtTime", time_utils.get_time(), source='std.time', is_input=False)
 
 def _log_execution_end_time() -> None:
-    PROV4ML_DATA.add_parameter("endedAtTime", time_utils.get_time(), source='std.time', prefix="prov:", is_input=False)
+    PROV4ML_DATA.add_parameter("endedAtTime", time_utils.get_time(), source='std.time', is_input=False)
 
 def log_current_execution_time(label: str, context : Optional[str] = None, step: Optional[int] = None) -> None:
     return log_metric(label, time_utils.get_time(), context=context, step=step, source='std.time', is_input=False)
@@ -49,7 +49,7 @@ def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, A
     memory_per_grad = total_params * 4 * 1e-6
     memory_per_optim = total_params * 4 * 1e-6
     
-    ret = {f"{PROV4ML_DATA.yProv_PREFIX}:model_name": model_name}
+    ret = {}
     ret[f"{PROV4ML_DATA.yProv_PREFIX}:total_params"] = total_params
     ret[f"{PROV4ML_DATA.yProv_PREFIX}:memory_of_model"] = memory_per_model
     ret[f"{PROV4ML_DATA.yProv_PREFIX}:total_memory_load_of_model"] = memory_per_model + memory_per_grad + memory_per_optim
@@ -70,7 +70,6 @@ def _get_nested_model_desc(m: torch.nn.Module):
         funcs._safe_get_model_attr(node, m, "stride")
         funcs._safe_get_model_attr(node, m, "padding")
         funcs._safe_get_model_attr(node, m, "weight.dtype", attr_label="dtype")
-        # safe_get_attr(node, m, "bias", attr_label="layer_bias")
         return node
     else:
         for name, child in children.items():
@@ -219,6 +218,7 @@ def log_dataset(
         dl = dataset
         dataset = dl.dataset
         attrs = {
+            f"prov:type": "provml:Dataset", 
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_batch_size": dl.batch_size, 
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_num_workers": dl.num_workers, 
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 

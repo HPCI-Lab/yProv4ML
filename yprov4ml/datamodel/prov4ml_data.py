@@ -30,12 +30,11 @@ class Prov4MLData:
         self.METRIC_DIR = "metric_dir"
 
         self.USER_NAMESPACE = "user_namespace"
-        self.PROV_PREFIX = "prov"#"yProv4ML_Entity"
+        self.PROV_PREFIX = "prov"
         self.XSD_PREFIX = "xsd"
         self.PROVML_PREFIX = "provml"
-        self.yProv_PREFIX = "yProv4ML"
+        self.yProv_PREFIX = "yprov"
         self.RDF_PREFIX = "dcterms"
-        # self.SOURCE_PREFIX = "yProv4ML_Source"
 
         self.RUN_ID = 0
 
@@ -143,7 +142,6 @@ class Prov4MLData:
         self.root_provenance_doc = prov.ProvDocument()
         self.root_provenance_doc.add_namespace(self.yProv_PREFIX, "https://github.com/HPCI-Lab/yProv4ML")
         self.root_provenance_doc.set_default_namespace(self.PROV_JSON_NAME)
-        # self.root_provenance_doc.add_namespace('prov','http://www.w3.org/ns/prov#')
         self.root_provenance_doc.add_namespace(self.PROV_PREFIX, "http://www.w3.org/ns/prov#")
         self.root_provenance_doc.add_namespace(self.XSD_PREFIX,'http://www.w3.org/2000/10/XMLSchema#')
         self.root_provenance_doc.add_namespace(self.PROVML_PREFIX, 'prov-ml')
@@ -182,12 +180,10 @@ class Prov4MLData:
     def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
         return f"{(f"{source}/" if source else "")}{context}"
-        # return f"{self.CONTEXT_PREFIX}:{context}" + (f"-{self.SOURCE_PREFIX}:{source}" if source else "")
 
     def _format_artifact_name(self, label : str, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
         return f"{(f"{source}/" if source else "")}{label}/{context}"
-        # return f"{self.PROV_PREFIX}:{label}-{self.CONTEXT_PREFIX}:{context}" + (f"-{self.yProv_PREFIX}:{source}" if source else "")
 
     def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity = self.root_provenance_doc.entity(path, attributes)
@@ -227,23 +223,19 @@ class Prov4MLData:
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_file(self.metrics[(metric, context)])
 
-    def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input : bool = True, prefix : str = None) -> None:
+    def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input : bool = True) -> None:
         context = self._set_ctx_or_default(context)
-        # root_ctx = self._format_activity_name(self.PROV_JSON_NAME, None)
-
-        if prefix is None: 
-            prefix = self.yProv_PREFIX
 
         if is_input: 
-            e = self._log_input(parameter_name, context, source, {})
+            e = self._log_input(parameter_name, context, source, {
+                f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
+            })
         else: 
             e = self._log_output(parameter_name, context, source, {})
 
         e.add_attributes({
-            "prov:type": "provml:HyperParameter", 
-            "prov:label": str(parameter_name),
-            "provml:paramName": str(parameter_name),
-            "prov:value": str(parameter_value),
+            f"{self.PROV_PREFIX}:label": str(parameter_name),
+            f"{self.PROV_PREFIX}:value": str(parameter_value),
         })
 
     def _log_artifact_copy(self, artifact_path_src : str, artifact_path_dst : str, is_input : bool, is_model : bool, context : str, source : str): 
@@ -290,6 +282,8 @@ class Prov4MLData:
             f'{self.PROV_PREFIX}:label': artifact_name, 
             f'{self.RDF_PREFIX}:identifier': artifact_path,
         }
+        if is_model: 
+            attributes.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
 
         if artifact_path: 
             file_size = os.path.getsize(artifact_path) / (1024*1024)
