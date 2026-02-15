@@ -45,7 +45,7 @@ class MNISTModel(nn.Module):
         return self.model(x.view(x.size(0), -1))
         
 mnist_model = MNISTModel().to(DEVICE)
-# mnist_model = yprov4ml.ProvenanceTrackedModel(mnist_model)
+mnist_model = yprov4ml.ProvenanceTrackedModel("mnist_model", mnist_model)
 yprov4ml.log_model("mnist_model", mnist_model, context="Training")
 
 tform = transforms.Compose([
