@@ -1,13 +1,30 @@
 
-<table align="center">
-  <tr>
-    <td><img src="./assets/HPCI-Lab.png" alt="HPCI Lab Logo" width="100"></td>
-    <td><h1>yProv4ML</h1></td>
-  </tr>
-</table>
+<div align="center">
+  <a href="https://github.com/HPCI-Lab">
+    <img src="./assets/HPCI-Lab.png" alt="HPCI Lab Logo" width="100" height="100">
+  </a>
 
+  <h3 align="center">yProv4ML</h3>
 
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+  <p align="center">
+    A lightweight Python script to convert PROV-JSON documents to PROV-JSONLD format according to the W3C PROV-JSONLD specification.
+    <br />
+    <a href="https://hpci-lab.github.io/yProv4ML/"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/HPCI-Lab/yProv4ML/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    &middot;
+    <a href="https://github.com/HPCI-Lab/yProv4ML/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+  </p>
+</div>
+
+<br />
+
+[![Contributors](https://img.shields.io/github/contributors/HPCI-Lab/yProv4ML?style=for-the-badge)](https://github.com/HPCI-Lab/yProv4ML/graphs/contributors)
+[![Forks](https://img.shields.io/github/forks/HPCI-Lab/yProv4ML?style=for-the-badge)](https://github.com/HPCI-Lab/yProv4ML/network/members)
+[![Stars](https://img.shields.io/github/stars/HPCI-Lab/yProv4ML?style=for-the-badge)](https://github.com/HPCI-Lab/yProv4ML/stargazers)
+[![Issues](https://img.shields.io/github/issues/HPCI-Lab/yProv4ML?style=for-the-badge)](https://github.com/HPCI-Lab/yProv4ML/issues)
+[![GPLv3 License](https://img.shields.io/badge/LICENCE-GPL3.0-green?style=for-the-badge)](https://opensource.org/licenses/)
 
 This library is part of the yProv suite, and provides a unified interface for logging and tracking provenance information in machine learning experiments, both on distributed as well as large scale experiments. 
 
