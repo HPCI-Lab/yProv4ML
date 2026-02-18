@@ -7,7 +7,7 @@
   <h3 align="center">yProv4ML</h3>
 
   <p align="center">
-    A lightweight Python script to convert PROV-JSON documents to PROV-JSONLD format according to the W3C PROV-JSONLD specification.
+    A unified interface for logging and tracking provenance information in machine learning experiments, both on distributed as well as large scale experiments.
     <br />
     <a href="https://hpci-lab.github.io/yProv4ML/"><strong>Explore the docs »</strong></a>
     <br />
