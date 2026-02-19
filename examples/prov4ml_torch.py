@@ -105,8 +105,10 @@ for epoch in range(EPOCHS):
 
 yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
 
-yprov4ml.end_run(
-    create_graph=True, 
-    create_svg=True, 
-    crate_ro_crate=True
-)
+print(yprov4ml.log_provenance_documents(create_graph=True, create_svg=True, crate_ro_crate=True))
+
+# yprov4ml.end_run(
+#     create_graph=True, 
+#     create_svg=True, 
+#     crate_ro_crate=True
+# )

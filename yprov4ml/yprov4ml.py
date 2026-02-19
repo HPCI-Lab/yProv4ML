@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 from yprov4ml.constants import PROV4ML_DATA
 from yprov4ml.utils import energy_utils
@@ -62,34 +62,7 @@ def start_run(
 
     log_execution_start_time()
 
-def end_run(
-        create_graph: Optional[bool] = False, 
-        create_svg: Optional[bool] = False, 
-        crate_ro_crate: Optional[bool]=False,
-    ):  
-    """
-    Finalizes the provenance data collection and optionally creates visualization and provenance collection files.
-
-    Parameters:
-    -----------
-    create_graph : Optional[bool], optional
-        Whether to create a graph representation of the provenance data. Default is False.
-    create_svg : Optional[bool], optional
-        Whether to create an SVG file for the graph visualization. Default is False. 
-        Must be set to True only if `create_graph` is also True.
-    create_provenance_collection : Optional[bool], optional
-        Whether to create a collection of provenance data from all runs. Default is False.
-
-    Raises:
-    -------
-    ValueError
-        If `create_svg` is True but `create_graph` is False.
-
-    Returns:
-    --------
-    None
-    """
-
+def end_run(create_graph: Optional[bool] = False, create_svg: Optional[bool] = False, crate_ro_crate: Optional[bool]=False):  
     if not PROV4ML_DATA.is_collecting: return
     
     log_execution_end_time()
@@ -113,7 +86,18 @@ def end_run(
         os.makedirs(PROV4ML_DATA.EXPERIMENT_DIR, exist_ok=True)
     
     path_graph = os.path.join(PROV4ML_DATA.EXPERIMENT_DIR, graph_filename)
+    dot_filename = path_graph.replace(".json", ".dot")
+    svg_filename = path_graph.replace(".json", ".svg")
+    rocrate_filename = f"{PROV4ML_DATA.EXPERIMENT_DIR}.zip"
+
     save_prov_file(doc, path_graph, create_graph, create_svg)
 
     if crate_ro_crate: 
         create_rocrate_in_dir(PROV4ML_DATA.EXPERIMENT_DIR)
+
+    return path_graph, dot_filename, svg_filename, rocrate_filename
+
+# --- Compatibility layer for INTERTWIN-AI ---
+def log_provenance_documents(create_graph: Optional[bool] = False, create_svg: Optional[bool] = False, crate_ro_crate: Optional[bool]=False) -> Tuple[str, Optional[str], Optional[str]]:
+    return end_run(create_graph, create_svg, crate_ro_crate)
+# --- Compatibility layer for INTERTWIN-AI ---
