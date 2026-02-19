@@ -60,7 +60,7 @@ class ProvenanceTrackedModel(nn.Module):
         self.layers = {}
         self.writer = ZarrWriterThread(self)
         self.writer_ptr = {}
-        self.initial_size = 1024
+        self.initial_size = 32
 
         self._register_hooks()
 
@@ -103,12 +103,16 @@ class ProvenanceTrackedModel(nn.Module):
         self._append(in_arr, inp, ptr)
         self._append(out_arr, out, ptr)
 
+        self.writer_ptr[name] += inp.shape[0]
+
     def _append(self, arr, data, ptr):
         M = arr.shape[0]
         new_n = ptr + data.shape[0]
+        # arr.resize(M + data.shape[0], axis=0)
         if new_n >= M: 
             arr.resize((M*2, *arr.shape[1:]))
         arr[ptr:new_n] = data
+        # arr[M:] = data
 
     def _hook_fn(self, name):
         def hook(module, inputs, output):
