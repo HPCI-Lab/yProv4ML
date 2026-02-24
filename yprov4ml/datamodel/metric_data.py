@@ -4,13 +4,15 @@ from typing import Any, Dict, List
 from typing import Optional
 import zarr
 import netCDF4 as nc
+import datetime
 
 from yprov4ml.datamodel.compressor_type import compressor_to_type
+from yprov4ml.utils.time_utils import get_time
 
 ZARR_CHUNK_SIZE = 1000
 
 class MetricInfo:
-    __slots__ = ['name', 'context', 'source', 'total_metric_values', 'use_compressor', 'epochDataList']
+    __slots__ = ['name', 'context', 'source', 'total_metric_values', 'use_compressor', "generation_time", 'epochDataList']
     
     def __init__(self, name: str, context: Any, source=str, use_compressor : Optional[str] = None) -> None:
         self.name = name
@@ -18,6 +20,7 @@ class MetricInfo:
         self.source = source
         self.total_metric_values = 0
         self.use_compressor = use_compressor
+        self.generation_time = get_time()
         self.epochDataList: Dict[int, List[Any]] = {}
 
     def add_metric(self, value: Any, epoch: int, timestamp : int) -> None:

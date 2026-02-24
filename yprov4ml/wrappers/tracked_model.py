@@ -108,11 +108,9 @@ class ProvenanceTrackedModel(nn.Module):
     def _append(self, arr, data, ptr):
         M = arr.shape[0]
         new_n = ptr + data.shape[0]
-        # arr.resize(M + data.shape[0], axis=0)
         if new_n >= M: 
             arr.resize((M*2, *arr.shape[1:]))
         arr[ptr:new_n] = data
-        # arr[M:] = data
 
     def _hook_fn(self, name):
         def hook(module, inputs, output):

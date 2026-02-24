@@ -4,7 +4,6 @@ from typing import Optional, Union
 from yprov4ml.constants import PROV4ML_DATA
 from yprov4ml.utils import energy_utils
 from yprov4ml.utils import flops_utils
-from yprov4ml.logging_aux import _log_execution_start_time, _log_execution_end_time
 from yprov4ml.provenance.provenance_graph import create_prov_document, create_rocrate_in_dir, save_prov_file
 from yprov4ml.utils.file_utils import _requirements_lookup
 from yprov4ml.datamodel.compressor_type import CompressorType
@@ -38,12 +37,8 @@ def start_run(
         energy_utils._carbon_init()
     flops_utils._init_flops_counters()
 
-    _log_execution_start_time()
-
 def end_run(create_graph: Optional[bool] = False, create_svg: Optional[bool] = False, crate_ro_crate: Optional[bool]=False):  
     if not PROV4ML_DATA.is_collecting: return
-    
-    _log_execution_end_time()
 
     filename = _requirements_lookup("./")
     if filename: 

@@ -17,6 +17,7 @@ from yprov4ml.utils import funcs
 from yprov4ml.utils.prov_utils import get_or_create_activity
 from yprov4ml.utils.funcs import get_global_rank, get_runtime_type
 from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
+from yprov4ml.utils.time_utils import get_time
 
 class Prov4MLData:
     def __init__(self) -> None:
@@ -129,6 +130,7 @@ class Prov4MLData:
         context_name = self._format_activity_name(context=ctx, source=source)
         c, created = get_or_create_activity(self.root_provenance_doc, context_name)
         if created:         
+            c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{get_time()}^^xsd:dateTime"})
             if source is not None: 
                 c.wasInformedBy(maybe_src_context)
             else: 
@@ -175,7 +177,16 @@ class Prov4MLData:
                 f"{self.yProv_PREFIX}:global_rank":str(global_rank)
             })
 
-        self._add_ctx(self.PROV_JSON_NAME, self.PROV_JSON_NAME, 'std.time')
+        # self._add_ctx(self.PROV_JSON_NAME, self.PROV_JSON_NAME, 'std.time')
+
+        rootstr.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{get_time()}^^xsd:dateTime"})
+
+        # def _log_execution_start_time() -> None:
+#     PROV4ML_DATA.add_parameter("startedAtTime", time_utils.get_time(), source='std.time', is_input=False)
+
+# def _log_execution_end_time() -> None:
+#     PROV4ML_DATA.add_parameter("endedAtTime", time_utils.get_time(), source='std.time', is_input=False)
+
 
     def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
@@ -268,6 +279,7 @@ class Prov4MLData:
         log_copy_in_prov_directory : bool = True, 
         log_copy_subdirectory : Optional[str] = None, 
         is_model : bool = False, 
+        attributes : dict = {}
     ) -> prov.ProvEntity:
         context = self._set_ctx_or_default(context)
 
@@ -278,16 +290,19 @@ class Prov4MLData:
         artifact_name = self._format_artifact_name(artifact_name, context, source)
         self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)
 
-        attributes = {
-            f'{self.PROV_PREFIX}:label': artifact_name, 
-            f'{self.RDF_PREFIX}:identifier': artifact_path,
-        }
+        if f'{self.PROV_PREFIX}:label' not in attributes.keys(): 
+            attributes[f'{self.PROV_PREFIX}:label'] = artifact_name
+        if f'{self.RDF_PREFIX}:identifier' not in attributes.keys(): 
+            attributes[f'{self.RDF_PREFIX}:identifier'] = artifact_path
+        if f'{self.PROV_PREFIX}:generatedAtTime' not in attributes.keys(): 
+            attributes[f'{self.PROV_PREFIX}:generatedAtTime'] = get_time()
+
         if is_model: 
             attributes.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
 
         if artifact_path: 
-            file_size = os.path.getsize(artifact_path) / (1024*1024)
-            attributes.setdefault(f'{self.yProv_PREFIX}:file_size_in_mb', file_size)
+            file_size = os.path.getsize(artifact_path)# / (1024*1024)
+            attributes.setdefault(f'{self.yProv_PREFIX}:file_size', f"{file_size}^^xsd:double")
 
         if is_input: 
             attributes.setdefault(f'{self.PROV_PREFIX}:role','input')
@@ -295,6 +310,7 @@ class Prov4MLData:
         else: 
             attributes.setdefault(f'{self.PROV_PREFIX}:role', 'output')
             return self._log_output(artifact_name, context, source, attributes)
+
 
     def save_metric_to_file(self, metric: MetricInfo) -> None:
         metric.save_to_file(self.METRIC_DIR, file_type=self.metrics_file_type, process=self.global_rank, csv_separator=self.csv_separator)

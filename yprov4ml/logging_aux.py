@@ -14,12 +14,6 @@ from yprov4ml.constants import PROV4ML_DATA, VERBOSE
 def log_metric(key: str, value: float, context: Optional[str] = None, step: int = 0, source: Optional[str] = None, timestamp : int = 0) -> None:
     PROV4ML_DATA.add_metric(key, value, step, context=context, source=source, timestamp=timestamp)
 
-def _log_execution_start_time() -> None:
-    PROV4ML_DATA.add_parameter("startedAtTime", time_utils.get_time(), source='std.time', is_input=False)
-
-def _log_execution_end_time() -> None:
-    PROV4ML_DATA.add_parameter("endedAtTime", time_utils.get_time(), source='std.time', is_input=False)
-
 def log_current_execution_time(label: str, context : Optional[str] = None, step: Optional[int] = None) -> None:
     return log_metric(label, time_utils.get_time(), context=context, step=step, source='std.time', is_input=False)
 
@@ -50,9 +44,9 @@ def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, A
     memory_per_optim = total_params * 4 * 1e-6
     
     ret = {}
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:total_params"] = total_params
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:memory_of_model"] = memory_per_model
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:total_memory_load_of_model"] = memory_per_model + memory_per_grad + memory_per_optim
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}_total_params"] = total_params
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}_memory_of_model"] = memory_per_model
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}_total_memory_load_of_model"] = memory_per_model + memory_per_grad + memory_per_optim
 
     return ret
 
@@ -213,7 +207,6 @@ def log_dataset(
     
     if not log_dataset_info: return
 
-    e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": len(dataset)})
     if isinstance(dataset, DataLoader):
         dl = dataset
         dataset = dl.dataset
@@ -222,7 +215,10 @@ def log_dataset(
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_batch_size": dl.batch_size, 
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_num_workers": dl.num_workers, 
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": len(dl), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": len(dl),
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": len(dataset) * dl.batch_size, 
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_batches": len(dataset), 
+
         }
         e.add_attributes(attrs)
 
@@ -230,6 +226,10 @@ def log_dataset(
         dl = dataset
         dataset = dl.dataset
         e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": len(dl)})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": len(dataset)})
+        
+    elif isinstance(dataset, Dataset): 
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": len(dataset)})
 
 def log_execution_command(cmd: str, path : str) -> None:
     path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)

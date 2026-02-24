@@ -11,7 +11,7 @@ import yprov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 30
+EPOCHS = 2
 DEVICE = "cpu"
 
 COMP = False#yprov4ml.CompressorType.LZ4
@@ -21,7 +21,7 @@ yprov4ml.start_run(
     provenance_save_dir="prov",
     save_after_n_logs=100,
     collect_all_processes=False, 
-    disable_codecarbon=True, 
+    # disable_codecarbon=True, 
     metrics_file_type="csv",
     use_compressor=COMP, 
 )
@@ -33,6 +33,8 @@ class MNISTModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = torch.nn.Sequential(
+            torch.nn.Linear(28 * 28, 28 * 28), 
+            torch.nn.Linear(28 * 28, 28 * 28), 
             torch.nn.Linear(28 * 28, 10), 
             torch.nn.ReLU(),
         )
@@ -55,7 +57,7 @@ mnist_model = yprov4ml.ProvenanceTrackedModel("mnist_model", mnist_model)
 yprov4ml.log_model("mnist_model", mnist_model, context="Training")
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-# train_ds = Subset(train_ds, range(BATCH_SIZE*150))
+train_ds = Subset(train_ds, range(BATCH_SIZE*150))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 yprov4ml.log_dataset("train_dataset", train_loader, context="Training")
 
@@ -70,7 +72,7 @@ yprov4ml.log_param("optimizer", "Adam")
 loss_fn = nn.MSELoss().to(DEVICE)
 loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, context="Training")
 yprov4ml.log_context("TrainingButDifferent", "Training")
-val_loss_fn = yprov4ml.ProvenanceTrackedFunction(nn.MSELoss(), context="TrainingButDifferent")
+val_loss_fn = yprov4ml.ProvenanceTrackedFunction(nn.MSELoss(), context="Validation")
 
 losses = []
 for epoch in range(EPOCHS):
@@ -88,24 +90,23 @@ for epoch in range(EPOCHS):
         # log system and carbon metrics (once per epoch), as well as the execution time
         # yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
         # yprov4ml.log_metric("Indices", indices.tolist(), context="Training", step=epoch)
-        # yprov4ml.log_carbon_metrics("Training", step=epoch)
-        # yprov4ml.log_system_metrics("Training", step=epoch)
+        yprov4ml.log_carbon_metrics("Training", step=epoch)
+        yprov4ml.log_system_metrics("Training", step=epoch)
         # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
 
-    # yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", epoch)
+    yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", step=epoch)
 
-    # mnist_model.eval()
-    # with torch.no_grad(): 
-    #     # mnist_model.cpu()
-    #     for (x, y) in tqdm(test_loader):
-    #         x, y = x.to(DEVICE), y.to(DEVICE)
-    #         y_hat = mnist_model(x)
-    #         y2 = F.one_hot(y, 10).float()
-    #         loss = val_loss_fn(y_hat, y2)
+    mnist_model.eval()
+    with torch.no_grad(): 
+        # mnist_model.cpu()
+        for (x, y) in tqdm(test_loader):
+            x, y = x.to(DEVICE), y.to(DEVICE)
+            y_hat = mnist_model(x)
+            y2 = F.one_hot(y, 10).float()
+            loss = val_loss_fn(y_hat, y2)
 
-    #     yprov4ml.log_metric("MSE", loss.item(), "TrainingButDifferent", step=epoch)
-    #     # yprov4ml.log_metric("Indices", indices, context=prov4ml.Context.TRAINING_LOD2, step=epoch)
+        # yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
 
-# yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
+yprov4ml.log_model("mnist_model_final", mnist_model, context="TrainingButDifferent", log_model_layers=True, is_input=False)
 
 yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)
