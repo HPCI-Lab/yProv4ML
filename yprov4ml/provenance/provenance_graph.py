@@ -11,22 +11,28 @@ import os
 import prov.model as prov
 
 from yprov4ml.utils.prov_utils import custom_prov_to_dot
+from yprov4ml.utils.prov_utils import get_or_create_activity
+from yprov4ml.utils.time_utils import get_time
 
 def create_prov_document() -> prov.ProvDocument:
     
     doc = PROV4ML_DATA.root_provenance_doc
+    rootstr, _ = get_or_create_activity(PROV4ML_DATA.root_provenance_doc, PROV4ML_DATA.PROV_JSON_NAME)
+    rootstr.add_attributes({f"{PROV4ML_DATA.PROV_PREFIX}:endedAtTime": f"{get_time()}^^xsd:dateTime"})
 
     for (name, ctx) in PROV4ML_DATA.metrics.keys():
         source = PROV4ML_DATA.metrics[(name, ctx)].source
+        generation_time = PROV4ML_DATA.metrics[(name, ctx)].generation_time
         metric_file_path = os.path.join(PROV4ML_DATA.METRIC_DIR, f"{name}_{str(ctx)}_{str(source)}_GR{PROV4ML_DATA.global_rank}.{PROV4ML_DATA.metrics_file_type}")
-        e = PROV4ML_DATA.add_artifact(name,metric_file_path,0,ctx, source, is_input=False, log_copy_in_prov_directory=False)
         
-        e.add_attributes({
+        attrs = {
             f"{PROV4ML_DATA.PROV_PREFIX}:type": "provml:Metric", 
             f'{PROV4ML_DATA.yProv_PREFIX}:context': str(ctx),
-            f'{PROV4ML_DATA.yProv_PREFIX}:source': str(source)
-        })
-
+            f'{PROV4ML_DATA.yProv_PREFIX}:source': str(source), 
+            f'{PROV4ML_DATA.PROV_PREFIX}:generatedAtTime': generation_time
+        }
+        PROV4ML_DATA.add_artifact(name,metric_file_path,0,ctx, source, is_input=False, log_copy_in_prov_directory=False, attributes=attrs)
+    
     return doc
 
 
