@@ -225,7 +225,7 @@ class Prov4MLData:
     ) -> None:
         if not self.is_collecting: return
 
-        if context is None: context = self.EXPERIMENT_NAME
+        if context is None: context = self.PROV_JSON_NAME
         if step is None: step = 0
 
         if (metric, context) not in self.metrics:
