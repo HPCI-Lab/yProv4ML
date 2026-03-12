@@ -14,7 +14,7 @@ BATCH_SIZE = 16
 EPOCHS = 2
 DEVICE = "cpu"
 
-TYPE = yprov4ml.MetricsType.ZARR
+TYPE = yprov4ml.MetricsType.CSV
 COMP = False
 yprov4ml.start_run(
     prov_user_namespace="www.example.org",
@@ -88,7 +88,7 @@ for epoch in range(EPOCHS):
         yprov4ml.log_metric("MSE", loss.item(), context=yprov4ml.Context.TRAINING, step=epoch)
         # yprov4ml.log_metric("Indices", indices.tolist(), context=yprov4ml.Context.TRAINING, step=epoch)
         # yprov4ml.log_carbon_metrics(yprov4ml.Context.TRAINING, step=epoch)
-        # yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
+        yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
     # save incremental model versions
     yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.MODELS, epoch)
 
@@ -105,10 +105,10 @@ for epoch in range(EPOCHS):
 
 yprov4ml.log_model("mnist_model_final", mnist_model, log_model_layers=True, is_input=False)
 
-print(yprov4ml.log_provenance_documents(create_graph=True, create_svg=True, crate_ro_crate=True))
+# print(yprov4ml.log_provenance_documents(create_graph=True, create_svg=True, crate_ro_crate=True))
 
-# yprov4ml.end_run(
-#     create_graph=True, 
-#     create_svg=True, 
-#     crate_ro_crate=True
-# )
+yprov4ml.end_run(
+    create_graph=True, 
+    create_svg=True, 
+    crate_ro_crate=True
+)
