@@ -20,6 +20,7 @@ if sys.platform != 'darwin':
             def amd_get_gpu_usage(): 
                 return first_gpu.query_utilisation()["graphics_pipe"]
             def amd_get_gpu_memory_usage(): 
+                if torch.cuda.memory_reserved() == 0.0: return 0.0
                 return torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
             def amd_get_gpu_power(): 
                 first_gpu = pyamdgpuinfo.get_gpu(0)
@@ -48,7 +49,9 @@ if sys.platform != 'darwin':
                 d["cpu_usage"] = get_cpu_usage()
                 d["memory_usage"] = get_memory_usage()
                 d["disk_usage"] = get_disk_usage()
-                d["gpu_memory_usage"] = torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
+                if torch.cuda.memory_reserved() == 0.0: v = 0.0
+                else: v = torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
+                d["gpu_memory_usage"] = v
                 d["gpu_usage"] = first_gpu.query_utilisation()["graphics_pipe"]
                 d["gpu_memory_power"] = get_gpu_memory_power()
                 d["gpu_power_usage"] = first_gpu.query_power()
@@ -65,6 +68,7 @@ if sys.platform != 'darwin':
                 device = devices[0] 
                 return device.gpu_utilization()
             def nvidia_get_gpu_memory_usage(): 
+                if torch.cuda.memory_reserved() == 0.0: return 0.0
                 return torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
             def nvidia_get_gpu_power(): 
                 handle = pynvml.nvmlDeviceGetHandleByIndex(0)
@@ -94,7 +98,9 @@ if sys.platform != 'darwin':
                 d["cpu_usage"] = get_cpu_usage()
                 d["memory_usage"] = get_memory_usage()
                 d["disk_usage"] = get_disk_usage()
-                d["gpu_memory_usage"] = torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
+                if torch.cuda.memory_reserved() == 0.0: v = 0.0
+                else: v = torch.cuda.memory_allocated() / torch.cuda.memory_reserved()
+                d["gpu_memory_usage"] = v
                 d["gpu_usage"] = device.gpu_utilization()
                 d["gpu_memory_power"] = power_mw / 1000.0 
                 d["gpu_power_usage"] = power_mw / 1000.0 
@@ -109,6 +115,7 @@ else:
         d = apple_gpu.accelerator_performance_statistics()
         used = d['In use system memory']
         tot = d['Alloc system memory']
+        if tot == 0.0: return 0.0
         return 100*used / tot
     get_gpu_usage = apple_get_gpu_usage
     get_gpu_memory_usage = apple_get_gpu_memory_usage
