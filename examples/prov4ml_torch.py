@@ -53,7 +53,7 @@ tform = transforms.Compose([
 yprov4ml.log_param("dataset transformation", tform)
 
 mnist_model = MNISTModel().to(DEVICE)
-mnist_model = yprov4ml.ProvenanceTrackedModel("mnist_model", mnist_model)
+mnist_model = yprov4ml.WeightDistributionTrackedModel("mnist_model", mnist_model)
 yprov4ml.log_model("mnist_model", mnist_model, context="Training")
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
@@ -95,6 +95,7 @@ for epoch in range(EPOCHS):
         # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
 
     yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", step=epoch)
+    mnist_model.log_epoch(epoch)
 
     mnist_model.eval()
     with torch.no_grad(): 
