@@ -5,14 +5,14 @@ from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
-# import sys
-# sys.path.append("../yProv4ML")
+import sys
+sys.path.append("./yProv4ML")
 import yprov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 16
 EPOCHS = 2
-DEVICE = "cpu"
+DEVICE = "mps"
 
 TYPE = yprov4ml.MetricsType.CSV
 COMP = False
