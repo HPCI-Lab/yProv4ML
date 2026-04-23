@@ -123,7 +123,7 @@ class MetricInfo:
     
         with open(txt_file, "a") as f:
             if not file_exists:
-                f.write(f"{self.name}{csv_separator}{self.context}{csv_separator}{self.source}\n")
+                f.write(f"epoch{csv_separator}value{csv_separator}timestep\n")
             
             lines = []
             for epoch, values in self.epochDataList.items():
