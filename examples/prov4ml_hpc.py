@@ -89,10 +89,9 @@ def run_job(proc):
             optim.step()
             losses.append(loss.item())
         
-            yprov4ml.log_metric("Loss", loss.item(), context=yprov4ml.Context.TRAINING, step=epoch)
-            # prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=epoch)
-            yprov4ml.log_system_metrics(yprov4ml.Context.TRAINING, step=epoch)
-        yprov4ml.save_model_version(f"mnist_model_version", mnist_model, yprov4ml.Context.MODELS, epoch)
+            yprov4ml.log_metric("Loss", loss.item(), context="Training", step=epoch)
+            yprov4ml.log_system_metrics("Training", step=epoch)
+        yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", epoch)
 
 
         mnist_model.eval()
@@ -102,7 +101,7 @@ def run_job(proc):
             y2 = F.one_hot(y, 10).float()
             loss = loss_fn(y_hat, y2)
 
-            yprov4ml.log_metric("Loss", loss.item(), yprov4ml.Context.VALIDATION, step=epoch)
+            yprov4ml.log_metric("Loss", loss.item(), "Validation", step=epoch)
 
     yprov4ml.log_model("mnist_model_final", mnist_model)
     yprov4ml.end_run(create_graph=True, create_svg=True)

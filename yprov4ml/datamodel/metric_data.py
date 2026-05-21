@@ -13,7 +13,7 @@ ZARR_CHUNK_SIZE = 1000
 class MetricInfo:
     __slots__ = ['name', 'context', 'source', 'total_metric_values', 'use_compressor', "generation_time", 'epochDataList']
     
-    def __init__(self, name: str, context: Any, source=str, use_compressor : Optional[str] = None) -> None:
+    def __init__(self, name: str, context: str, source=str, use_compressor : Optional[str] = None) -> None:
         self.name = name
         self.context = context
         self.source = source

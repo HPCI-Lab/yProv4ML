@@ -5,7 +5,7 @@ import torch
 from yprov4ml.logging_aux import log_metric
 
 class ProvenanceTrackedFunction:
-    def __init__(self, func, context=None):
+    def __init__(self, func, context : str = None):
         self.fn = func
         self.context = context
         self.source = type(func).__name__
