@@ -108,6 +108,9 @@ for epoch in range(EPOCHS):
 
         # yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
 
-yprov4ml.log_model("mnist_model_final", mnist_model, context="TrainingButDifferent", log_model_layers=True, is_input=False)
+
+yprov4ml.log_model("mnist_model_final_out", mnist_model, context="TrainingButDifferent", log_model_layers=True, is_input=False)
+
+yprov4ml.log_model("mnist_model_final_in", mnist_model, context="TrainingButDifferent2", log_model_layers=True, is_input=True)
 
 yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)

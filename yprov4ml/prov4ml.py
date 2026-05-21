@@ -19,6 +19,7 @@ def start_run(
         metrics_file_type: str = "csv",
         csv_separator : str = ",", 
         use_compressor: Optional[Union[CompressorType, bool]] = None,
+        use_run_id: Optional[int] = None, 
     ) -> None:
     PROV4ML_DATA.start_run(
         experiment_name=experiment_name, 
@@ -31,6 +32,7 @@ def start_run(
         metrics_file_type=metrics_file_type,
         csv_separator=csv_separator,
         use_compressor=use_compressor,
+        use_run_id=use_run_id,
     )
 
     if not disable_codecarbon: 

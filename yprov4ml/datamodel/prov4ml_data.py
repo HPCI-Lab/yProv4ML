@@ -9,6 +9,7 @@ import prov.model as prov
 import pwd
 import warnings
 import uuid
+import platform
 
 from yprov4ml.datamodel.artifact_data import ArtifactInfo
 from yprov4ml.datamodel.metric_data import MetricInfo
@@ -57,6 +58,7 @@ class Prov4MLData:
             metrics_file_type: str = "nc",
             csv_separator:str = ",", 
             use_compressor: Optional[Union[CompressorType, bool]] = None,
+            use_run_id: Optional[int] = None, 
         ) -> None:
 
         self.global_rank = funcs.get_global_rank() if rank is None else rank
@@ -87,13 +89,16 @@ class Prov4MLData:
             use_compressor = CompressorType.NONE
 
         # look at PROV dir how many experiments are there with the same name
-        if not os.path.exists(self.PROV_SAVE_PATH):
-            os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
-            self.RUN_ID = 0
-        else: 
-            prev_exps = os.listdir(self.PROV_SAVE_PATH) 
-            matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
-            self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
+        if use_run_id is not None: 
+            self.RUN_ID = use_run_id
+        else:
+            if not os.path.exists(self.PROV_SAVE_PATH):
+                os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
+                self.RUN_ID = 0
+            else: 
+                prev_exps = os.listdir(self.PROV_SAVE_PATH) 
+                matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
+                self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
 
         self.CLEAN_EXPERIMENT_NAME = experiment_name
         self.PROV_JSON_NAME = self.CLEAN_EXPERIMENT_NAME + f"_GR{self.global_rank}" if self.global_rank else experiment_name + f"_GR0"
@@ -177,6 +182,14 @@ class Prov4MLData:
                 f"{self.yProv_PREFIX}:global_rank":str(global_rank)
             })
 
+        rootstr.add_attributes({
+            f"{self.yProv_PREFIX}:runtime_type":str(runtime_type),
+            f"{self.yProv_PREFIX}:operating_system":str(platform.system()),
+            f"{self.yProv_PREFIX}:release":str(platform.release()),
+            f"{self.yProv_PREFIX}:processor":str(platform.processor()),
+            f"{self.yProv_PREFIX}:machine":str(platform.machine()),
+        })
+
         # self._add_ctx(self.PROV_JSON_NAME, self.PROV_JSON_NAME, 'std.time')
 
         rootstr.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{get_time()}^^xsd:dateTime"})
@@ -190,11 +203,11 @@ class Prov4MLData:
 
     def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
-        return f"{(f"{source}/" if source else "")}{context}"
+        return f"{(f"{source}//" if source else "")}{context}"
 
     def _format_artifact_name(self, label : str, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
-        return f"{(f"{source}/" if source else "")}{label}/{context}"
+        return f"{(f"{source}//" if source else "")}{label}//{context}"
 
     def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity = self.root_provenance_doc.entity(path, attributes)
@@ -258,9 +271,16 @@ class Prov4MLData:
         newart_path = os.path.join(self.ARTIFACTS_DIR, artifact_path_dst)
         if path.is_file():
             os.makedirs(os.path.dirname(newart_path), exist_ok=True)
-            shutil.copy(path, newart_path)
+            try: 
+                shutil.copy(path, newart_path)
+            except shutil.SameFileError: 
+                pass
+
         else:  
-            shutil.copytree(path, newart_path)
+            try: 
+                shutil.copytree(path, newart_path)
+            except shutil.SameFileError: 
+                pass
 
         original = self.add_artifact("Original_" + path.name, str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input, source=source, context=context)
         copied = self.add_artifact(path.name, newart_path, log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input, source=source, context=context)
@@ -289,27 +309,29 @@ class Prov4MLData:
 
         artifact_name = self._format_artifact_name(artifact_name, context, source)
         self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)
-
-        if f'{self.PROV_PREFIX}:label' not in attributes.keys(): 
-            attributes[f'{self.PROV_PREFIX}:label'] = artifact_name
-        if f'{self.RDF_PREFIX}:identifier' not in attributes.keys(): 
-            attributes[f'{self.RDF_PREFIX}:identifier'] = artifact_path
-        if f'{self.PROV_PREFIX}:generatedAtTime' not in attributes.keys(): 
-            attributes[f'{self.PROV_PREFIX}:generatedAtTime'] = get_time()
+        local_attrs = attributes.copy()
+        if f'{self.PROV_PREFIX}:label' not in local_attrs.keys(): 
+            local_attrs[f'{self.PROV_PREFIX}:label'] = artifact_name
+        if f'{self.RDF_PREFIX}:identifier' not in local_attrs.keys(): 
+            local_attrs[f'{self.RDF_PREFIX}:identifier'] = artifact_path
+        if f'{self.PROV_PREFIX}:generatedAtTime' not in local_attrs.keys(): 
+            local_attrs[f'{self.PROV_PREFIX}:generatedAtTime'] = get_time()
 
         if is_model: 
-            attributes.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
+            local_attrs.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
 
         if artifact_path: 
             file_size = os.path.getsize(artifact_path)# / (1024*1024)
-            attributes.setdefault(f'{self.yProv_PREFIX}:file_size', f"{file_size}^^xsd:double")
+            local_attrs.setdefault(f'{self.yProv_PREFIX}:file_size', f"{file_size}^^xsd:double")
 
         if is_input: 
-            attributes.setdefault(f'{self.PROV_PREFIX}:role','input')
-            return self._log_input(artifact_name, context, source, attributes)
+            local_attrs.setdefault(f'{self.PROV_PREFIX}:role','input')
+            e = self._log_input(artifact_name, context, source, local_attrs)
+            return e
+
         else: 
-            attributes.setdefault(f'{self.PROV_PREFIX}:role', 'output')
-            return self._log_output(artifact_name, context, source, attributes)
+            local_attrs.setdefault(f'{self.PROV_PREFIX}:role', 'output')
+            return self._log_output(artifact_name, context, source, local_attrs)
 
 
     def save_metric_to_file(self, metric: MetricInfo) -> None:
