@@ -6,7 +6,6 @@ from argparse import Namespace
 from torch import Tensor
 
 from yprov4ml.logging_aux import log_param, log_metric
-from yprov4ml.datamodel.context import Context
 
 class ProvMLLogger(Logger):
     def __init__(
@@ -57,11 +56,11 @@ class ProvMLLogger(Logger):
     def log_metrics(self, metrics: Dict[str, Union[Tensor, float]], step) -> None:
 
         for m, v in metrics.items(): 
-            context = Context.TRAINING
+            context = "Training"
             if "evaluation" in m or "test" in m: 
-                context = Context.TESTING
+                context = "Test"
             elif "validation" in m: 
-                context = Context.VALIDATION
+                context = "Validation"
             log_metric(m, v, context=context)
     
     @override

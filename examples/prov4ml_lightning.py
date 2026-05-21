@@ -37,29 +37,29 @@ class MNISTModel(LightningModule):
     def training_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        yprov4ml.log_metric("MSE", loss, yprov4ml.Contexts.TRAINING, step=self.current_epoch)
+        yprov4ml.log_metric("MSE", loss, "Training", step=self.current_epoch)
         return loss
     
     def validation_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
         # change the context to VALIDATION to log the metric as evaluation metric
-        yprov4ml.log_metric("MSE", loss, yprov4ml.Contexts.VALIDATION, step=self.current_epoch)
+        yprov4ml.log_metric("MSE", loss, "Validation", step=self.current_epoch)
         return loss
     
     def test_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
         # change the context to EVALUATION to log the metric as evaluation metric
-        yprov4ml.log_metric("MSE",loss,yprov4ml.Contexts.TESTING,step=self.current_epoch)
+        yprov4ml.log_metric("MSE",loss,"Test",step=self.current_epoch)
         return loss
     
     def on_train_epoch_end(self) -> None:
-        yprov4ml.log_metric("epoch", self.current_epoch, yprov4ml.Contexts.TRAINING, step=self.current_epoch)
-        yprov4ml.save_model_version(f"model_version_{self.current_epoch}", self, yprov4ml.Contexts.TRAINING, step=self.current_epoch)
-        yprov4ml.log_system_metrics(yprov4ml.Contexts.TRAINING,step=self.current_epoch)
-        yprov4ml.log_carbon_metrics(yprov4ml.Contexts.TRAINING,step=self.current_epoch)
-        yprov4ml.log_current_execution_time("train_epoch_time", yprov4ml.Contexts.TRAINING, self.current_epoch)
+        yprov4ml.log_metric("epoch", self.current_epoch, "Training", step=self.current_epoch)
+        yprov4ml.save_model_version(f"model_version_{self.current_epoch}", self, "Training", step=self.current_epoch)
+        yprov4ml.log_system_metrics("Training",step=self.current_epoch)
+        yprov4ml.log_carbon_metrics("Training",step=self.current_epoch)
+        yprov4ml.log_current_execution_time("train_epoch_time", "Training", self.current_epoch)
 
     def configure_optimizers(self):
         optim = torch.optim.Adam(self.parameters(), lr=0.0002)

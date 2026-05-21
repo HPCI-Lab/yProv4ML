@@ -38,25 +38,25 @@ class MNISTModel(LightningModule):
     def training_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        self.log("MSE_training", loss, yprov4ml.Contexts.TRAINING)
+        self.log("MSE_training", loss, "Training")
         return loss
     
     def validation_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
         # change the context to VALIDATION to log the metric as evaluation metric
-        self.log("MSE_validation", loss, yprov4ml.Contexts.VALIDATION)
+        self.log("MSE_validation", loss, "Validation")
         return loss
     
     def test_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
         # change the context to EVALUATION to log the metric as evaluation metric
-        self.log("MSE_test", loss, yprov4ml.Contexts.TESTING, self.current_epoch)
+        self.log("MSE_test", loss, "Test", self.current_epoch)
         return loss
     
     def on_train_epoch_end(self) -> None:
-        self.log("epoch", self.current_epoch, yprov4ml.Contexts.TRAINING)
+        self.log("epoch", self.current_epoch, "Training")
         # prov4ml.save_model_version(f"model_version_{self.current_epoch}", self, prov4ml.Contexts.TRAINING, step=self.current_epoch)
         # prov4ml.log_system_metrics(prov4ml.Contexts.TRAINING,step=self.current_epoch)
         # prov4ml.log_carbon_metrics(prov4ml.Contexts.TRAINING,step=self.current_epoch)
