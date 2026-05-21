@@ -9,16 +9,6 @@ def _init_flops_counters() -> None:
     FLOPS_PER_EPOCH_COUNTER = 0
 
 def get_flops_per_epoch(model: Any, dataset: Any) -> int:
-    """
-    Calculates and returns the total FLOPs per epoch for the given model and dataset.
-
-    Args:
-        model (Any): The model for which FLOPs per epoch are to be calculated.
-        dataset (Any): The dataset used for training the model.
-
-    Returns:
-        int: The total FLOPs per epoch.
-    """
     global FLOPS_PER_EPOCH_COUNTER
 
     x, _ = dataset[0]
@@ -28,16 +18,6 @@ def get_flops_per_epoch(model: Any, dataset: Any) -> int:
     return FLOPS_PER_EPOCH_COUNTER
 
 def get_flops_per_batch(model: Any, batch: Any) -> int:
-    """
-    Calculates and returns the total FLOPs per batch for the given model and batch of data.
-
-    Args:
-        model (Any): The model for which FLOPs per batch are to be calculated.
-        batch (Any): A batch of data used for inference with the model.
-
-    Returns:
-        int: The total FLOPs per batch.
-    """
     global FLOPS_PER_BATCH_COUNTER
     x, _ = batch
     flops = FlopCountAnalysis(model, x)
