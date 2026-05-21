@@ -21,7 +21,7 @@ def run_job(proc):
     from torch.utils.data import DataLoader, Subset
     from tqdm import tqdm
     import sys
-    sys.path.append("../yProvML")
+    sys.path.append("../yProv4ML")
     import yprov4ml
 
     PATH_DATASETS = "./data"
@@ -37,8 +37,6 @@ def run_job(proc):
         collect_all_processes=True
     )
 
-    yprov4ml.create_context("TRAINING_LOD2", yprov4ml.Context.TRAINING)
-    yprov4ml.create_context("TRAINING_LOD3", yprov4ml.Context.TRAINING_LOD2)
     yprov4ml.log_source_code("./examples/prov4ml_hpc.py")
     yprov4ml.log_execution_command(cmd="python", path="prov4ml_hpc.py")
 
@@ -107,7 +105,7 @@ def run_job(proc):
             yprov4ml.log_metric("Loss", loss.item(), yprov4ml.Context.VALIDATION, step=epoch)
 
     yprov4ml.log_model("mnist_model_final", mnist_model)
-    yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)
+    yprov4ml.end_run(create_graph=True, create_svg=True)
 
 
 if __name__ == "__main__": 

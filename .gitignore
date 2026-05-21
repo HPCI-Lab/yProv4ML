@@ -6,11 +6,14 @@ mlruns/
 *.json
 *.dot
 *.svg
+*.pt
+*.zarr
+*.nc
 # ignore test folder
 test/
 
 __pycache__/
-
+**.DS_Store*
 
 build/
 dist/

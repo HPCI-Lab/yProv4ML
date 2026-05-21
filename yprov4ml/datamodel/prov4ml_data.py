@@ -4,36 +4,40 @@ import sys
 import time
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, Union
 import prov.model as prov
-# import pwd
-import getpass as gt
+import pwd
 import warnings
-from aenum import extend_enum
-import subprocess
+import uuid
+import platform
 
 from yprov4ml.datamodel.artifact_data import ArtifactInfo
-from yprov4ml.datamodel.attribute_type import LoggingItemKind
 from yprov4ml.datamodel.metric_data import MetricInfo
-from yprov4ml.datamodel.context import Context
-from yprov4ml.datamodel.metric_type import MetricsType
 from yprov4ml.datamodel.compressor_type import CompressorType, COMPRESSORS_FOR_ZARR
 from yprov4ml.utils import funcs
-from yprov4ml.utils.prov_utils import get_activity, create_activity
+from yprov4ml.utils.prov_utils import get_or_create_activity
 from yprov4ml.utils.funcs import get_global_rank, get_runtime_type
+from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
+from yprov4ml.utils.time_utils import get_time
 
 class Prov4MLData:
     def __init__(self) -> None:
-        self.metrics: Dict[(str, Context), MetricInfo] = {}
-        self.artifacts: Dict[(str, Context), ArtifactInfo] = {}
+        self.metrics: Dict[(str, str), MetricInfo] = {}
+        self.artifacts: Dict[(str, str), ArtifactInfo] = {}
 
         self.PROV_SAVE_PATH = "prov_save_path"
         self.PROV_JSON_NAME = "test_experiment"
         self.EXPERIMENT_DIR = "test_experiment_dir"
         self.ARTIFACTS_DIR = "artifact_dir"
         self.METRIC_DIR = "metric_dir"
+
         self.USER_NAMESPACE = "user_namespace"
-        self.PROV_PREFIX = "yProv4ML"
+        self.PROV_PREFIX = "prov"
+        self.XSD_PREFIX = "xsd"
+        self.PROVML_PREFIX = "provml"
+        self.yProv_PREFIX = "yprov"
+        self.RDF_PREFIX = "dcterms"
+
         self.RUN_ID = 0
 
         self.global_rank = None
@@ -50,40 +54,51 @@ class Prov4MLData:
             collect_all_processes: bool = False, 
             save_after_n_logs: int = 100, 
             rank: Optional[int] = None, 
-            metrics_file_type: MetricsType = MetricsType.ZARR,
+            disable_codecarbon : bool = False,
+            metrics_file_type: str = "nc",
             csv_separator:str = ",", 
-            use_compressor: Optional[CompressorType] = None,
+            use_compressor: Optional[Union[CompressorType, bool]] = None,
+            use_run_id: Optional[int] = None, 
         ) -> None:
 
         self.global_rank = funcs.get_global_rank() if rank is None else rank
         self.is_collecting = self.global_rank is None or int(self.global_rank) == 0 or collect_all_processes
         
-        if not self.is_collecting: return
+        if not self.is_collecting: 
+            self.add_metric = lambda: None
+            self.add_artifact = lambda: None
+            self.save_metric_to_file = lambda: None
+            self.save_all_metrics = lambda: None
+            self.add_parameter = lambda: None
+            return
 
         self.save_metrics_after_n_logs = save_after_n_logs
         if prov_save_path: self.PROV_SAVE_PATH = prov_save_path
         if user_namespace: self.USER_NAMESPACE = user_namespace
 
-        if use_compressor in COMPRESSORS_FOR_ZARR and metrics_file_type != MetricsType.ZARR: 
-            warnings.warn(f">start_run(): use_compressor chosen is only compatible with MetricsType.ZARR, but saving type is {metrics_file_type}, the compressor chosen will have no effect")
-        if metrics_file_type == MetricsType.ZARR and use_compressor != False and use_compressor not in COMPRESSORS_FOR_ZARR: 
-            raise AttributeError(f">start_run(): use_compressor chosen is only compatible with MetricsType.ZARR")
+        if use_compressor in COMPRESSORS_FOR_ZARR and metrics_file_type != "zarr": 
+            warnings.warn(f">start_run(): use_compressor chosen is only compatible with str.ZARR, but saving type is {metrics_file_type}, the compressor chosen will have no effect")
+        if metrics_file_type == "zarr" and use_compressor != False and use_compressor not in COMPRESSORS_FOR_ZARR: 
+            raise AttributeError(f">start_run(): use_compressor chosen is only compatible with str.ZARR")
 
-        if metrics_file_type == MetricsType.ZARR and use_compressor:
+        if metrics_file_type == "zarr" and use_compressor:
             use_compressor = CompressorType.BLOSC_ZSTD
-        elif metrics_file_type in [MetricsType.NETCDF, MetricsType.CSV] and use_compressor:
+        elif metrics_file_type in ["nc", "csv"] and use_compressor:
             use_compressor = CompressorType.ZIP
         if not use_compressor: 
             use_compressor = CompressorType.NONE
 
         # look at PROV dir how many experiments are there with the same name
-        if not os.path.exists(self.PROV_SAVE_PATH):
-            os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
-            self.RUN_ID = 0
-        else: 
-            prev_exps = os.listdir(self.PROV_SAVE_PATH) 
-            matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
-            self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
+        if use_run_id is not None: 
+            self.RUN_ID = use_run_id
+        else:
+            if not os.path.exists(self.PROV_SAVE_PATH):
+                os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
+                self.RUN_ID = 0
+            else: 
+                prev_exps = os.listdir(self.PROV_SAVE_PATH) 
+                matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
+                self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
 
         self.CLEAN_EXPERIMENT_NAME = experiment_name
         self.PROV_JSON_NAME = self.CLEAN_EXPERIMENT_NAME + f"_GR{self.global_rank}" if self.global_rank else experiment_name + f"_GR0"
@@ -96,6 +111,8 @@ class Prov4MLData:
         self.metrics_file_type = metrics_file_type
         self.use_compressor = use_compressor
         self.csv_separator = csv_separator
+        self.codecarbon_is_disabled = disable_codecarbon
+        self.source_code_required = False
 
         self._init_root_context()
 
@@ -107,291 +124,220 @@ class Prov4MLData:
         os.makedirs(self.ARTIFACTS_DIR, exist_ok=True)
         os.makedirs(self.METRIC_DIR, exist_ok=True)
 
+    def _add_ctx(self, rootstr : str, ctx : str, source : Optional[str] = None):
+        rootstr = self._format_activity_name(rootstr)
+        if source is not None: 
+            src_context_name = self._format_activity_name(context=ctx, source=None)
+            maybe_src_context, created = get_or_create_activity(self.root_provenance_doc, src_context_name)
+            if created: 
+                maybe_src_context.wasInformedBy(rootstr)
 
-    def _add_ctx(self, rootContext, ctx):
-        c = self.root_provenance_doc.activity("context:"+ str(ctx))
-        c.wasInformedBy(rootContext)
-        c.add_attributes({f'{self.PROV_PREFIX}:level':1})
+        context_name = self._format_activity_name(context=ctx, source=source)
+        c, created = get_or_create_activity(self.root_provenance_doc, context_name)
+        if created:         
+            c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{get_time()}^^xsd:dateTime"})
+            if source is not None: 
+                c.wasInformedBy(maybe_src_context)
+            else: 
+                c.wasInformedBy(rootstr)
+        return c
+
+    def _set_ctx_or_default(self, ctx : str): 
+        return ctx or self.PROV_JSON_NAME
 
     def _init_root_context(self): 
         self.root_provenance_doc = prov.ProvDocument()
-        self.root_provenance_doc.add_namespace('context', 'context')
-        self.root_provenance_doc.add_namespace(self.PROV_PREFIX, self.PROV_PREFIX)
+        self.root_provenance_doc.add_namespace(self.yProv_PREFIX, "https://github.com/HPCI-Lab/yProv4ML")
         self.root_provenance_doc.set_default_namespace(self.PROV_JSON_NAME)
-        # self.root_provenance_doc.set_default_namespace(self.USER_NAMESPACE)
-        self.root_provenance_doc.add_namespace('prov','http://www.w3.org/ns/prov#')
-        self.root_provenance_doc.add_namespace('xsd','http://www.w3.org/2000/10/XMLSchema#')
-        self.root_provenance_doc.add_namespace('prov-ml', 'prov-ml')
-        # self.provDoc.add_namespace(name,name)
+        self.root_provenance_doc.add_namespace(self.PROV_PREFIX, "http://www.w3.org/ns/prov#")
+        self.root_provenance_doc.add_namespace(self.XSD_PREFIX,'http://www.w3.org/2000/10/XMLSchema#')
+        self.root_provenance_doc.add_namespace(self.PROVML_PREFIX, 'prov-ml')
+        self.root_provenance_doc.add_namespace(self.RDF_PREFIX, 'http://purl.org/dc/terms/')
 
-        user_ag = self.root_provenance_doc.agent(f'{self.PROV_PREFIX}:{gt.getuser()}')
-        rootContext = self.root_provenance_doc.activity("context:"+ self.PROV_JSON_NAME)
-        rootContext.add_attributes({
-            f'{self.PROV_PREFIX}:level':0, 
-            f"{self.PROV_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
-            f"{self.PROV_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
-            f"{self.PROV_PREFIX}:experiment_dir":self.EXPERIMENT_DIR,
-            f"{self.PROV_PREFIX}:experiment_name":self.PROV_JSON_NAME,
-            f"{self.PROV_PREFIX}:run_id":self.RUN_ID,
-            f"{self.PROV_PREFIX}:python_version":str(sys.version), 
+        user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
+        rootstr, _ = get_or_create_activity(self.root_provenance_doc, self.PROV_JSON_NAME)
+        rootstr.add_attributes({
+            f"{self.yProv_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
+            f"{self.yProv_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
+            f"{self.yProv_PREFIX}:experiment_dir":self.EXPERIMENT_DIR,
+            f"{self.yProv_PREFIX}:experiment_name":self.PROV_JSON_NAME,
+            f"{self.yProv_PREFIX}:run_id":self.RUN_ID,
+            f"{self.yProv_PREFIX}:python_version":str(sys.version), 
+            f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
         })
-        rootContext.wasAssociatedWith(user_ag)
-        self._add_ctx(rootContext, Context.TRAINING)
-        self._add_ctx(rootContext, Context.VALIDATION)
-        self._add_ctx(rootContext, Context.TESTING)
-        self._add_ctx(rootContext, Context.DATASETS)
-        self._add_ctx(rootContext, Context.MODELS)
+        rootstr.wasAssociatedWith(user_ag)
 
         global_rank = get_global_rank()
         runtime_type = get_runtime_type()
         if runtime_type == "slurm":
             node_rank = os.getenv("SLURM_NODEID", None)
             local_rank = os.getenv("SLURM_LOCALID", None) 
-            rootContext.add_attributes({
-                f"{self.PROV_PREFIX}:global_rank": global_rank,
-                f"{self.PROV_PREFIX}:local_rank": local_rank,
-                f"{self.PROV_PREFIX}:node_rank": node_rank,
+            rootstr.add_attributes({
+                f"{self.yProv_PREFIX}:global_rank": str(global_rank),
+                f"{self.yProv_PREFIX}:local_rank":str(local_rank),
+                f"{self.yProv_PREFIX}:node_rank":str(node_rank),
             })
         elif runtime_type == "single_core":
-            rootContext.add_attributes({
-                f"{self.PROV_PREFIX}:global_rank": global_rank
+            rootstr.add_attributes({
+                f"{self.yProv_PREFIX}:global_rank":str(global_rank)
             })
 
+        rootstr.add_attributes({
+            f"{self.yProv_PREFIX}:runtime_type":str(runtime_type),
+            f"{self.yProv_PREFIX}:operating_system":str(platform.system()),
+            f"{self.yProv_PREFIX}:release":str(platform.release()),
+            f"{self.yProv_PREFIX}:processor":str(platform.processor()),
+            f"{self.yProv_PREFIX}:machine":str(platform.machine()),
+        })
 
-        
-    def _log_input(self, path : str, context : Context, attributes : dict={}) -> prov.ProvEntity:
+        # self._add_ctx(self.PROV_JSON_NAME, self.PROV_JSON_NAME, 'std.time')
+
+        rootstr.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{get_time()}^^xsd:dateTime"})
+
+        # def _log_execution_start_time() -> None:
+#     PROV4ML_DATA.add_parameter("startedAtTime", time_utils.get_time(), source='std.time', is_input=False)
+
+# def _log_execution_end_time() -> None:
+#     PROV4ML_DATA.add_parameter("endedAtTime", time_utils.get_time(), source='std.time', is_input=False)
+
+
+    def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
+        context = self._set_ctx_or_default(context)
+        return f"{(f"{source}//" if source else "")}{context}"
+
+    def _format_artifact_name(self, label : str, context : Optional[str] = None, source: Optional[str]=None): 
+        context = self._set_ctx_or_default(context)
+        return f"{(f"{source}//" if source else "")}{label}//{context}"
+
+    def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity = self.root_provenance_doc.entity(path, attributes)
-        activity = get_activity(self.root_provenance_doc,"context:"+str(context))
+        activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
         activity.used(entity)
         return entity
     
-    def _log_output(self, path : str, context : Context, attributes : dict={}) -> prov.ProvEntity:
+    def _log_output(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity= self.root_provenance_doc.entity(path, attributes)
-        activity = get_activity(self.root_provenance_doc,"context:"+str(context))
+        activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
         entity.wasGeneratedBy(activity)
         return entity
     
-    def _get_git_revision_hash() -> str:
-        return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    def request_source_code(self): 
+        self.source_code_required = True
 
-    def _get_git_remote_url() -> Optional[str]:
-        try:
-            remote_url = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url'], stderr=subprocess.DEVNULL).strip().decode()
-            return remote_url
-        except subprocess.CalledProcessError:
-            print("> get_git_remote_url() Repository not found")
-            return None  # No remote found
+    def add_source_code(self): 
+        repo = _get_git_remote_url()
+        if repo is not None:
+            commit_hash = _get_git_revision_hash()
+            self.add_parameter("source_code", f"{repo}/{commit_hash}")
+        
+        paths = _get_source_files()
+        for path in paths: 
+            os.makedirs(os.path.join(self.ARTIFACTS_DIR, "src"), exist_ok=True)
+            self.add_artifact(path, path, log_copy_in_prov_directory=True, log_copy_subdirectory="src", is_model=False, is_input=True)
 
-    def add_source_code(self, path: str): 
-        if path is None:
-            repo = _get_git_remote_url()
-            if repo is not None:
-                commit_hash = _get_git_revision_hash()
-                log_param("source_code", os.path.join(repo, commit_hash))
-        else:
-            p = Path(path)
-            if p.is_file():
-                self.add_artifact(p.name.replace(".py", ""), str(p), log_copy_in_prov_directory=True, is_model=False, is_input=True)
-                self.add_parameter("source_code", os.path.join(self.ARTIFACTS_DIR, p.name))
-            else:
-                self.add_artifact("source_code", str(p), log_copy_in_prov_directory=True, is_model=False, is_input=True)
-                self.add_parameter("source_code", os.path.join(self.ARTIFACTS_DIR, "source_code"))
-
-
-    def add_context(self, context : str, is_subcontext_of: Optional[Context] = None):     
-        is_subcontext_of = str(is_subcontext_of).split(".")[-1]
-
-        extend_enum(Context, context, str(context))
-        new_context = create_activity(self.root_provenance_doc,'context:'+ str(getattr(Context, context)))
-
-        if is_subcontext_of is not None:
-            if not hasattr(Context, is_subcontext_of): 
-                raise Exception(f"{is_subcontext_of} not found as a valid Context")
-            parent_context = get_activity(self.root_provenance_doc,'context:' + str(getattr(Context, is_subcontext_of)))
-        else: 
-            parent_context = get_activity(self.root_provenance_doc,'context:'+ str(Context.EXPERIMENT))
-
-        level=list(parent_context.get_attribute(f'{self.PROV_PREFIX}:level'))[0]
-        new_context.wasInformedBy(parent_context)
-        new_context.add_attributes({f'{self.PROV_PREFIX}:level':level+1})
-
-    def add_metric(
-        self, 
-        metric: str, 
-        value: Any, 
-        step: Optional[int] = None, 
-        context: Optional[Any] = None, 
-        source: Optional[LoggingItemKind] = None, 
-    ) -> None:
-        if not self.is_collecting: return
-
-        if context is None: context = self.PROV_JSON_NAME
-        if step is None: step = 0
+    def add_metric(self, metric: str, value: Any, step: int = 0, context: Optional[Any] = None, source: Optional[str] = None, timestamp: int = 0) -> None:
+        context = self._set_ctx_or_default(context)
 
         if (metric, context) not in self.metrics:
             self.metrics[(metric, context)] = MetricInfo(metric, context, source=source, use_compressor=self.use_compressor)
         
-        self.metrics[(metric, context)].add_metric(value, step, funcs.get_current_time_millis())
+        self.metrics[(metric, context)].add_metric(value, step, timestamp)
 
         total_metrics_values = self.metrics[(metric, context)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
             self.save_metric_to_file(self.metrics[(metric, context)])
 
-    def add_parameter(
-            self, 
-            parameter_name: str, 
-            parameter_value: Any, 
-            context : Optional[Context] = None, 
-        ) -> None:
-        """
-        Adds a parameter to the provenance data.
+    def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input : bool = True) -> None:
+        context = self._set_ctx_or_default(context)
 
-        Parameters:
-        -----------
-        parameter : str
-            The name of the parameter to add.
-        value : Any
-            The value of the parameter to add.
-
-        Returns:
-        --------
-        None
-        """
-        if not self.is_collecting: return
-
-        if context is None: 
-            context = self.PROV_JSON_NAME
-
-        current_activity = get_activity(self.root_provenance_doc,"context:"+ str(context))
-
-        SUPPORTED_TYPES = [int, float, tuple, str, bool]
-        if type(parameter_value) in SUPPORTED_TYPES: 
-            current_activity.add_attributes({
-                f"{self.PROV_PREFIX}:{parameter_name}": parameter_value
+        if is_input: 
+            e = self._log_input(parameter_name, context, source, {
+                f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
             })
         else: 
-            current_activity.add_attributes({
-                f"{self.PROV_PREFIX}:{parameter_name}": str({
-                    "$": str(parameter_value), 
-                    "type": type(parameter_value).__name__, 
-                })
-            })
+            e = self._log_output(parameter_name, context, source, {})
+
+        e.add_attributes({
+            f"{self.PROV_PREFIX}:label": str(parameter_name),
+            f"{self.PROV_PREFIX}:value": str(parameter_value),
+        })
+
+    def _log_artifact_copy(self, artifact_path_src : str, artifact_path_dst : str, is_input : bool, is_model : bool, context : str, source : str): 
+        try: 
+            path = Path(artifact_path_src)
+        except: 
+            Exception(f">_log_artifact_copy: log_copy_in_prov_directory was True but value is not a valid Path: {artifact_path_src}, {artifact_path_dst}")
+        
+        newart_path = os.path.join(self.ARTIFACTS_DIR, artifact_path_dst)
+        if path.is_file():
+            os.makedirs(os.path.dirname(newart_path), exist_ok=True)
+            try: 
+                shutil.copy(path, newart_path)
+            except shutil.SameFileError: 
+                pass
+
+        else:  
+            try: 
+                shutil.copytree(path, newart_path)
+            except shutil.SameFileError: 
+                pass
+
+        original = self.add_artifact("Original_" + path.name, str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input, source=source, context=context)
+        copied = self.add_artifact(path.name, newart_path, log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input, source=source, context=context)
+        copied.wasDerivedFrom(original)
+        return copied
+
 
     def add_artifact(
         self, 
         artifact_name: str, 
         artifact_path: str, 
-        step: Optional[int] = None, 
+        step: int = 0, 
         context: Optional[Any] = None,
+        source: Optional[str] = None,
         is_input : bool = False, 
         log_copy_in_prov_directory : bool = True, 
-        is_model = False, 
+        log_copy_subdirectory : Optional[str] = None, 
+        is_model : bool = False, 
+        attributes : dict = {}
     ) -> prov.ProvEntity:
-        if not self.is_collecting: return
-
-        if context is None: 
-            context = self.PROV_JSON_NAME
-
-        if not isinstance(artifact_path, str): 
-            print(artifact_path)
-            raise AttributeError(f">add_artifact({artifact_path}): the parameter \"artifact_path\" has to be a string")
+        context = self._set_ctx_or_default(context)
 
         if log_copy_in_prov_directory: 
-            try: 
-                path = Path(artifact_path)
+            new_path = os.path.join(log_copy_subdirectory, artifact_path) if log_copy_subdirectory else artifact_path
+            return self._log_artifact_copy(artifact_path, new_path, is_input, is_model, context, source)
 
-                # create original artefact
-                original = self.add_artifact(f"original_{path.name}", str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input)
-                copied = self.add_artifact(f"{path.name}", os.path.join(self.ARTIFACTS_DIR, path.name), log_copy_in_prov_directory=False, is_model=is_model, is_input=True)
-                copied.wasDerivedFrom(original)
+        artifact_name = self._format_artifact_name(artifact_name, context, source)
+        self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)
+        local_attrs = attributes.copy()
+        if f'{self.PROV_PREFIX}:label' not in local_attrs.keys(): 
+            local_attrs[f'{self.PROV_PREFIX}:label'] = artifact_name
+        if f'{self.RDF_PREFIX}:identifier' not in local_attrs.keys(): 
+            local_attrs[f'{self.RDF_PREFIX}:identifier'] = artifact_path
+        if f'{self.PROV_PREFIX}:generatedAtTime' not in local_attrs.keys(): 
+            local_attrs[f'{self.PROV_PREFIX}:generatedAtTime'] = get_time()
 
-                newart_path = os.path.join(self.ARTIFACTS_DIR, path.name)
-                if path.is_file():
-                    shutil.copy(path, newart_path)
-                else:  
-                    shutil.copytree(path, newart_path)
-                artifact_path = newart_path
+        if is_model: 
+            local_attrs.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
 
-                return copied
-            except: 
-                Exception(f">add_artifact: log_copy_in_prov_directory was True but value is not a valid Path: {artifact_path}")
-
-        self.artifacts[(f"{self.PROV_PREFIX}:{artifact_name}", context)] = ArtifactInfo(f"{self.PROV_PREFIX}:{artifact_name}", artifact_path, step, context=context, is_model=is_model)
-
-        attributes = {
-            f'{self.PROV_PREFIX}:label': artifact_name, 
-            f'{self.PROV_PREFIX}:path': artifact_path,
-        }
+        if artifact_path: 
+            file_size = os.path.getsize(artifact_path)# / (1024*1024)
+            local_attrs.setdefault(f'{self.yProv_PREFIX}:file_size', f"{file_size}^^xsd:double")
 
         if is_input: 
-            attributes.setdefault(f'{self.PROV_PREFIX}:role','input')
-            return self._log_input(f"{self.PROV_PREFIX}:{artifact_name}", context, attributes)
+            local_attrs.setdefault(f'{self.PROV_PREFIX}:role','input')
+            e = self._log_input(artifact_name, context, source, local_attrs)
+            return e
+
         else: 
-            attributes.setdefault(f'{self.PROV_PREFIX}:role', 'output')
-            return self._log_output(f"{self.PROV_PREFIX}:{artifact_name}", context, attributes)
+            local_attrs.setdefault(f'{self.PROV_PREFIX}:role', 'output')
+            return self._log_output(artifact_name, context, source, local_attrs)
 
-    def get_artifacts(self) -> List[ArtifactInfo]:
-        """
-        Returns a list of all artifacts.
-
-        Returns:
-            List[ArtifactInfo]: A list of artifact information objects.
-        """
-        if not self.is_collecting: return
-
-        return list(self.artifacts.values())
-    
-    def get_model_versions(self) -> List[ArtifactInfo]:
-        """
-        Returns a list of all model version artifacts.
-
-        Returns:
-            List[ArtifactInfo]: A list of model version artifact information objects.
-        """
-        if not self.is_collecting: return
-
-        return [artifact for artifact in self.artifacts.values() if artifact.is_model_version]
-    
-    def get_final_model(self) -> Optional[ArtifactInfo]:
-        """
-        Returns the most recent model version artifact.
-
-        Returns:
-            Optional[ArtifactInfo]: The most recent model version artifact information object, or None if no model versions exist.
-        """
-        if not self.is_collecting: return
-
-        model_versions = self.get_model_versions()
-        if model_versions:
-            return model_versions[-1]
-        return None
 
     def save_metric_to_file(self, metric: MetricInfo) -> None:
-        """
-        Saves a metric to a temporary file.
-
-        Parameters:
-        --------
-            metric (MetricInfo): The metric to save.
-        
-        Returns:
-        --------
-        None
-        """
-        if not self.is_collecting: return
-        
         metric.save_to_file(self.METRIC_DIR, file_type=self.metrics_file_type, process=self.global_rank, csv_separator=self.csv_separator)
 
     def save_all_metrics(self) -> None:
-        """
-        Saves all tracked metrics to temporary files.
-
-        Returns:
-        --------
-        None
-        """
-        if not self.is_collecting: return
-
         for metric in self.metrics.values():
             self.save_metric_to_file(metric)
 
