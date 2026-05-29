@@ -1,4 +1,7 @@
 
+def _log_param_value(v, type):
+    return str({"$": v, "type": type}) 
+
 def create_activity(provDoc, record):
     if len(provDoc.get_record(record))>0:
         raise Exception(f">create_activity({record}): a record already exists")

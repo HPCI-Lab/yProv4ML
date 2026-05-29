@@ -15,7 +15,7 @@ from yprov4ml.datamodel.artifact_data import ArtifactInfo
 from yprov4ml.datamodel.metric_data import MetricInfo
 from yprov4ml.datamodel.compressor_type import CompressorType, COMPRESSORS_FOR_ZARR
 from yprov4ml.utils import funcs
-from yprov4ml.utils.prov_utils import get_or_create_activity
+from yprov4ml.utils.prov_utils import get_or_create_activity, _log_param_value
 from yprov4ml.utils.funcs import get_global_rank, get_runtime_type
 from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
 from yprov4ml.utils.time_utils import get_time
@@ -135,7 +135,8 @@ class Prov4MLData:
         context_name = self._format_activity_name(context=ctx, source=source)
         c, created = get_or_create_activity(self.root_provenance_doc, context_name)
         if created:         
-            c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{get_time()}^^xsd:dateTime"})
+            d = {"$": get_time(), "type": "xsd:dateTime"}
+            c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{d}"})
             if source is not None: 
                 c.wasInformedBy(maybe_src_context)
             else: 
@@ -161,7 +162,7 @@ class Prov4MLData:
             f"{self.yProv_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
             f"{self.yProv_PREFIX}:experiment_dir":self.EXPERIMENT_DIR,
             f"{self.yProv_PREFIX}:experiment_name":self.PROV_JSON_NAME,
-            f"{self.yProv_PREFIX}:run_id":self.RUN_ID,
+            f"{self.yProv_PREFIX}:run_id": _log_param_value(self.RUN_ID, "xsd:int"), #self.RUN_ID,
             f"{self.yProv_PREFIX}:python_version":str(sys.version), 
             f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
         })
@@ -173,13 +174,13 @@ class Prov4MLData:
             node_rank = os.getenv("SLURM_NODEID", None)
             local_rank = os.getenv("SLURM_LOCALID", None) 
             rootstr.add_attributes({
-                f"{self.yProv_PREFIX}:global_rank": str(global_rank),
-                f"{self.yProv_PREFIX}:local_rank":str(local_rank),
-                f"{self.yProv_PREFIX}:node_rank":str(node_rank),
+                f"{self.yProv_PREFIX}:global_rank": _log_param_value(global_rank, "xsd:int"),
+                f"{self.yProv_PREFIX}:local_rank": _log_param_value(local_rank, "xsd:int"),
+                f"{self.yProv_PREFIX}:node_rank": _log_param_value(node_rank, "xsd:int"),
             })
         elif runtime_type == "single_core":
             rootstr.add_attributes({
-                f"{self.yProv_PREFIX}:global_rank":str(global_rank)
+                f"{self.yProv_PREFIX}:global_rank":_log_param_value(global_rank, "xsd:int"),
             })
 
         rootstr.add_attributes({
@@ -190,16 +191,7 @@ class Prov4MLData:
             f"{self.yProv_PREFIX}:machine":str(platform.machine()),
         })
 
-        # self._add_ctx(self.PROV_JSON_NAME, self.PROV_JSON_NAME, 'std.time')
-
-        rootstr.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{get_time()}^^xsd:dateTime"})
-
-        # def _log_execution_start_time() -> None:
-#     PROV4ML_DATA.add_parameter("startedAtTime", time_utils.get_time(), source='std.time', is_input=False)
-
-# def _log_execution_end_time() -> None:
-#     PROV4ML_DATA.add_parameter("endedAtTime", time_utils.get_time(), source='std.time', is_input=False)
-
+        rootstr.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": _log_param_value(get_time(), "xsd:dateTime")})
 
     def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
@@ -315,14 +307,14 @@ class Prov4MLData:
         if f'{self.RDF_PREFIX}:identifier' not in local_attrs.keys(): 
             local_attrs[f'{self.RDF_PREFIX}:identifier'] = artifact_path
         if f'{self.PROV_PREFIX}:generatedAtTime' not in local_attrs.keys(): 
-            local_attrs[f'{self.PROV_PREFIX}:generatedAtTime'] = get_time()
+            local_attrs[f'{self.PROV_PREFIX}:generatedAtTime'] = _log_param_value(get_time(), "xsd:dateTime")
 
         if is_model: 
             local_attrs.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
 
         if artifact_path: 
-            file_size = os.path.getsize(artifact_path)# / (1024*1024)
-            local_attrs.setdefault(f'{self.yProv_PREFIX}:file_size', f"{file_size}^^xsd:double")
+            file_size = os.path.getsize(artifact_path)
+            local_attrs.setdefault(f'{self.yProv_PREFIX}:file_size',_log_param_value(file_size, "xsd:int"))
 
         if is_input: 
             local_attrs.setdefault(f'{self.PROV_PREFIX}:role','input')

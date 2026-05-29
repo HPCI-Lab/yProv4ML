@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Subset, Dataset, RandomSampler
 from typing import Any, Optional, Union
 
 from yprov4ml.utils import energy_utils, flops_utils, system_utils, time_utils, funcs
+from yprov4ml.utils.prov_utils import _log_param_value
 from yprov4ml.constants import PROV4ML_DATA, VERBOSE
 
 def log_metric(key: str, value: float, context: Optional[str] = None, step: int = 0, source: Optional[str] = None, timestamp : int = 0) -> None:
@@ -89,9 +90,10 @@ def log_model(
         source : Optional[str] = None, 
         log_model_info: bool = True, 
         log_model_layers : bool = False,
+        log_copy_in_prov_directory : bool = True, 
         is_input: bool = False,
     ) -> None:      
-    e = save_model_version(model_name, model, context=context, source=source, incremental=False, is_input=is_input)
+    e = save_model_version(model_name, model, context=context, source=source, incremental=False, is_input=is_input, log_copy_in_prov_directory=log_copy_in_prov_directory)
 
     if log_model_info:
         d = _get_model_memory_footprint(model_name, model)
@@ -167,6 +169,7 @@ def save_model_version(
         step: Optional[int] = None, 
         incremental : bool = True, 
         is_input : bool =False, 
+        log_copy_in_prov_directory : bool = True, 
     ) -> prov.ProvEntity:
 
     if incremental: 
@@ -180,7 +183,7 @@ def save_model_version(
         return log_artifact(
             f"{model_name}_{num_files}", file_name, 
             context=context, source=source, step=step, 
-            log_copy_in_prov_directory=True, 
+            log_copy_in_prov_directory=log_copy_in_prov_directory, 
             log_copy_subdirectory=model_name, 
             is_model=True, is_input=is_input, 
         )
@@ -190,7 +193,7 @@ def save_model_version(
         return log_artifact(
             model_name, file_name, 
             context=context, source=source, step=step, 
-            log_copy_in_prov_directory=True, 
+            log_copy_in_prov_directory=log_copy_in_prov_directory, 
             log_copy_subdirectory=model_name, 
             is_model=True, is_input=is_input
         )
@@ -212,12 +215,12 @@ def log_dataset(
         dataset = dl.dataset
         attrs = {
             f"prov:type": "provml:Dataset", 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_batch_size": dl.batch_size, 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_num_workers": dl.num_workers, 
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_batch_size": _log_param_value(dl.batch_size, "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_num_workers": _log_param_value(dl.num_workers, "xsd:int"), 
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": len(dl),
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": len(dataset) * dl.batch_size, 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_batches": len(dataset), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": _log_param_value(len(dl), "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": _log_param_value(len(dataset) * dl.batch_size, "xsd:int"),
+            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_batches": _log_param_value(len(dataset), "xsd:int"), 
 
         }
         e.add_attributes(attrs)
@@ -225,11 +228,11 @@ def log_dataset(
     elif isinstance(dataset, Subset):
         dl = dataset
         dataset = dl.dataset
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": len(dl)})
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": len(dataset)})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": _log_param_value(len(dl), "xsd:int")})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": _log_param_value(len(dataset), "xsd:int")})
         
     elif isinstance(dataset, Dataset): 
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": len(dataset)})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": _log_param_value(len(dataset), "xsd:int")})
 
 def log_execution_command(cmd: str, path : str) -> None:
     path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)
