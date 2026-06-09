@@ -63,3 +63,9 @@ def end_run(create_graph: Optional[bool] = False, create_svg: Optional[bool] = F
 
     if crate_ro_crate: 
         create_rocrate_in_dir(PROV4ML_DATA.EXPERIMENT_DIR)
+
+def get_artifacts_dir(): 
+    return PROV4ML_DATA.ARTIFACTS_DIR
+
+def get_run_dir(): 
+    return PROV4ML_DATA.EXPERIMENT_DIR
