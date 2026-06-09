@@ -10,7 +10,7 @@ include = [
 
 [project]
 name = "yprov4ml"
-version = "3.2.0"
+version = "3.2.1"
 authors = [
   { name="Gabriele Padovani", email="gabriele.padovani@unitn.it" },
 ]
@@ -23,7 +23,6 @@ classifiers = [
 ]
 license = {file = "LICENSE"}
 dependencies = [
-    "codecarbon >= 2.8",
     "fvcore",
     "lightning",
     "netCDF4",
