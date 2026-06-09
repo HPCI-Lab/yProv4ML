@@ -93,7 +93,7 @@ for epoch in range(EPOCHS):
         # log system and carbon metrics (once per epoch), as well as the execution time
         # yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
         # yprov4ml.log_metric("Indices", indices.tolist(), context="Training", step=epoch)
-        yprov4ml.log_carbon_metrics("Training", step=epoch)
+        # yprov4ml.log_carbon_metrics("Training", step=epoch)
         yprov4ml.log_system_metrics("Training", step=epoch)
         # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
 

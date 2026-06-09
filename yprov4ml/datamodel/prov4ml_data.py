@@ -19,6 +19,7 @@ from yprov4ml.utils.prov_utils import get_or_create_activity, _log_param_value
 from yprov4ml.utils.funcs import get_global_rank, get_runtime_type
 from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
 from yprov4ml.utils.time_utils import get_time
+from yprov4ml.utils.system_utils import Tracker
 
 class Prov4MLData:
     def __init__(self) -> None:
@@ -54,7 +55,6 @@ class Prov4MLData:
             collect_all_processes: bool = False, 
             save_after_n_logs: int = 100, 
             rank: Optional[int] = None, 
-            disable_codecarbon : bool = False,
             metrics_file_type: str = "nc",
             csv_separator:str = ",", 
             use_compressor: Optional[Union[CompressorType, bool]] = None,
@@ -111,7 +111,7 @@ class Prov4MLData:
         self.metrics_file_type = metrics_file_type
         self.use_compressor = use_compressor
         self.csv_separator = csv_separator
-        self.codecarbon_is_disabled = disable_codecarbon
+        self.tracker = Tracker()
         self.source_code_required = False
 
         self._init_root_context()

@@ -5,7 +5,7 @@ from typing import List, Tuple, Literal
 
 from yprov4ml.logging_aux import *
 from yprov4ml.loggers.itwinai_logger import Logger
-from yprov4ml.yprov4ml import *
+from yprov4ml.functs import *
 
 class ProvMLItwinAILogger(Logger):
     """
