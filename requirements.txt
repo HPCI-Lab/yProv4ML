@@ -1,4 +1,3 @@
-codecarbon
 fvcore
 lightning
 netCDF4==1.7.2

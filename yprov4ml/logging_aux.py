@@ -8,7 +8,7 @@ import prov.model as prov
 from torch.utils.data import DataLoader, Subset, Dataset, RandomSampler
 from typing import Any, Optional, Union
 
-from yprov4ml.utils import energy_utils, flops_utils, system_utils, time_utils, funcs
+from yprov4ml.utils import flops_utils, time_utils, funcs
 from yprov4ml.utils.prov_utils import _log_param_value
 from yprov4ml.constants import PROV4ML_DATA, VERBOSE
 
@@ -110,33 +110,25 @@ def log_flops_per_batch(label: str, model: Any, batch: Any, context: Optional[st
     return log_metric(label, flops_utils.get_flops_per_batch(model, batch), context, step=step, source='fvcore.nn.FlopCountAnalysis')
 
 def log_system_metrics(context: Optional[str] = None, step: int = 0) -> None:
-    data, src = system_utils.get_bulk_stats()
+    data = PROV4ML_DATA.tracker.checkpoint()
+    src = data["hardware_access_mode"]
     timestamp = funcs.get_current_time_millis()
-    log_metric("cpu_usage", data["cpu_usage"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("memory_usage", data["memory_usage"], context, step=step, source=src,timestamp=timestamp)
-    log_metric("disk_usage", data["disk_usage"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_memory_power", data["gpu_memory_power"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_memory_usage", data["gpu_memory_usage"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_usage", data["gpu_usage"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_power_usage", data["gpu_power_usage"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_temperature", data["gpu_temperature"], context, step=step, source=src, timestamp=timestamp)
-
-def log_carbon_metrics(context: Optional[str] = None, step: int = 0): 
-    if PROV4ML_DATA.codecarbon_is_disabled: 
-        raise Exception(">log_carbon_metrics(): The log_carbon_metrics function cannot be called if disable_codecarbon=True")
-
-    emissions = energy_utils.stop_carbon_tracked_block()
-    timestamp = funcs.get_current_time_millis()
-   
-    log_metric("emissions", emissions.energy_consumed, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("emissions_rate", emissions.emissions_rate, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("cpu_power", emissions.cpu_power, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("gpu_power", emissions.gpu_power, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("ram_power", emissions.ram_power, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("cpu_energy", emissions.cpu_energy, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("gpu_energy", emissions.gpu_energy, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("ram_energy", emissions.ram_energy, context, step=step, source='codecarbon', timestamp=timestamp)
-    log_metric("energy_consumed", emissions.energy_consumed, context, step=step, source='codecarbon', timestamp=timestamp)
+    log_metric("cpu_usage_pct", data["cpu_utilization_pct"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("cpu_power", data["cpu_power_watts"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("cpu_energy", data["cpu_energy_delta_joules"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("ram_usage_pct", data["ram_used_pct"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("ram_usage_gb", data["ram_used_gb"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("ram_power", data["ram_power_watts"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("ram_energy", data["ram_energy_delta_joules"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("disk_usage_gb", data["disk_used_gb"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("disk_usage_pct", data["disk_used_pct"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_usage_pct", data["gpu_utilization_pct"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_power", data["gpu_power_watts"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_energy", data["gpu_energy_delta_joules"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_memory_usage_gb", data["gpu_memory_used_gb"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_memory_usage_pct", data["gpu_memory_used_pct"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_memory_power", data["gpu_memory_power_watts"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("gpu_temperature_c", data["gpu_temperature_c"], context, step=step, source=src, timestamp=timestamp)
 
 def log_artifact(
         artifact_name : str, 
