@@ -195,11 +195,13 @@ class Prov4MLData:
 
     def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
-        return f"{(f"{source}//" if source else "")}{context}"
+        source = source + "//" if source else ""
+        return f"{source}{context}"
 
     def _format_artifact_name(self, label : str, context : Optional[str] = None, source: Optional[str]=None): 
         context = self._set_ctx_or_default(context)
-        return f"{(f"{source}//" if source else "")}{label}//{context}"
+        source = source + "//" if source else ""
+        return f"{source}{label}//{context}"
 
     def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
         entity = self.root_provenance_doc.entity(path, attributes)
