@@ -5,7 +5,7 @@ from yprov4ml.utils import getters
 
 if __name__ == "__main__":
 
-    path = sys.argv[1] if len(sys.argv) > 1 else "yProv4ML/prov/example_4/prov_example_GR0_4.json"
+    path = sys.argv[1] if len(sys.argv) > 1 else "prov/example_0/prov_example_GR0_0.json"
     # 1. list_activities
     print("=== Activities ===")
     for a in getters.list_activities(path):
@@ -20,8 +20,8 @@ if __name__ == "__main__":
 
     # 3. get_parameter
     print("=== Parameters ===")
-    print("run_id          :", getters.get_parameter(path, "example_GR0_4", "yprov:run_id"))
-    print("runtime_type    :", getters.get_parameter(path, "example_GR0_4", "yprov:runtime_type"))
+    print("run_id          :", getters.get_parameter(path, "example_GR0_0", "yprov:run_id"))
+    print("runtime_type    :", getters.get_parameter(path, "example_GR0_0", "yprov:runtime_type"))
     print("batch_size      :", getters.get_parameter(path, "train_dataset//Training", "yprov:train_dataset_stat_batch_size"))
     print("Training start  :", getters.get_parameter(path, "Training", "prov:startedAtTime"))
     print()
@@ -36,3 +36,7 @@ if __name__ == "__main__":
     df = getters.list_metrics(path, context="Training")
     print(df[["label", "context", "source", "yprov:file_size"]].to_string())
     print()
+
+    print("=== Metric DataFrame (Training) ===")
+    df = getters.get_metric(path, name="MSE", context="Training")
+    print(df)

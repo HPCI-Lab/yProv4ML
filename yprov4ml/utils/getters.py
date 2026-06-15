@@ -154,7 +154,8 @@ def list_metric_paths(data : dict | str, context: str | None = None, source : st
 
 def get_metric(data : dict | str, name: str | None = None, context: str | None = None, source : str | None = None): 
     _doc = _get_source(data)
-    for name, attrs in _doc.get("entity", {}).items():
+    name = f"{name}_{context}_{source}"
+    for _, attrs in _doc.get("entity", {}).items():
         if not _is_metric(attrs):
             continue
         if context is not None and attrs.get("yprov:context") != context:
@@ -162,7 +163,7 @@ def get_metric(data : dict | str, name: str | None = None, context: str | None =
         if source is not None and attrs.get("yprov:source") != source:
             continue
         csv_id = attrs.get("dcterms:identifier", "")
-        if name == csv_id: 
+        if name in csv_id: 
             return _open_file(csv_id)
 
 
