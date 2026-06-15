@@ -38,5 +38,5 @@ if __name__ == "__main__":
     print()
 
     print("=== Metric DataFrame (Training) ===")
-    df = getters.get_metric(path, name="MSE", context="Training")
+    df = getters.get_metric(path, name="MSELoss", context="Training", source="MSELoss")
     print(df)

@@ -1,6 +1,3 @@
-import time
-start_time = time.time()
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -89,7 +86,7 @@ for epoch in range(EPOCHS):
         losses.append(loss.item())
     
         # log system and carbon metrics (once per epoch), as well as the execution time
-        # yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
+        yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
         # yprov4ml.log_metric("Indices", indices.tolist(), context="Training", step=epoch)
         # yprov4ml.log_carbon_metrics("Training", step=epoch)
         yprov4ml.log_system_metrics("Training", step=epoch)
@@ -115,6 +112,3 @@ yprov4ml.log_model("mnist_model_final_out", mnist_model, context="TrainingButDif
 yprov4ml.log_model("mnist_model_final_in", mnist_model, context="TrainingButDifferent2", log_model_layers=True, is_input=True)
 
 yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)
-
-end_time = time.time()
-print(end_time - start_time)
