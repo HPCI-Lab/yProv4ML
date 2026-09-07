@@ -5,14 +5,16 @@ from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
+import sys
+sys.path.append("yProv4ML")
 import yprov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 20
+EPOCHS = 10
 DEVICE = "mps"
 
-COMP = False#yprov4ml.CompressorType.LZ4
+COMP = yprov4ml.CompressorType.LZ4
 yprov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="example", 
@@ -24,8 +26,8 @@ yprov4ml.start_run(
     use_compressor=COMP, 
 )
 
-yprov4ml.log_source_code()
-yprov4ml.log_execution_command(cmd="python", path="prov4ml_torch.py")
+# yprov4ml.log_source_code()
+# yprov4ml.log_execution_command(cmd="python", path="prov4ml_torch.py")
 
 class MNISTModel(nn.Module):
     def __init__(self):
@@ -55,12 +57,12 @@ mnist_model = yprov4ml.WeightDistributionTrackedModel("mnist_model", mnist_model
 yprov4ml.log_model("mnist_model", mnist_model, context="Training")
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
-train_ds = Subset(train_ds, range(BATCH_SIZE*150))
+# train_ds = Subset(train_ds, range(BATCH_SIZE*150))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 yprov4ml.log_dataset("train_dataset", train_loader, context="Training")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
-test_ds = Subset(test_ds, range(BATCH_SIZE*5))
+# test_ds = Subset(test_ds, range(BATCH_SIZE*50))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 yprov4ml.log_dataset("val_dataset", test_loader, context="Validation")
 
@@ -87,12 +89,12 @@ for epoch in range(EPOCHS):
     
         # log system and carbon metrics (once per epoch), as well as the execution time
         yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
-        # yprov4ml.log_metric("Indices", indices.tolist(), context="Training", step=epoch)
+        # yprov4ml.log_metric("Indices", y.flatten().tolist(), context="Training", step=epoch)
         # yprov4ml.log_carbon_metrics("Training", step=epoch)
         yprov4ml.log_system_metrics("Training", step=epoch)
         # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
 
-    yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", step=epoch)
+    # yprov4ml.save_model_version(f"mnist_model_version", mnist_model, "Training", step=epoch)
     mnist_model.log_epoch(epoch)
 
     mnist_model.eval()
@@ -104,11 +106,11 @@ for epoch in range(EPOCHS):
             y2 = F.one_hot(y, 10).float()
             loss = val_loss_fn(y_hat, y2)
 
-        # yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
+            yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
 
 
-yprov4ml.log_model("mnist_model_final_out", mnist_model, context="TrainingButDifferent", log_model_layers=True, is_input=False)
+# yprov4ml.log_model("mnist_model_final_out", mnist_model, context="TrainingButDifferent", log_model_layers=True, is_input=False)
 
-yprov4ml.log_model("mnist_model_final_in", mnist_model, context="TrainingButDifferent2", log_model_layers=True, is_input=True)
+# yprov4ml.log_model("mnist_model_final_in", mnist_model, context="TrainingButDifferent2", log_model_layers=True, is_input=True)
 
 yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)

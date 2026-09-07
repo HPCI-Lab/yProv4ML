@@ -11,6 +11,6 @@ tqdm
 typing_extensions
 rocrate
 prov
-zarr<3
+zarr
 lxml
 rdflib

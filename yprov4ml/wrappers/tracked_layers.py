@@ -86,14 +86,29 @@ class WeightDistributionTrackedModel(nn.Module):
             return
         self.arrays[layer_name] = {}
         for stat in STAT_KEYS:
-            arr = self.store.create_dataset(
-                f"{layer_name}/{stat}",
-                shape=(self.initial_size,),
-                chunks=(self.chunk_size,),
-                dtype=ENCODING_ZARR,
-                overwrite=True,
-                compressor=None,
-            )
+            path = f"{layer_name}/{stat}"
+            
+            if hasattr(self.store, "create_array"):
+                # Zarr v3.0+ API
+                arr = self.store.create_array(
+                    path,
+                    shape=(self.initial_size,),
+                    chunks=(self.chunk_size,),
+                    dtype=ENCODING_ZARR,
+                    overwrite=True,
+                    compressors=None,  # v3 uses plural 'compressors'
+                )
+            else:
+                # Zarr v2.x legacy API
+                arr = self.store.create_dataset(
+                    path,
+                    shape=(self.initial_size,),
+                    chunks=(self.chunk_size,),
+                    dtype=ENCODING_ZARR,
+                    overwrite=True,
+                    compressor=None,   # v2 uses singular 'compressor'
+                )
+                
             self.arrays[layer_name][stat] = arr
         self.writer_ptr[layer_name] = 0
 
