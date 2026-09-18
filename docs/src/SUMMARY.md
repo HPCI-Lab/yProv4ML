@@ -7,7 +7,7 @@
 - [Logging](./logging.md)
 <!-- - [Prov Collection](./prov_collection.md) -->
 - [Metrics](./metrics.md)
-    - [Carbon Metrics](./carbon.md)
+    <!-- - [Carbon Metrics](./carbon.md) -->
     - [System Metrics](./system.md)
     - [Time Metrics](./time.md)
     <!-- - [Registering Metrics](./registering_metrics.md) -->
