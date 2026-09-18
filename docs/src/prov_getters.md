@@ -16,84 +16,96 @@ yProv4ml offers a set of directives to easily extract the information logged fro
 </div>
 
 ```python
+from yprov4ml import (
+    list_activities, 
+    list_entities, 
+    get_parameter, 
+    list_parameters,
+    list_metrics, 
+    list_metric_paths, 
+    get_metric
+)
+
 import json
 data = json.load(open(path_to_prov_json))     
 ```
 
 <hr style="border: 2px solid #009B77; margin: 20px 0;">
-
 ### Utility Functions
 
-```python 
-def get_metrics(data : dict, keyword : Optional[str] = None) -> List[str]
-```
-
-The `get_metrics` function retrieves all available metrics from the provided provjson file. If a keyword is specified, it filters the results to include only metrics that match the keyword.
-
-| Parameter         | Type               | Default | Description |
-|------------------|--------------------|--------------|-------------|
-| `data`          | `pd.DataFrame`      | Required     | The dataset containing metrics. |
-| `keyword`       | `Optional[str]`     | `None`       | If provided, filters the metrics to only those containing this keyword. |
-
-<!-- ```python 
-def get_metric(
-    data : pd.DataFrame, 
-    metric : str, 
-    time_in_sec : bool = False, 
-    time_incremental : bool = False, 
-    sort_by : Optional[str] = None, 
-    start_at : Optional[int] = None,
-    end_at : Optional[int] = None
-) -> pd.DataFrame
-```
-
-The `get_metric` function extracts a specific metric from the dataset, with additional options for formatting and filtering:
-- It allows conversion of time-based metrics to seconds.
-- It can return time-incremental values instead of absolute values.
-- Sorting and range selection (start and end points) can be applied.
-
-
-| Parameter         | Type               | Default | Description |
-|------------------|--------------------|--------------|-------------|
-| `data`          | `pd.DataFrame`      | Required     | The dataset containing metrics. |
-| `metric`        | `str`               | Required     | The specific metric to retrieve. |
-| `time_in_sec`   | `bool`              | `False`      | If `True`, converts time-based metrics to seconds. |
-| `time_incremental` | `bool`           | `False`      | If `True`, returns incremental values instead of absolute values. |
-| `sort_by`       | `Optional[str]`     | `None`       | Sorts the metric values by the specified column. |
-| `start_at`      | `Optional[int]`     | `None`       | Filters data to start at this index. |
-| `end_at`        | `Optional[int]`     | `None`       | Filters data to end at this index. |
-
-The return value for this function is a dataframe containing the following columns: 
-- `value`: contains the metric items 
-- `epoch`: contains the corresponding epochs
-- `time`: contains the corresponding time steps -->
+#### Listing Functions
 
 ```python 
-def get_param(data : dict, param : str) -> Any
+def list_activities(source : dict | str) -> list[str]
+def list_entities(source : dict | str, entity_type: str | None = None) -> list[str]
 ```
 
-Retrieves a single value corresponding to the given param.
-This function is useful when the parameter is expected to have a unique value and the label exactly matches in the prov json file.
+- **`list_activities`**: Retrieves a list of all activity names stored in the provenance document.
+- **`list_entities`**: Retrieves a list of entity names from the provenance document. Can be filtered by passing an explicit `entity_type` (e.g., `"provml:Metric"`).
+
+---
+
+#### Parameter Retrieval
 
 ```python 
-def get_params(data : dict, param : str) -> List[Any]
+def get_parameter(source : dict | str, name: str, param: str, unwrap: bool = True) -> Any
 ```
 
-Retrieves a list of values for the given param.
-This is useful when multiple values exist for the parameter (for example when marked with an incremental ID) in the provenance json file, allowing further analysis or aggregation.
+Retrieves a single parameter value associated with a specified activity or entity key name.
 
-| Parameter | Type           | Return Type  | Description |
-|-----------|--------------|--------------|-------------|
-| `data`    | `pd.DataFrame` | - | The dataset containing parameters. |
-| `param`   | `str`         | - | The specific parameter to retrieve. |
-
-<!-- More utility functions are also available: 
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `source` | `dict \| str` | *Required* | Loaded PROV dictionary or file path. |
+| `name` | `str` | *Required* | Name of the activity or entity. |
+| `param` | `str` | *Required* | Specific attribute or parameter key to extract. |
+| `unwrap` | `bool` | `True` | Automatically unwraps PROV typed-literals into native Python values. |
 
 ```python 
-def get_avg_metric(data, metric) -> pd.DataFrame: ...
-def get_sum_metric(data, metric) -> pd.DataFrame: ...
-def get_metric_time(data, metric, time_in_sec=False) -> pd.DataFrame: ...
-``` -->
+def list_parameters(data : dict | str, name: str | None = None, unwrap: bool = True) -> dict[str, Any]
+```
+
+Retrieves a dictionary of key-value parameters. If `name` is omitted, it aggregates parameters across all entities and activities in the file.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `data` | `dict \| str` | *Required* | Loaded PROV dictionary or file path. |
+| `name` | `str \| None` | `None` | Target activity/entity name. If `None`, extracts all available parameters. |
+| `unwrap` | `bool` | `True` | Automatically unwraps PROV typed-literals into native Python values. |
+
+---
+
+#### Metric Management
+
+```python 
+def list_metrics(data : dict | str, context: str | None = None, source: str | None = None) -> pd.DataFrame
+```
+
+Summarizes all metric entities recorded in the provenance JSON into a single Pandas DataFrame with metadata columns (`label`, `context`, `source`, `csv_path`).
+
+```python 
+def list_metric_paths(data : dict | str, context: str | None = None, source : str | None = None, file_type : str | None = None) -> dict[str, str]
+```
+
+Returns a dictionary mapping metric entity identifiers to their underlying dataset file paths.
+
+```python 
+def get_metric(data : dict | str, name: str | None = None, context: str | None = None, source : str | None = None)
+```
+
+Fetches and automatically loads the data object for a metric (named in the format `{name}_{context}_{source}`) using the appropriate reader.
+
+---
+
+#### Project Helpers
+
+```python 
+def list_runs_in_proj(path: str | Path) -> list[Path]
+def list_provjson_in_proj(path : str | Path) -> list[Path]
+```
+
+- **`list_runs_in_proj`**: Returns paths to all run subdirectories found within a given project folder.
+- **`list_provjson_in_proj`**: Searches across run directories to locate all available `.json` provenance files.
+
 
 
 <div style="display: flex; align-items: center; background-color: #ffcc00; color: #333; border: 5px solid #ffcc00; font-weight: bold; border-radius: 5px; position: relative;">

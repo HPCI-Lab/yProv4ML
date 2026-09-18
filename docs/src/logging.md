@@ -1,31 +1,7 @@
 
 # General Logging
 
-When logging parameters and metrics, the user must specify the context of the information. 
-The available contexts are: 
- - `TRAINING`: adds the information to the training context  
- - `VALIDATION`: adds the information to the validation context
- - `TESTING`: adds the information to the testing context
- - `MODELS`: adds the information to the models group
- - `DATASETS`: adds the information to the datasets group
-
-
-The user can easily create new contexts: 
-
-<div style="display: flex; align-items: center; margin: 20px 0;">
-    <hr style="flex-grow: 0.05; border: 2px solid #009B77; margin: 0;">
-    <span style="background: white; padding: 0 10px; font-weight: bold; color: #009B77;">Example:</span>
-    <hr style="flex-grow: 1; border: 2px solid #009B77; margin: 0;">
-</div>
-
-```python
-prov4ml.create_context("TRAINING_LOD2", prov4ml.Context.TRAINING)
-prov4ml.create_context("TRAINING_LOD3", prov4ml.Context.TRAINING_LOD2)
-
-prov4ml.log_param("loss_fn", "MSELoss", prov4ml.Context.TRAINING_LOD2)
-
-<hr style="border: 2px solid #009B77; margin: 20px 0;">
-
+When logging parameters and metrics, the user must specify the context of the information (string indicating, for instance, "Training", "Validation", "Testing"). 
 
 ## Log Parameters
 
@@ -34,8 +10,10 @@ To specify arbitrary training parameters used during the execution of the experi
 ```python
 prov4ml.log_param(
     key: str, 
-    value: str, 
-    context : Optional[Context] = None
+    value: Any, 
+    context : Optional[str] = None, 
+    source : Optional[str] = None, 
+    is_input : Optional[bool] = False
 )
 ```
 
@@ -43,34 +21,9 @@ prov4ml.log_param(
 | :-------- | :------- | :------------------------- |
 | `key` | `string` | **Required**. Name of the parameter |
 | `value` | `string` | **Required**. Value of the parameter |
-| `context` | `Optional[Context]` | **Optional**. Indicates which context to add the parameter to |
-
-
-## Log Metrics
-
-To specify metrics, which can be tracked during the execution of the experiment, the user can call the following function.
-
-```python
-prov4ml.log_metric(
-    key: str, 
-    value: float, 
-    context: Optional[Context] = None, 
-    step: Optional[int] = None, 
-    source: Optional[LoggingItemKind] = None, 
-)
-```
-
-| Parameter | Type     | Description                |
-| :-------- | :------- | :------------------------- |
-| `key` | `string` | **Required**. Name of the metric |
-| `value` | `float` | **Required**. Value of the metric |
-| `context` | `Optional[prov4ml.Context]` | **Required**. Context of the metric |
-| `step` | `Optional[int]` | **Optional**. Step of the metric |
-| `source` | `Optional[LoggingItemKind]` | **Optional**. Source of the metric |
-
-The *step* parameter is optional and can be used to specify the current time step of the experiment, for example the current epoch, it defaults to 0.
-In a similar manner, the *context* parameter can also be omitted, and it will default to the main experiment context. 
-The *source* parameter is optional and can be used to specify the source of the metric, so for example which library the data comes from. If omitted, yProv4ML will try to automatically determine the origin. 
+| `context` | `Optional[str]` | **Optional**. Indicates which context to add the parameter to |
+| `source` | `Optional[str]` | **Optional**. Indicates the source of the coming information |
+| `is_input` | `Optional[bool]` | **Optional**. Indicates whether the parameter is an input |
 
 ## Log Artifacts
 
@@ -80,7 +33,7 @@ To log artifacts, the user can call the following function.
 prov4ml.log_artifact(
     artifact_name : str, 
     artifact_path : str, 
-    context: Optional[Context] = None,
+    context: Optional[str] = None,
     step: Optional[int] = None, 
     log_copy_in_prov_directory : bool = True, 
     is_model : bool = False, 
@@ -92,7 +45,7 @@ prov4ml.log_artifact(
 | :-------- | :------- | :------------------------- |
 | `artifact_name` | `string` | **Required**. Label to give to the artifact |
 | `artifact_path` | `string` | **Required**. Path to the artifact |
-| `context` | `Optional[prov4ml.Context]` | **Required**. Context of the artifact |
+| `context` | `Optional[prov4ml.str]` | **Required**. str of the artifact |
 | `step` | `Optional[int]` | **Optional**. Step of the artifact |
 | `log_copy_in_prov_directory` | `bool` | **Optional**. Copies file in artifact directory |
 | `is_input` | `bool` | **Optional**. Indicates that the artifact is used as input to the training process. |
@@ -133,7 +86,7 @@ The parameters saved for each layer depend on the type of the latter, but genera
 prov4ml.save_model_version(
     model_name: str, 
     model: Union[torch.nn.Module, Any], 
-    context: Optional[Context] = None, 
+    context: Optional[str] = None, 
     step: Optional[int] = None, 
     incremental : bool = True, 
     is_input : bool =False, 
@@ -146,7 +99,7 @@ The save_model_version function saves the state of a PyTorch model and logs it a
 | :-------- | :------- | :------------------------- |
 | `model_name`	| `str`|	**Required**. The name under which to save the model. | 
 | `model`	| `torch.nn.Module` |	**Required**. The PyTorch model to be saved. |
-| `context`	| `Optional[Context]` |	**Optional**. The context in which the model is saved. |
+| `context`	| `Optional[str]` |	**Optional**. The context in which the model is saved. |
 | `step`	| `Optional[int]` |	**Optional**. The step or epoch number associated with the saved model. |
 | `incremental`	| `bool` |	**Optional**. Indicates whether there will be multiple versions of this model. |
 | `is_input`	| `bool` |	**Optional**. Indicates that the model is used as input to the training process. |
@@ -174,6 +127,54 @@ prov4ml.log_dataset(
 
 The function logs the dataset in the current experiment. The dataset can be a DataLoader, a Subset, or a Dataset class from pytorch.
 Parameters which are logged include batch size, number of workers, whether the dataset is shuffled, the number of batches and the number of total samples. 
+
+# Logging through Wrappers
+
+yProv4ML offers helper wrappers to log information automatically. 
+
+<div style="display: flex; align-items: center; background-color: #cc3300; color: #333; border: 5px solid #cc3300; font-weight: bold; border-radius: 5px; position: relative;">
+    <span style="position: absolute; left: 10px; font-size: 20px;">‼</span>
+    <span style="margin-left: 35px; padding: 5px; background-color: white; border-radius: 5px; width: 100%">These are only supported for PyTorch objects.  </span>
+</div>
+
+
+## ProvenanceTrackedFunction
+
+```python
+class ProvenanceTrackedFunction:
+    def __init__(self, 
+        func : Any, 
+        context : Optional[str] = None
+    )
+```
+
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| func	  | Any	          |  Required	| The target callable function or object to wrap (e.g., PyTorch loss function or metric evaluator). |
+| context |	Optional[str]|	None	    | Optional execution context or stage name (e.g. "training", "validation"). |
+
+
+## ProvenanceTrackedModel
+
+```python
+class ProvenanceTrackedModel(nn.Module):
+    def __init__(self, 
+        model_label : str, 
+        model : Any, 
+        context : Optional[str] = None, 
+        chunk_size : int = 64
+    )
+```
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `model_label` | `str` | *Required* | Label identifier for the model. Used as the output Zarr dataset name (`<model_label>.zarr`). |
+| `model` | `Any` (`nn.Module`) | *Required* | The underlying PyTorch model instance to track. |
+| `context` | `Optional[str]` | `None` | Optional execution context (e.g. stage or step name) associated with provenance tracking. |
+| `chunk_size` | `int` | `64` | Zarr chunk dimension along the batch axis for layer datasets. |
+
+
 
 <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
     <a href="prov_graph.md" style="text-decoration: none; background-color: #006269; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; transition: 0.3s;">← Prev</a>

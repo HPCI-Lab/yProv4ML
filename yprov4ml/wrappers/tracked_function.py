@@ -1,11 +1,12 @@
 
 
 import torch
+from typing import Optional, Any
 
 from yprov4ml.logging_aux import log_metric
 
 class ProvenanceTrackedFunction:
-    def __init__(self, func, context : str = None):
+    def __init__(self, func : Any, context : Optional[str] = None):
         self.fn = func
         self.context = context
         self.source = type(func).__name__

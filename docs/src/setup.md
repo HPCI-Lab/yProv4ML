@@ -5,15 +5,16 @@ Before using the library, the user must set up the yProv4ML execution, as well a
 
 ```python
 prov4ml.start_run(
-    experiment_name: str, 
+    experiment_name: str,
     prov_user_namespace: Optional[str] = None,
-    prov_save_path: Optional[str] = None, 
-    collect_all_processes: bool = False, 
-    save_after_n_logs: int = 100, 
-    rank: Optional[int] = None, 
-    metrics_file_type: MetricsType = MetricsType.ZARR,
-    csv_separator:str = ",", 
-    use_compressor: Optional[CompressorType] = None,
+    provenance_save_dir: Optional[str] = None,
+    collect_all_processes: Optional[bool] = False,
+    save_after_n_logs: Optional[int] = 100,
+    rank : Optional[int] = None, 
+    metrics_file_type: str = "csv",
+    csv_separator : str = ",", 
+    use_compressor: Optional[Union[str, bool]] = None,
+    use_run_id: Optional[int] = None, 
 )
 ```
 

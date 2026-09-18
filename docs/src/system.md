@@ -15,17 +15,27 @@ prov4ml.log_system_metrics(
 | :-------- | :------- | :------------------------- |
 | `context` | `prov4ml.Context` | **Required**. Context of the metric |
 | `step` | `int` | **Optional**. Step of the metric |
-| `synchronous` | `bool` | **Optional**. Whether to log the metric synchronously |
-| `timestamp` | `int` | **Optional**. Timestamp of the metric |
 
 This function logs the following system metrics:
 
-| Parameter | Description                | Unit |
-| :-------- | :-------------------------: | :---: |
-| `Memory usage` | Memory usage of the system | % |
-| `Disk usage` | Disk usage of the system | % |
-| `Gpu memory usage` | Memory usage of the GPU | % |
-| `Gpu usage` | Usage of the GPU | % |
+| Parameter | Description | Unit |
+| :-------- | :---------- | :--- |
+| `cpu_usage_pct` | CPU utilization percentage | % |
+| `cpu_power` | Power consumed by the CPU | Watts (W) |
+| `cpu_energy` | Energy consumed by the CPU over the logging interval | Joules (J) |
+| `ram_usage_pct` | Percentage of total RAM used | % |
+| `ram_usage_gb` | Amount of RAM used in gigabytes | Gigabytes (GB) |
+| `ram_power` | Power consumed by the system RAM | Watts (W) |
+| `ram_energy` | Energy consumed by RAM over the logging interval | Joules (J) |
+| `disk_usage_gb` | Amount of disk space used in gigabytes | Gigabytes (GB) |
+| `disk_usage_pct` | Percentage of total disk space used | % |
+| `gpu_usage_pct` | GPU compute utilization percentage | % |
+| `gpu_power` | Power consumed by the GPU | Watts (W) |
+| `gpu_energy` | Energy consumed by the GPU over the logging interval | Joules (J) |
+| `gpu_memory_usage_gb` | Amount of GPU VRAM used in gigabytes | Gigabytes (GB) |
+| `gpu_memory_usage_pct` | Percentage of GPU VRAM used | % |
+| `gpu_memory_power` | Power consumed by the GPU VRAM module | Watts (W) |
+| `gpu_temperature_c` | Temperature of the GPU core | Degrees Celsius (°C) |
 
 
 # FLOPs per Epoch

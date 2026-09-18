@@ -36,7 +36,9 @@ class MNISTModel(nn.Module):
         return self.model(x.view(x.size(0), -1))
         
 
-tform = transforms.Compose([transforms.ToTensor()])
+tform = transforms.Compose([
+    transforms.ToTensor()
+])
 yprov4ml.log_param("dataset transformation", tform)
 
 mnist_model = MNISTModel().to(DEVICE)
@@ -57,7 +59,9 @@ optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
 yprov4ml.log_param("optimizer", "Adam")
 
 loss_fn = nn.MSELoss().to(DEVICE)
+loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, context="Training")
 yprov4ml.log_context("TrainingButDifferent", "Training")
+val_loss_fn = yprov4ml.ProvenanceTrackedFunction(nn.MSELoss(), context="Validation")
 
 losses = []
 for epoch in range(EPOCHS):
@@ -72,8 +76,11 @@ for epoch in range(EPOCHS):
         optim.step()
         losses.append(loss.item())
     
+        # log system and carbon metrics (once per epoch), as well as the execution time
         yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
         yprov4ml.log_system_metrics("Training", step=epoch)
+
+    mnist_model.log_epoch(epoch)
 
     mnist_model.eval()
     with torch.no_grad(): 
@@ -82,7 +89,7 @@ for epoch in range(EPOCHS):
             x, y = x.to(DEVICE), y.to(DEVICE)
             y_hat = mnist_model(x)
             y2 = F.one_hot(y, 10).float()
-            loss = loss_fn(y_hat, y2)
+            loss = val_loss_fn(y_hat, y2)
 
             yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
 

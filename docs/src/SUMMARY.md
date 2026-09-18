@@ -5,14 +5,14 @@
 - [Setup](./setup.md)
 - [Provenance Graph](./prov_graph.md)
 - [Logging](./logging.md)
-- [Prov Collection](./prov_collection.md)
+<!-- - [Prov Collection](./prov_collection.md) -->
 - [Metrics](./metrics.md)
     - [Carbon Metrics](./carbon.md)
     - [System Metrics](./system.md)
     - [Time Metrics](./time.md)
-    - [Registering Metrics](./registering_metrics.md)
+    <!-- - [Registering Metrics](./registering_metrics.md) -->
 - [Reproducibility](./reproducibility.md)
-- [Provenance Viewer](./prov_viewer.md)
+<!-- - [Provenance Viewer](./prov_viewer.md) -->
 - [Get Data from Provenance Files](./prov_getters.md)
 - [Examples](./examples.md)
     - [Usage with PyTorch](./usage_pytorch.md)

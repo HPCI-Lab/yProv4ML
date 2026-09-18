@@ -3,7 +3,7 @@
 
 This section covers the different types of metrics which can be collected using yProv4ml. These metrics provide insights into efficiency, resource usage, and overall effectiveness. Below is an overview of the key metric categories:
 
-- [Carbon Metrics](./carbon.md): Focuses on tracking and analyzing carbon emissions and HW impact.
+- [General Metrics](./custom_metrics.md): Covers customized, user-defined metrics
 - [System Metrics](./system.md): Covers performance-related metrics such as CPU usage, memory consumption, and GPU stats.
 - [Time Metrics](./time.md): Offers directives for time-based measurements.
 - [Registering Metrics](./registering_metrics.md): Offers the ability to pre-process data "in-situ".

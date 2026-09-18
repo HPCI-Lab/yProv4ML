@@ -11,30 +11,17 @@ With workflow streamlined by yProv4ML, it is trivial to guarantee reproducibilit
 To guarantee the necessary amount of information are present in the prov.json file however, some calls to the library have to be executed. 
 
 ```python
-def log_execution_command(cmd : str): ...
+def log_execution_command(cmd : str, path : str): ...
 ```
 
 Simply logs the execution command for it to be retrieved by the reproduction script later. This is often a call to python3
 
 ```python
-def log_source_code(path: Optional[str] = None): ...
+def log_source_code(): ...
 ```
 
 Logs as an artifact a path to the source code. This could be a single python file (e.g. main.py), a repository link (if the path is not specified in the arguments), or an entire directory of source files. 
 In case the source code is not on github, the source files are all copied inside the artifacts directory, and the path logged inside the provenance file will reference whis copy. 
-
-```python
-def log_input(inp : Any, log_copy_in_prov_directory : bool = True): ...
-```
-
-The directive `log_input` saves with incremental ids a various number of inputs, which are user defined. 
-The `log_copy_in_prov_directory` parameter indicates whether the input (if a file) is copied as artifact into the artifact directory. This is necessary for reproducibility of the experiment if the input is not retrievable in any other way. 
-
-```python
-def log_output(out : Any, log_copy_in_prov_directory : bool = True): ...
-```
-
-The directive `log_output` saves with incremental ids a various number of outputs, which are user defined. 
 
 <div style="display: flex; align-items: center; background-color: #ffcc00; color: #333; border: 5px solid #ffcc00; font-weight: bold; border-radius: 5px; position: relative;">
     <span style="position: absolute; left: 10px; font-size: 20px;">⚠</span>
