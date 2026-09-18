@@ -8,6 +8,7 @@
 <!-- - [Prov Collection](./prov_collection.md) -->
 - [Metrics](./metrics.md)
     <!-- - [Carbon Metrics](./carbon.md) -->
+    - [Custom Metrics](./custom_metrics.md)
     - [System Metrics](./system.md)
     - [Time Metrics](./time.md)
     <!-- - [Registering Metrics](./registering_metrics.md) -->
