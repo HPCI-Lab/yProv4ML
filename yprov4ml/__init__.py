@@ -6,3 +6,4 @@ from .wrappers.tracked_function import ProvenanceTrackedFunction
 from .wrappers.tracked_model import ProvenanceTrackedModel
 from .wrappers.tracked_layers import WeightDistributionTrackedModel
 from .datamodel.compressor_type import CompressorType
+from .utils import getters

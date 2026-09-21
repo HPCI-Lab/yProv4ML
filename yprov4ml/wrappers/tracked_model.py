@@ -11,6 +11,8 @@ from yprov4ml.constants import PROV4ML_DATA
 
 ENCODING = np.float16
 ENCODING_ZARR = "f2" if ENCODING == np.float16 else "f4"
+QUEUE_SIZE = 1024
+ARR_SIZE = 64
 
 class ZarrWriterThread(threading.Thread):
     def __init__(self, zarr_wrapper):
@@ -22,7 +24,7 @@ class ZarrWriterThread(threading.Thread):
         except: pass
 
         self.wrapper = zarr_wrapper
-        self.queue = queue.Queue(maxsize=256)
+        self.queue = queue.Queue(maxsize=QUEUE_SIZE)
         self.start()
 
     def run(self):
@@ -42,8 +44,8 @@ class ZarrWriterThread(threading.Thread):
 
             # Now batch process
             for name, inp, out in items:
-                inp = inp.to("cpu", non_blocking=True).numpy().astype(ENCODING)
-                out = out.to("cpu", non_blocking=True).numpy().astype(ENCODING)
+                inp = inp.to("cpu").numpy().astype(ENCODING)
+                out = out.to("cpu").numpy().astype(ENCODING)
                 self.wrapper._buffer_numpy(name, inp, out)
 
 class ProvenanceTrackedModel(nn.Module):
@@ -60,7 +62,7 @@ class ProvenanceTrackedModel(nn.Module):
         self.layers = {}
         self.writer = ZarrWriterThread(self)
         self.writer_ptr = {}
-        self.initial_size = 32
+        self.initial_size = ARR_SIZE
 
         self._register_hooks()
 

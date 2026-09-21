@@ -1,6 +1,8 @@
 
 def _log_param_value(v, type):
-    return str({"$": v, "type": type}) 
+    # return str({"$": v, "type": type}) 
+    # TEST
+    return str(v)
 
 def create_activity(provDoc, record):
     if len(provDoc.get_record(record))>0:

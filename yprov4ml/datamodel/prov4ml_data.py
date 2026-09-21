@@ -135,7 +135,9 @@ class Prov4MLData:
         context_name = self._format_activity_name(context=ctx, source=source)
         c, created = get_or_create_activity(self.root_provenance_doc, context_name)
         if created:         
-            d = {"$": get_time(), "type": "xsd:dateTime"}
+            d = get_time()
+            # TEST
+            # d = {"$": get_time(), "type": "xsd:dateTime"}
             c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{d}"})
             if source is not None: 
                 c.wasInformedBy(maybe_src_context)
