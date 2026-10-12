@@ -245,6 +245,7 @@ class Prov4MLData:
 
     def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input : bool = True) -> None:
         context = self._set_ctx_or_default(context)
+        parameter_name = self._format_artifact_name(parameter_name, context, source)
 
         if is_input: 
             e = self._log_input(parameter_name, context, source, {

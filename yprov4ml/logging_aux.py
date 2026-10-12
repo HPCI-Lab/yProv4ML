@@ -19,7 +19,7 @@ def log_current_execution_time(label: str, context : Optional[str] = None, step:
     return log_metric(label, time_utils.get_time(), context=context, step=step, source='std.time', is_input=False)
 
 def log_param(key: str, value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input=False) -> None:
-    PROV4ML_DATA.add_parameter(key,value, context, source, is_input=is_input)
+    PROV4ML_DATA.add_parameter(key, value, context, source, is_input=is_input)
 
 def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, Any]) -> dict:
 
