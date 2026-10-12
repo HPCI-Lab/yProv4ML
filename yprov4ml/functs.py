@@ -4,6 +4,7 @@ from typing import Optional, Union, Tuple
 from yprov4ml.constants import PROV4ML_DATA
 from yprov4ml.utils import flops_utils
 from yprov4ml.provenance.provenance_graph import create_prov_document, create_rocrate_in_dir, save_prov_file
+from yprov4ml.prov2card import convert
 from yprov4ml.utils.file_utils import _requirements_lookup
 from yprov4ml.datamodel.compressor_type import CompressorType
 
@@ -34,7 +35,12 @@ def start_run(
 
     flops_utils._init_flops_counters()
 
-def end_run(create_graph: Optional[bool] = False, create_svg: Optional[bool] = False, crate_ro_crate: Optional[bool]=False):  
+def end_run(
+        create_graph: Optional[bool] = False, 
+        create_svg: Optional[bool] = False, 
+        crate_ro_crate: Optional[bool] = False, 
+        create_card : Optional[bool] = False, 
+    ):  
     if not PROV4ML_DATA.is_collecting: return
 
     filename = _requirements_lookup("./")
@@ -58,6 +64,9 @@ def end_run(create_graph: Optional[bool] = False, create_svg: Optional[bool] = F
 
     if crate_ro_crate: 
         create_rocrate_in_dir(PROV4ML_DATA.EXPERIMENT_DIR)
+
+    if create_card: 
+        convert(PROV4ML_DATA.EXPERIMENT_DIR, PROV4ML_DATA.EXPERIMENT_DIR)
 
 def get_artifacts_dir(): 
     return PROV4ML_DATA.ARTIFACTS_DIR

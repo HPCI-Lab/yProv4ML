@@ -26,6 +26,19 @@ Or alternatively, using directly the Graphviz suite:
 dot -Tsvg -O prov_graph.dot
 ```
 
+## Workflow Card (.md)
+
+yProv4ML additionally has a built-in script to convert run directories (or PROV-JSONL files, such as the ones created using [Flowcept](https://flowcept.org/)) to [Workflow Cards](https://arxiv.org/abs/2608.11022).
+
+To convert a run directory, the user can run: 
+
+```bash
+python -m yprov4ml.prov2card --path **<path to jsonl or run_dir>**
+```
+
+specifying either the desired run directory (i.e. `example_0`) or a JSONL file (i.e. `flowcept_buffer.jsonl`). 
+
+
 <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
     <a href="setup.md" style="text-decoration: none; background-color: #006269; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; transition: 0.3s;">← Prev</a>
     <a href="." style="text-decoration: none; background-color: #006269; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; transition: 0.3s;">🏠 Home</a>

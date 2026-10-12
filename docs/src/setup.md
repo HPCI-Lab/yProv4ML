@@ -60,6 +60,7 @@ prov4ml.end_run(
 | `create_graph` | `Optional[bool]` | **Optional**. Whether to create the graph |
 | `create_svg` | `Optional[bool]` | **Optional**. Whether to create the svg |
 | `crate_ro_crate` | `Optional[bool]` | **Optional**. Indicates whether to pack the experiment in a ro-crate zip, containing all the run's information. |
+| `crate_card` | `Optional[bool]` | **Optional**. Indicates whether to convert the created run directory to [Workflow cards](https://arxiv.org/abs/2608.11022) format. |
 
 This call allows the library to save the provenance graph in the specified directory. 
 

@@ -9,7 +9,7 @@ import yprov4ml
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 1
 DEVICE = "cpu"
 
 yprov4ml.start_run(
@@ -86,4 +86,4 @@ for epoch in range(EPOCHS):
 
             yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
 
-yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)
+yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True, create_card=True)

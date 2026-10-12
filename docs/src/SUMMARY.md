@@ -3,7 +3,7 @@
 - [Introduction](./readme.md)
 - [Installation](./installation.md)
 - [Setup](./setup.md)
-- [Provenance Graph](./prov_graph.md)
+- [Provenance Graphs and Cards](./prov_graph.md)
 - [Logging](./logging.md)
 <!-- - [Prov Collection](./prov_collection.md) -->
 - [Metrics](./metrics.md)
