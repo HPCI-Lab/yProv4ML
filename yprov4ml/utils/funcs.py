@@ -2,6 +2,7 @@
 import os
 import torch
 from typing import Optional
+from datetime import datetime
 import time
 
 def _safe_get_model_attr(dic, node, attr, attr_label=None):
@@ -21,6 +22,11 @@ def _safe_get_model_attr(dic, node, attr, attr_label=None):
 def prov4ml_experiment_matches(experiment_name : str, exp_folder : str) -> bool:
     exp_folder = "_".join(exp_folder.split("_")[:-1])
     return experiment_name == exp_folder
+
+def get_local_timezone_info():
+    """Returns local timezone offset and abbreviation using built-ins."""
+    local_now = datetime.now().astimezone()
+    return local_now.tzname() + local_now.strftime("%z")  
 
 def get_current_time_millis() -> int:
     return int(round(time.time() * 1000))

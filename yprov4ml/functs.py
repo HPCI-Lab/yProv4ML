@@ -5,7 +5,7 @@ from yprov4ml.constants import PROV4ML_DATA
 from yprov4ml.utils import flops_utils
 from yprov4ml.provenance.provenance_graph import create_prov_document, create_rocrate_in_dir, save_prov_file
 from yprov4ml.prov2card import convert
-from yprov4ml.utils.file_utils import _requirements_lookup
+from yprov4ml.utils.file_utils import _requirements_lookup, _generate_requirements
 from yprov4ml.datamodel.compressor_type import CompressorType
 
 def start_run(
@@ -43,7 +43,7 @@ def end_run(
     ):  
     if not PROV4ML_DATA.is_collecting: return
 
-    filename = _requirements_lookup("./")
+    filename = _generate_requirements("./") or _requirements_lookup("./")
     if filename: 
         PROV4ML_DATA.add_artifact("requirements", filename, step=0, context=None, is_input=True)
     

@@ -236,17 +236,25 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
         platform_info["release"] = main_act.get("yprov:release", NF)
         platform_info["machine"] = main_act.get("yprov:machine", NF)
 
-        repo = {}
-        repo["remote"] = NF
-        repo["branch"] = NF
-        repo["short_sha"] = NF
 
         python_ver = main_act.get("yprov:python_version", NF)
 
         input_entities = get_entities_by_role(fc_lines, "input")
         output_entities = get_entities_by_role(fc_lines, "output")
 
+        repo = {}
+        for i_name, i_val in input_entities: 
+            if "source_code" in i_name: 
+                url_part, full_sha = i_val["prov:value"].rsplit('/', 1)
+                repo = {
+                    "remote": url_part,
+                    "branch": "NF",   
+                    "short_sha": full_sha
+                }
+                break
+
         agent = list(fc_lines.get("agent", {}).keys())
+        agent = agent[0] if len(agent) > 0 else NF
 
         agg = aggregate_metrics(metrics_dir)
 
@@ -281,10 +289,11 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
     field("version", unwrap(v))
     field("started_at", started)
     field("ended_at", ended)
+    time_zone = main_act.get("yprov:time_zone", NF)
+    field("timezone", time_zone)
     field("duration", dur)
     field("status", status)
-    loc = platform_info.get("yprov:runtime_type", "local")
-    if loc not in ["local", NF]: loc = "HPC"
+    loc = main_act.get("yprov:host_name", NF)
     field("location", loc)
     field("user", agent)
 
@@ -310,7 +319,7 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
     if python_ver != NF:
         primary_sw.append(f"Python {python_ver.split('|')[0].strip()}")
     field("primary_software", "; ".join(primary_sw) if primary_sw else NF)
-    field("environment_snapshot", open(env_snapshot).read().replace("\n", "; ") if env_snapshot != NF else env_snapshot)
+    field("environment_snapshot", open(env_snapshot).read().replace("\n", "; ")[:200] + "..." if env_snapshot != NF else env_snapshot)
 
     h2("4. Workflow Overview")
 
@@ -384,7 +393,6 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
         lines.append(f"  - {observation}")
 
     h2("5. Activities")
-
     for act_name in sub_acts:
         start_times = [pd.read_csv(os.path.join(metrics_dir, f))["timestep"].min() for f in os.listdir(metrics_dir) if act_name in f]
         act_started_raw = min(start_times) if len(start_times) > 0 else None

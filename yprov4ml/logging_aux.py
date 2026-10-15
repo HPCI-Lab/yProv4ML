@@ -12,7 +12,7 @@ from yprov4ml.utils import flops_utils, time_utils, funcs
 from yprov4ml.utils.prov_utils import _log_param_value
 from yprov4ml.constants import PROV4ML_DATA, VERBOSE
 
-def log_metric(key: str, value: float, context: Optional[str] = None, step: int = 0, source: Optional[str] = None, timestamp : int = 0) -> None:
+def log_metric(key: str, value: float, context: Optional[str] = None, step: int = 0, source: Optional[str] = None, timestamp : Optional[int] = None) -> None:
     PROV4ML_DATA.add_metric(key, value, step, context=context, source=source, timestamp=timestamp)
 
 def log_current_execution_time(label: str, context : Optional[str] = None, step: Optional[int] = None) -> None:
@@ -92,8 +92,9 @@ def log_model(
         log_model_layers : bool = False,
         log_copy_in_prov_directory : bool = True, 
         is_input: bool = False,
+        other_attrs : Optional[bool] = None
     ) -> None:      
-    e = save_model_version(model_name, model, context=context, source=source, incremental=False, is_input=is_input, log_copy_in_prov_directory=log_copy_in_prov_directory)
+    e = save_model_version(model_name, model, context=context, source=source, incremental=False, is_input=is_input, log_copy_in_prov_directory=log_copy_in_prov_directory, other_attrs=other_attrs)
 
     if log_model_info:
         d = _get_model_memory_footprint(model_name, model)
@@ -140,6 +141,7 @@ def log_artifact(
         log_copy_subdirectory : Optional[str] = None, 
         is_model : bool = False, 
         is_input : bool = False, 
+        other_attrs : Optional[dict] = None, 
     ) -> prov.ProvEntity:
     return PROV4ML_DATA.add_artifact(
         artifact_name=artifact_name, 
@@ -151,6 +153,7 @@ def log_artifact(
         log_copy_subdirectory=log_copy_subdirectory,
         is_model=is_model, 
         is_input=is_input, 
+        attributes=other_attrs, 
     )
 
 def save_model_version(
@@ -162,6 +165,7 @@ def save_model_version(
         incremental : bool = True, 
         is_input : bool =False, 
         log_copy_in_prov_directory : bool = True, 
+        other_attrs : Optional[dict] = None, 
     ) -> prov.ProvEntity:
 
     if incremental: 
@@ -178,6 +182,7 @@ def save_model_version(
             log_copy_in_prov_directory=log_copy_in_prov_directory, 
             log_copy_subdirectory=model_name, 
             is_model=True, is_input=is_input, 
+            other_attrs=other_attrs,  
         )
     else: 
         file_name = f"{model_name}.pt"
@@ -196,9 +201,10 @@ def log_dataset(
         context : Optional[str] = None, 
         source : Optional[str] = None, 
         log_dataset_info : bool = True, 
+        other_attrs: Optional[dict] = None
         ): 
 
-    e = log_artifact(dataset_label, "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True, source=source)
+    e = log_artifact(dataset_label, "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True, source=source, other_attrs=other_attrs)
     
     if not log_dataset_info: return
 
@@ -213,7 +219,6 @@ def log_dataset(
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": _log_param_value(len(dl), "xsd:int"), 
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": _log_param_value(len(dataset) * dl.batch_size, "xsd:int"),
             f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_batches": _log_param_value(len(dataset), "xsd:int"), 
-
         }
         e.add_attributes(attrs)
 
@@ -230,8 +235,8 @@ def log_execution_command(cmd: str, path : str) -> None:
     path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)
     log_param("execution_command", cmd + " " + path)
 
-def log_source_code() -> None:
-    PROV4ML_DATA.request_source_code()
+def log_source_code(use_git : bool = False) -> None:
+    PROV4ML_DATA.request_source_code(use_git=use_git)
 
 def log_context(context : str, is_subcontext_of : Optional[str] = None, source_of_data : Optional[str] = None): 
     PROV4ML_DATA._add_ctx(is_subcontext_of, context, source=source_of_data)

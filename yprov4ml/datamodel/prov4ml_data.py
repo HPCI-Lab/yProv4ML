@@ -10,13 +10,14 @@ import pwd
 import warnings
 import uuid
 import platform
+import socket
 
 from yprov4ml.datamodel.artifact_data import ArtifactInfo
 from yprov4ml.datamodel.metric_data import MetricInfo
 from yprov4ml.datamodel.compressor_type import CompressorType, COMPRESSORS_FOR_ZARR
 from yprov4ml.utils import funcs
 from yprov4ml.utils.prov_utils import get_or_create_activity, _log_param_value
-from yprov4ml.utils.funcs import get_global_rank, get_runtime_type
+from yprov4ml.utils.funcs import get_global_rank, get_runtime_type, get_local_timezone_info
 from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
 from yprov4ml.utils.time_utils import get_time
 from yprov4ml.utils.system_utils import Tracker
@@ -159,6 +160,8 @@ class Prov4MLData:
 
         user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
         rootstr, _ = get_or_create_activity(self.root_provenance_doc, self.PROV_JSON_NAME)
+        hostname = socket.gethostname()
+        timezone = get_local_timezone_info()
         rootstr.add_attributes({
             f"{self.yProv_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
             f"{self.yProv_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
@@ -167,18 +170,25 @@ class Prov4MLData:
             f"{self.yProv_PREFIX}:run_id": _log_param_value(self.RUN_ID, "xsd:int"), #self.RUN_ID,
             f"{self.yProv_PREFIX}:python_version":str(sys.version), 
             f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
+            f"{self.yProv_PREFIX}:host_name": hostname,
+            f"{self.yProv_PREFIX}:time_zone": timezone,
         })
         rootstr.wasAssociatedWith(user_ag)
 
+        
         global_rank = get_global_rank()
         runtime_type = get_runtime_type()
         if runtime_type == "slurm":
             node_rank = os.getenv("SLURM_NODEID", None)
             local_rank = os.getenv("SLURM_LOCALID", None) 
+            jobid = os.getenv("SLURM_JOB_ID", None) 
+            jobname = os.getenv("SLURM_JOB_NAME", None) 
             rootstr.add_attributes({
                 f"{self.yProv_PREFIX}:global_rank": _log_param_value(global_rank, "xsd:int"),
                 f"{self.yProv_PREFIX}:local_rank": _log_param_value(local_rank, "xsd:int"),
                 f"{self.yProv_PREFIX}:node_rank": _log_param_value(node_rank, "xsd:int"),
+                f"{self.yProv_PREFIX}:job_id": _log_param_value(jobid, "xsd:int"),
+                f"{self.yProv_PREFIX}:job_id": jobname,
             })
         elif runtime_type == "single_core":
             rootstr.add_attributes({
@@ -217,22 +227,25 @@ class Prov4MLData:
         entity.wasGeneratedBy(activity)
         return entity
     
-    def request_source_code(self): 
+    def request_source_code(self, use_git : bool=False): 
         self.source_code_required = True
+        self.use_git = use_git
 
     def add_source_code(self): 
-        repo = _get_git_remote_url()
-        if repo is not None:
-            commit_hash = _get_git_revision_hash()
-            self.add_parameter("source_code", f"{repo}/{commit_hash}")
-        
-        paths = _get_source_files()
-        for path in paths: 
-            os.makedirs(os.path.join(self.ARTIFACTS_DIR, "src"), exist_ok=True)
-            self.add_artifact(path, path, log_copy_in_prov_directory=True, log_copy_subdirectory="src", is_model=False, is_input=True)
+        if self.use_git: 
+            repo = _get_git_remote_url()
+            if repo:
+                commit_hash = _get_git_revision_hash()
+                self.add_parameter("source_code", f"{repo}/{commit_hash}")
+        else: 
+            paths = _get_source_files()
+            for path in paths: 
+                os.makedirs(os.path.join(self.ARTIFACTS_DIR, "src"), exist_ok=True)
+                self.add_artifact(path, path, log_copy_in_prov_directory=True, log_copy_subdirectory="src", is_model=False, is_input=True)
 
-    def add_metric(self, metric: str, value: Any, step: int = 0, context: Optional[Any] = None, source: Optional[str] = None, timestamp: int = 0) -> None:
+    def add_metric(self, metric: str, value: Any, step: int = 0, context: Optional[Any] = None, source: Optional[str] = None, timestamp: Optional[int] = None) -> None:
         context = self._set_ctx_or_default(context)
+        timestamp = timestamp or funcs.get_current_time_millis()
 
         if (metric, context) not in self.metrics:
             self.metrics[(metric, context)] = MetricInfo(metric, context, source=source, use_compressor=self.use_compressor)
@@ -257,6 +270,7 @@ class Prov4MLData:
         e.add_attributes({
             f"{self.PROV_PREFIX}:label": str(parameter_name),
             f"{self.PROV_PREFIX}:value": str(parameter_value),
+            f"prov:role": "input" if is_input else "output", 
         })
 
     def _log_artifact_copy(self, artifact_path_src : str, artifact_path_dst : str, is_input : bool, is_model : bool, context : str, source : str): 
@@ -296,7 +310,7 @@ class Prov4MLData:
         log_copy_in_prov_directory : bool = True, 
         log_copy_subdirectory : Optional[str] = None, 
         is_model : bool = False, 
-        attributes : dict = {}
+        attributes : Optional[dict] = None, 
     ) -> prov.ProvEntity:
         context = self._set_ctx_or_default(context)
 
@@ -306,7 +320,7 @@ class Prov4MLData:
 
         artifact_name = self._format_artifact_name(artifact_name, context, source)
         self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)
-        local_attrs = attributes.copy()
+        local_attrs = attributes.copy() if attributes else {}
         if f'{self.PROV_PREFIX}:label' not in local_attrs.keys(): 
             local_attrs[f'{self.PROV_PREFIX}:label'] = artifact_name
         if f'{self.RDF_PREFIX}:identifier' not in local_attrs.keys(): 

@@ -38,6 +38,8 @@ class MNISTModel(nn.Module):
 
 tform = transforms.Compose([transforms.ToTensor()])
 
+yprov4ml.log_source_code(use_git=True)
+
 yprov4ml.log_context("www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
 yprov4ml.log_context("Training", "www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
 yprov4ml.log_context("Validation", "www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
@@ -48,12 +50,12 @@ yprov4ml.log_model("parent", mnist_model, context="Training", source="ri-scale/c
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
 train_ds = Subset(train_ds, range(BATCH_SIZE*150))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
-yprov4ml.log_dataset("training_data", train_loader, context="Training", source="www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
+yprov4ml.log_dataset("training_data", train_loader, context="Training", source="www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000", other_attrs={"dcterms:identifier": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000"})
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
 test_ds = Subset(test_ds, range(BATCH_SIZE*50))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
-yprov4ml.log_dataset("validation_data", test_loader, context="Validation", source="www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
+yprov4ml.log_dataset("validation_data", test_loader, context="Validation", source="www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000", other_attrs={"dcterms:identifier": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000"})
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
 yprov4ml.log_param("optimizer", "Adam")
