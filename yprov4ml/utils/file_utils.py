@@ -80,18 +80,43 @@ def _requirements_lookup(path):
 
 def _generate_requirements(output_dir):
     """
-    Generates a requirements.txt file in the specified directory 
-    using importlib.metadata from the active Python environment.
+    Generates a clean requirements.txt file containing only the packages 
+    actually used during the run, without duplicates or invalid entries.
     """
     output_path = os.path.join(output_dir, "requirements.txt")
     
     try:
-        # Collect all installed distributions and format them like pip freeze
-        packages = sorted(
-            [f"{dist.metadata['Name']}=={dist.version}" for dist in importlib.metadata.distributions()]
-        )
+        # 1. Map top-level importable module names to their distribution packages
+        pkg_map = importlib.metadata.packages_distributions()
         
-        # Write the packages to requirements.txt
+        # 2. Identify top-level modules loaded/used in the current Python process
+        loaded_modules = {name.split('.')[0] for name in sys.modules}
+        
+        # 3. Find the distribution names corresponding to those loaded modules
+        used_dists = set()
+        for mod in loaded_modules:
+            if mod in pkg_map:
+                for dist_name in pkg_map[mod]:
+                    used_dists.add(dist_name)
+        
+        # 4. Gather versions, filter out invalid entries (None==None), and deduplicate
+        package_versions = {}
+        for dist in importlib.metadata.distributions():
+            name = dist.metadata.get("Name")
+            version = dist.version
+            
+            # Skip invalid or malformed entries
+            if not name or not version or name.lower() == "none" or version.lower() == "none":
+                continue
+                
+            # Keep only distributions that match our used list (case-insensitive)
+            if any(d.lower() == name.lower() for d in used_dists):
+                package_versions[name.lower()] = (name, version)
+                
+        # Format and sort unique packages
+        packages = sorted([f"{name}=={version}" for name, version in package_versions.values()])
+        
+        # Write the clean requirements to file
         with open(output_path, "w", encoding="utf-8") as f:
             f.write("\n".join(packages) + "\n")
             
@@ -100,7 +125,8 @@ def _generate_requirements(output_dir):
     except Exception as e:
         print(f"Error generating requirements.txt: {e}", file=sys.stderr)
         return None
-
+    
+    
 
 def _get_source_files(): 
     PROJECT_ROOT = os.path.dirname(os.path.relpath(sys.argv[0]))

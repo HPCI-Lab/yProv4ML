@@ -58,10 +58,10 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 yprov4ml.log_dataset("validation_data", test_loader, context="Validation", source="www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000", other_attrs={"dcterms:identifier": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000"})
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
-yprov4ml.log_param("optimizer", "Adam")
-yprov4ml.log_param("epochs", EPOCHS)
-yprov4ml.log_param("learning_rate", 1.0e-5)
-yprov4ml.log_param("batch_size", BATCH_SIZE)
+yprov4ml.log_param("optimizer", "Adam", is_input=True)
+yprov4ml.log_param("epochs", EPOCHS, is_input=True)
+yprov4ml.log_param("learning_rate", 1.0e-5, is_input=True)
+yprov4ml.log_param("batch_size", BATCH_SIZE, is_input=True)
 
 loss_fn = nn.MSELoss().to(DEVICE)
 

@@ -258,6 +258,7 @@ class Prov4MLData:
 
     def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input : bool = True) -> None:
         context = self._set_ctx_or_default(context)
+        act_name = parameter_name
         parameter_name = self._format_artifact_name(parameter_name, context, source)
 
         if is_input: 
@@ -265,12 +266,15 @@ class Prov4MLData:
                 f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
             })
         else: 
-            e = self._log_output(parameter_name, context, source, {})
+            e = self._log_output(parameter_name, context, source, {
+                f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
+            })
 
         e.add_attributes({
-            f"{self.PROV_PREFIX}:label": str(parameter_name),
+            f"{self.PROV_PREFIX}:label": act_name,
+            f'{self.yProv_PREFIX}:fullLabel': str(parameter_name), 
             f"{self.PROV_PREFIX}:value": str(parameter_value),
-            f"prov:role": "input" if is_input else "output", 
+            f"{self.PROV_PREFIX}:role": "input" if is_input else "output", 
         })
 
     def _log_artifact_copy(self, artifact_path_src : str, artifact_path_dst : str, is_input : bool, is_model : bool, context : str, source : str): 
@@ -318,15 +322,18 @@ class Prov4MLData:
             new_path = os.path.join(log_copy_subdirectory, artifact_path) if log_copy_subdirectory else artifact_path
             return self._log_artifact_copy(artifact_path, new_path, is_input, is_model, context, source)
 
+        node_name = artifact_name
         artifact_name = self._format_artifact_name(artifact_name, context, source)
         self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)
         local_attrs = attributes.copy() if attributes else {}
         if f'{self.PROV_PREFIX}:label' not in local_attrs.keys(): 
-            local_attrs[f'{self.PROV_PREFIX}:label'] = artifact_name
+            local_attrs[f'{self.PROV_PREFIX}:label'] = node_name
         if f'{self.RDF_PREFIX}:identifier' not in local_attrs.keys(): 
             local_attrs[f'{self.RDF_PREFIX}:identifier'] = artifact_path
         if f'{self.PROV_PREFIX}:generatedAtTime' not in local_attrs.keys(): 
             local_attrs[f'{self.PROV_PREFIX}:generatedAtTime'] = _log_param_value(get_time(), "xsd:dateTime")
+        if f'{self.yProv_PREFIX}:fullLabel' not in local_attrs.keys(): 
+            local_attrs[f'{self.yProv_PREFIX}:fullLabel'] = artifact_name
 
         if is_model: 
             local_attrs.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
