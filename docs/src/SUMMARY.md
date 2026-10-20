@@ -3,7 +3,7 @@
 - [Introduction](./readme.md)
 - [Installation](./installation.md)
 - [Setup](./setup.md)
-- [Ontology](https://raw.githubusercontent.com/HPCI-Lab/yProv4ML/main/)
+- [Ontology](../../ontology/index.html)
 - [Provenance Graphs and Cards](./prov_graph.md)
 - [Logging](./logging.md)
 <!-- - [Prov Collection](./prov_collection.md) -->
