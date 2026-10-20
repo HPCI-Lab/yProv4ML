@@ -4,6 +4,7 @@ import prov
 import prov.model as prov
 from rocrate.rocrate import ROCrate
 from pathlib import Path
+import math
 
 from yprov4ml.constants import PROV4ML_DATA
 
@@ -19,8 +20,12 @@ from yprov4ml.utils.time_utils import get_time
 def get_metric_stats_from_file(metric_file_path : str): 
     if metric_file_path.endswith(".csv"): 
         data = pd.read_csv(metric_file_path)
-        return data["timestep"].min(), data["timestep"].max(), data["value"].max(), data["value"].max() 
-
+        mT, MT, mean, fin = data["timestep"].min(), data["timestep"].max(), data["value"].max(), data["value"].max() 
+        if math.isnan(mT): mT = ""
+        if math.isnan(MT): MT = ""
+        if math.isnan(mean): mean = ""
+        if math.isnan(fin): fin = ""
+        return mT, MT, mean, fin
 
 def create_prov_document() -> prov.ProvDocument:
     

@@ -5,6 +5,7 @@ import psutil
 from pathlib import Path
 
 NF = "~"
+YPROV_PREFIX = "yprov4ml"
 
 def unwrap(val):
     if isinstance(val, str): 
@@ -55,22 +56,15 @@ def calculate_duration(start_str, end_str):
     return duration
         
 def calculate_duration(start_str, end_str):
-    # Handle "Not Found" or empty cases
     if NF in [start_str, end_str] or not (start_str and end_str):
         return NF
     
     try:
-        # 1. Strip the " (ISO 8601)" suffix to get the raw ISO string
         raw_start = start_str.split(" (")[0]
         raw_end = end_str.split(" (")[0]
-        
-        # 2. Parse back into datetime objects
         start_dt = datetime.fromisoformat(raw_start)
         end_dt = datetime.fromisoformat(raw_end)
-        
-        # 3. Calculate difference (returns a timedelta object)
         duration = end_dt - start_dt
-        
         return duration
         
     except Exception as e:
@@ -111,7 +105,7 @@ def read_csv_column(path, col="value"):
 
 def get_main_activity(yprov):
     for k, v in yprov.get("activity", {}).items():
-        if "/" not in k and v and "yprov:experiment_name" in v:
+        if "/" not in k and v and f"{YPROV_PREFIX}:experimentName" in v:
             return k, v
     return NF, {}
 
@@ -127,7 +121,7 @@ def get_sub_activities(yprov, metrics_dir=None):
     acts = []
     start_times = []
     for k, v in yprov.get("activity", {}).items():
-        if "/" not in k and "yprov:experiment_name" not in (v or {}):
+        if "/" not in k and f"{YPROV_PREFIX}:experimentName" not in (v or {}):
             acts.append(k)
             if "prov:startedAtTime" in v: 
                 start_times.append(v["prov:startedAtTime"])
@@ -216,11 +210,11 @@ def aggregate_metrics(metrics_dir):
 
 def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
 
-    _type = "yprov"
+    _type = f"{YPROV_PREFIX}"
     if isinstance(fc_lines, list): 
         _type = "flowcept"
 
-    if _type == "yprov": 
+    if _type == f"{YPROV_PREFIX}": 
         main_act_key, main_act = get_main_activity(fc_lines)
         sub_acts = get_sub_activities(fc_lines, metrics_dir)
 
@@ -231,13 +225,13 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
         dur = duration_str(started_raw, ended_raw)
         status = "Completed"# if ended != NF else "Unknown"
         platform_info = {}
-        platform_info["node"] = main_act.get("yprov:global_rank", NF)
-        platform_info["system"] = main_act.get("yprov:operating_system", NF)
-        platform_info["release"] = main_act.get("yprov:release", NF)
-        platform_info["machine"] = main_act.get("yprov:machine", NF)
+        platform_info["node"] = main_act.get(f"{YPROV_PREFIX}:globalRank", NF)
+        platform_info["system"] = main_act.get(f"{YPROV_PREFIX}:operatingSystem", NF)
+        platform_info["release"] = main_act.get(f"{YPROV_PREFIX}:release", NF)
+        platform_info["machine"] = main_act.get(f"{YPROV_PREFIX}:machine", NF)
 
 
-        python_ver = main_act.get("yprov:python_version", NF)
+        python_ver = main_act.get(f"{YPROV_PREFIX}:pythonVersion", NF)
 
         input_entities = get_entities_by_role(fc_lines, "input")
         output_entities = get_entities_by_role(fc_lines, "output")
@@ -278,22 +272,22 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
     section_break()
 
     h2("1. Workflow")
-    field("name", main_act.get("yprov:experiment_name", wf_name))
+    field("name", main_act.get(f"{YPROV_PREFIX}:experimentName", wf_name))
     field("description", f"ML workflow run identified as '{wf_name}', consisting of {len(sub_acts)} sub-activit{'ies' if len(sub_acts) != 1 else 'y'}.")
 
     h2("2. Summary")
-    field("execution_id", main_act.get("yprov:experiment_name", NF))
-    v = main_act.get("yprov:run_id", NF)
+    field("execution_id", main_act.get(f"{YPROV_PREFIX}:experimentName", NF))
+    v = main_act.get(f"{YPROV_PREFIX}:runID", NF)
     if isinstance(v, dict): 
         v = v["$"]
     field("version", unwrap(v))
     field("started_at", started)
     field("ended_at", ended)
-    time_zone = main_act.get("yprov:time_zone", NF)
+    time_zone = main_act.get(f"{YPROV_PREFIX}:timeZone", NF)
     field("timezone", time_zone)
     field("duration", dur)
     field("status", status)
-    loc = main_act.get("yprov:host_name", NF)
+    loc = main_act.get(f"{YPROV_PREFIX}:hostName", NF)
     field("location", loc)
     field("user", agent)
 
@@ -327,27 +321,30 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
     all_acts_in_wf = [k for k in fc_lines.get("activity", {}).keys() if "/" not in k]
     field("total_activities", len(sub_acts))
 
-    finished_count = len(all_acts_in_wf)-1 #sum(1 for k, v in fc_lines.get("activity", {}).items() if "/" not in k and v and "prov:endedAtTime" in v)
-    field("status_counts", f"finished: {finished_count}, unknown: {0}")#len(all_acts_in_wf)-1 - finished_count}")
+    finished_count = len(all_acts_in_wf)-1 
+    field("status_counts", f"finished: {finished_count}, unknown: {0}")
 
     cmd = fc_lines.get("entity", NF)
-    if cmd != NF: 
-        if "execution_command" in cmd.keys(): 
-            cmd = cmd["execution_command"]["prov:value"]
-        else: 
-            cmd = NF
-    field("exec command", cmd)
-    if cmd != NF: 
-        cmd = " ".join(cmd.split(" ")[2:]).strip()
-        cmd = cmd if cmd != "" else NF
-    field("arguments", cmd)
+    execution_command = NF
+    execution_arguments = NF
+    execution_executable = NF
+    for lab, cont in cmd.items(): 
+        if "execution_command" in lab: 
+            execution_command = cont["prov:value"]
+        if "execution_arguments" in lab: 
+            execution_arguments = cont["prov:value"]
+        if "execution_executable" in lab: 
+            execution_executable = cont["prov:value"]
+    field("execution_command", execution_command)
+    field("execution_arguments", execution_arguments)
+    field("execution_executable", execution_executable)
 
     lines.append("\n**Significant Inputs:**")
     if input_entities:
         for ident, ent in input_entities:
             if ident == "": continue
-            size = unwrap(ent.get("yprov:file_size", ""))
-            typ = ent.get("prov:type", "file").replace("provml:", "")
+            size = unwrap(ent.get(f"{YPROV_PREFIX}:fileSizeInBytes", ""))
+            typ = ent.get("prov:type", "file")
             source = ent.get('dcterms:identifier', NF)
             lines.append(f"  - `{ident}` — format: {typ}, size: {size} bytes, source: {source if source != "" else NF}")
     else:
@@ -357,8 +354,8 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
     if output_entities:
         for ident, ent in output_entities:
             if ident == "": continue
-            typ = ent.get("prov:type", "file").replace("provml:", "")
-            size = unwrap(ent.get("yprov:file_size", ""))
+            typ = ent.get("prov:type", "file")
+            size = unwrap(ent.get(f"{YPROV_PREFIX}:fileSizeInBytes", ""))
             source = ent.get('dcterms:identifier', NF)
             lines.append(f"  - `{ident}` — type: {typ}, size: {size} bytes, location: {source if source != "" else NF}")
     else:
@@ -407,7 +404,7 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
         act_metrics = get_metrics_summary(metrics_dir, activity_filter=act_name)
         act_outputs = [
             (k, v) for k, v in fc_lines.get("entity", {}).items()
-            if v.get("yprov:context") == act_name and v.get("prov:role") == "output"
+            if v.get(f"{YPROV_PREFIX}:context") == act_name and v.get("prov:role") == "output"
         ]
         act_inputs_via_used = [
             v.get("prov:entity") for v in fc_lines.get("used", {}).values()
@@ -425,7 +422,7 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
 
         field("hosts", "")
         # lines.append("  - **hosts**:")
-        host_id = unwrap(main_act.get("yprov:global_rank", NF))
+        host_id = unwrap(main_act.get(f"{YPROV_PREFIX}:globalRank", NF))
         lines.append(f"    - host: `{host_id}`, tasks: 1")
         if act_metrics:
             for metric_name, stats in list(act_metrics.items()): # [:3]
@@ -460,14 +457,13 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
         any_input = True
         lines.append(f"\n**Artifact: `{ident}`**")
         field("identifier", ident)
-        typ = ent.get("prov:type", "file").replace("provml:", "")
-        size_raw = ent.get("yprov:file_size", NF)
-        size = size_raw.split("^^")[0] if "^^" in str(size_raw) else str(size_raw)
-        tm = unwrap(ent.get("prov:generatedAtTime", NF).replace("prov:", ""))
+        typ = ent.get("prov:type", "file")
+        size_raw = ent.get(f"{YPROV_PREFIX}:fileSizeInBytes", NF)
+        tm = unwrap(ent.get("prov:generatedAtTime", NF))
         metadata = get_metadata(ent)
         field("description", f"Input file of type {typ}, used by the workflow at time {tm}.")
         field("reference", ent.get("dcterms:identifier", NF))
-        field("size", fmt_bytes(size))
+        field("size", fmt_bytes(size_raw))
         field("additional metadata", metadata)
     if not any_input:
         field("name", NF)
@@ -488,14 +484,13 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
         any_output = True
         lines.append(f"\n**Artifact: `{ident}`**")
         field("identifier", ident)
-        typ = ent.get("prov:type", "file").replace("provml:", "")
-        size_raw = ent.get("yprov:file_size", NF)
-        size = size_raw.split("^^")[0] if "^^" in str(size_raw) else str(size_raw)
+        typ = ent.get("prov:type", "file")
+        size_raw = ent.get(f"{YPROV_PREFIX}:fileSizeInBytes", NF)
         tm = ent.get("prov:generatedAtTime", NF).replace("prov:", "")
         metadata = get_metadata(ent)
         field("description", f"Output artifact of type '{typ}', generated at time {tm}.")
         field("reference", ent.get("dcterms:identifier", NF))
-        field("size", fmt_bytes(size))
+        field("size", fmt_bytes(size_raw))
         field("additional metadata", metadata)
     if not any_output:
         field("name", NF)

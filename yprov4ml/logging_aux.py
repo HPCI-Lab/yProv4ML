@@ -1,8 +1,9 @@
-import os, hashlib, io
+import os, hashlib, io, sys
 import torch
 import json
 import warnings
 import prov.model as prov
+import shlex
 
 from torch.utils.data import DataLoader, Subset, Dataset, RandomSampler
 from typing import Any, Optional, Union
@@ -262,9 +263,26 @@ def log_dataset(
     elif isinstance(dataset, Dataset): 
         e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": _log_param_value(len(dataset), "xsd:int")})
 
-def log_execution_command(cmd: str, path : str) -> None:
-    path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)
-    log_param("execution_command", cmd + " " + path)
+def log_execution_command(full_command_str: Optional[str] = None, path : Optional[str] = None) -> None:
+    if not full_command_str:
+        full_command_str = " ".join([sys.executable] + sys.argv)
+    if not path: 
+        path = sys.argv[0]
+
+    tokens = shlex.split(full_command_str)
+    raw_args = tokens[1:] if len(tokens) > 1 else []
+    
+    full_path = sys.executable + " " + os.path.join(
+        "/workspace", 
+        f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", 
+        "artifacts", 
+        path
+    )
+    
+    log_param("execution_executable", sys.executable, is_input=True)
+    log_param("reproducibility_command", full_path, is_input=False)
+    log_param("execution_arguments", " ".join(raw_args), is_input=True)
+    log_param("execution_command", full_command_str, is_input=True)
 
 def log_source_code(use_git : bool = False) -> None:
     PROV4ML_DATA.request_source_code(use_git=use_git)

@@ -270,6 +270,7 @@ class Prov4MLData:
 
         e.add_attributes({
             f"{self.PROV_PREFIX}:label": act_name,
+            f"{self.PROV_PREFIX}:generatedAtTime": get_time(),
             f'{self.yProv_PREFIX}:fullLabel': str(parameter_name), 
             f"{self.PROV_PREFIX}:value": str(parameter_value),
             f"{self.PROV_PREFIX}:role": "input" if is_input else "output", 
