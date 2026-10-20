@@ -1,5 +1,5 @@
 @prefix : <https://github.com/HPCI-Lab/yProv4ML#> .
-@prefix yprov: <https://github.com/HPCI-Lab/yProv4ML#> .
+@prefix yprov4ml4ml: <https://github.com/HPCI-Lab/yProv4ML#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix provml: <https://w3id.org/provml#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
@@ -31,156 +31,156 @@ provml:Metric a rdfs:Class ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Metric" .
 
-yprov:ExecutionActivity a rdfs:Class ;
+yprov4ml:ExecutionActivity a rdfs:Class ;
     rdfs:subClassOf prov:Activity ;
     rdfs:label "Execution Activity" .
 
 # --- Data Properties (Activity Metadata) ---
-yprov:provenance_path a rdf:Property ;
+yprov4ml:provenance_path a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:artifact_uri a rdf:Property ;
+yprov4ml:artifact_uri a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:experiment_dir a rdf:Property ;
+yprov4ml:experiment_dir a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:experiment_name a rdf:Property ;
+yprov4ml:experiment_name a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:run_id a rdf:Property ;
+yprov4ml:run_id a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:python_version a rdf:Property ;
+yprov4ml:python_version a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:PID a rdf:Property ;
+yprov4ml:PID a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:host_name a rdf:Property ;
+yprov4ml:host_name a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:time_zone a rdf:Property ;
+yprov4ml:time_zone a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:global_rank a rdf:Property ;
+yprov4ml:global_rank a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:runtime_type a rdf:Property ;
+yprov4ml:runtime_type a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:operating_system a rdf:Property ;
+yprov4ml:operating_system a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:release a rdf:Property ;
+yprov4ml:release a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:processor a rdf:Property ;
+yprov4ml:processor a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
-yprov:machine a rdf:Property ;
+yprov4ml:machine a rdf:Property ;
     rdfs:domain prov:Activity ;
     rdfs:range xsd:string .
 
 # --- Data Properties (Entity Attributes & Stats) ---
-yprov:fullLabel a rdf:Property ;
+yprov4ml:fullLabel a rdf:Property ;
     rdfs:domain prov:Entity ;
     rdfs:range xsd:string .
 
-yprov:file_size a rdf:Property ;
+yprov4ml:file_size a rdf:Property ;
     rdfs:domain prov:Entity ;
     rdfs:range xsd:string .
 
-yprov:parent_total_params a rdf:Property ;
+yprov4ml:parent_total_params a rdf:Property ;
     rdfs:domain provml:Model ;
     rdfs:range xsd:int .
 
-yprov:parent_memory_of_model a rdf:Property ;
+yprov4ml:parent_memory_of_model a rdf:Property ;
     rdfs:domain provml:Model ;
     rdfs:range xsd:double .
 
-yprov:parent_total_memory_load_of_model a rdf:Property ;
+yprov4ml:parent_total_memory_load_of_model a rdf:Property ;
     rdfs:domain provml:Model ;
     rdfs:range xsd:double .
 
-yprov:weights_total_params a rdf:Property ;
+yprov4ml:weights_total_params a rdf:Property ;
     rdfs:domain provml:Model ;
     rdfs:range xsd:int .
 
-yprov:weights_memory_of_model a rdf:Property ;
+yprov4ml:weights_memory_of_model a rdf:Property ;
     rdfs:domain provml:Model ;
     rdfs:range xsd:double .
 
-yprov:weights_total_memory_load_of_model a rdf:Property ;
+yprov4ml:weights_total_memory_load_of_model a rdf:Property ;
     rdfs:domain provml:Model ;
     rdfs:range xsd:double .
 
-yprov:training_data_stat_batch_size a rdf:Property ;
+yprov4ml:training_data_stat_batch_size a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:training_data_stat_num_workers a rdf:Property ;
+yprov4ml:training_data_stat_num_workers a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:training_data_stat_shuffle a rdf:Property ;
+yprov4ml:training_data_stat_shuffle a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:boolean .
 
-yprov:training_data_stat_total_steps a rdf:Property ;
+yprov4ml:training_data_stat_total_steps a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:training_data_stat_total_samples a rdf:Property ;
+yprov4ml:training_data_stat_total_samples a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:training_data_stat_total_batches a rdf:Property ;
+yprov4ml:training_data_stat_total_batches a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:validation_data_stat_batch_size a rdf:Property ;
+yprov4ml:validation_data_stat_batch_size a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:validation_data_stat_num_workers a rdf:Property ;
+yprov4ml:validation_data_stat_num_workers a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:validation_data_stat_shuffle a rdf:Property ;
+yprov4ml:validation_data_stat_shuffle a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:boolean .
 
-yprov:validation_data_stat_total_steps a rdf:Property ;
+yprov4ml:validation_data_stat_total_steps a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:validation_data_stat_total_samples a rdf:Property ;
+yprov4ml:validation_data_stat_total_samples a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:validation_data_stat_total_batches a rdf:Property ;
+yprov4ml:validation_data_stat_total_batches a rdf:Property ;
     rdfs:domain provml:Dataset ;
     rdfs:range xsd:string .
 
-yprov:context a rdf:Property ;
+yprov4ml:context a rdf:Property ;
     rdfs:domain provml:Metric ;
     rdfs:range xsd:string .
 
-yprov:source a rdf:Property ;
+yprov4ml:source a rdf:Property ;
     rdfs:domain provml:Metric ;
     rdfs:range xsd:string .
