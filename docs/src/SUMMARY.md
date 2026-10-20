@@ -3,7 +3,7 @@
 - [Introduction](./readme.md)
 - [Installation](./installation.md)
 - [Setup](./setup.md)
-- [Ontology](./index.html)
+- [Ontology](./ontology.html)
 - [Provenance Graphs and Cards](./prov_graph.md)
 - [Logging](./logging.md)
 <!-- - [Prov Collection](./prov_collection.md) -->
