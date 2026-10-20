@@ -9,10 +9,18 @@ from yprov4ml.constants import PROV4ML_DATA
 
 import os
 import prov.model as prov
+import pandas as pd
 
 from yprov4ml.utils.prov_utils import custom_prov_to_dot
 from yprov4ml.utils.prov_utils import get_or_create_activity, _log_param_value
 from yprov4ml.utils.time_utils import get_time
+
+
+def get_metric_stats_from_file(metric_file_path : str): 
+    if metric_file_path.endswith(".csv"): 
+        data = pd.read_csv(metric_file_path)
+        return data["timestep"].min(), data["timestep"].max(), data["value"].max(), data["value"].max() 
+
 
 def create_prov_document() -> prov.ProvDocument:
     
@@ -25,11 +33,17 @@ def create_prov_document() -> prov.ProvDocument:
         generation_time = PROV4ML_DATA.metrics[(name, ctx)].generation_time
         metric_file_path = os.path.join(PROV4ML_DATA.METRIC_DIR, f"{name}_{str(ctx)}_{str(source)}_GR{PROV4ML_DATA.global_rank}.{PROV4ML_DATA.metrics_file_type}")
 
+        mT, MT, mean, fin = get_metric_stats_from_file(metric_file_path)
+
         attrs = {
             f"{PROV4ML_DATA.PROV_PREFIX}:type": "provml:Metric", 
             f'{PROV4ML_DATA.yProv_PREFIX}:context': str(ctx),
             f'{PROV4ML_DATA.yProv_PREFIX}:source': str(source), 
-            f'{PROV4ML_DATA.PROV_PREFIX}:generatedAtTime': _log_param_value(generation_time, "xsd:dateTime")
+            f'{PROV4ML_DATA.PROV_PREFIX}:generatedAtTime': _log_param_value(generation_time, "xsd:dateTime"),
+            f'{PROV4ML_DATA.PROV_PREFIX}:startedAtTime': mT,
+            f'{PROV4ML_DATA.PROV_PREFIX}:endedAtTime': MT,
+            f'{PROV4ML_DATA.yProv_PREFIX}:meanMetricValue': mean,
+            f'{PROV4ML_DATA.PROV_PREFIX}:finalMetricValue': fin,
         }
         PROV4ML_DATA.add_artifact(name,metric_file_path,0,ctx, source, is_input=False, log_copy_in_prov_directory=False, attributes=attrs)
     

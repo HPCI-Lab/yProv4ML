@@ -1,7 +1,6 @@
-import os
+import os, hashlib, io
 import torch
 import json
-import sys
 import warnings
 import prov.model as prov
 
@@ -45,9 +44,9 @@ def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, A
     memory_per_optim = total_params * 4 * 1e-6
     
     ret = {}
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}_total_params"] = total_params
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}_memory_of_model"] = memory_per_model
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}_total_memory_load_of_model"] = memory_per_model + memory_per_grad + memory_per_optim
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}TotalParameters"] = total_params
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}WeightsMemoryLoad"] = memory_per_model
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}ModelTotalMemoryLoad"] = memory_per_model + memory_per_grad + memory_per_optim
 
     return ret
 
@@ -81,7 +80,7 @@ def _get_model_layers_description(model_name : str, model: Union[torch.nn.Module
     with open(f"{path}/{model_name}_layers_description.json", "w") as fp:
         json.dump(mo , fp) 
 
-    return {f"{PROV4ML_DATA.yProv_PREFIX}:layers_description_path": f"{path}/{model_name}_layers_description.json"}
+    return {f"{PROV4ML_DATA.yProv_PREFIX}:layersDescriptionFilePath": f"{path}/{model_name}_layers_description.json"}
 
 def log_model(
         model_name: str, 
@@ -168,6 +167,16 @@ def save_model_version(
         other_attrs : Optional[dict] = None, 
     ) -> prov.ProvEntity:
 
+    buffer = io.BytesIO()
+    state_dict = model.state_dict() if isinstance(model, torch.nn.Module) else model
+    torch.save(state_dict, buffer)
+    model_bytes = buffer.getvalue()
+    model_hash = hashlib.sha256(model_bytes).hexdigest()
+
+    if other_attrs is None: 
+        other_attrs = {}
+    other_attrs[f"{PROV4ML_DATA.yProv_PREFIX}:checksum"] = model_hash
+
     if incremental: 
         path = os.path.join(PROV4ML_DATA.ARTIFACTS_DIR, model_name)
         if not os.path.exists(path):
@@ -194,6 +203,27 @@ def save_model_version(
             log_copy_subdirectory=model_name, 
             is_model=True, is_input=is_input
         )
+    
+def compute_dataset_checksum(dataset: Union[DataLoader, Subset, Dataset]) -> str:
+    hasher = hashlib.sha256()
+    if isinstance(dataset, DataLoader):
+        hasher.update(f"batch_size={dataset.batch_size}".encode())
+        hasher.update(f"num_workers={dataset.num_workers}".encode())
+        dataset = dataset.dataset
+    if isinstance(dataset, Subset):
+        indices_str = ",".join(map(str, sorted(dataset.indices)))
+        hasher.update(indices_str.encode())
+        dataset = dataset.dataset
+    hasher.update(type(dataset).__name__.encode())
+    hasher.update(str(len(dataset)).encode())
+    if hasattr(dataset, 'tensors'):
+        for tensor in dataset.tensors:
+            hasher.update(tensor.detach().cpu().numpy().tobytes())
+    elif hasattr(dataset, 'samples') or hasattr(dataset, 'imgs'):
+        file_paths = [s[0] for s in getattr(dataset, 'samples', getattr(dataset, 'imgs', []))]
+        for path in sorted(file_paths):
+            hasher.update(str(path).encode())
+    return hasher.hexdigest()
 
 def log_dataset(
         dataset_label : str, 
@@ -204,6 +234,7 @@ def log_dataset(
         other_attrs: Optional[dict] = None
         ): 
 
+    other_attrs[f"{PROV4ML_DATA.yProv_PREFIX}:checksum"] = compute_dataset_checksum(dataset)
     e = log_artifact(dataset_label, "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True, source=source, other_attrs=other_attrs)
     
     if not log_dataset_info: return
@@ -213,23 +244,23 @@ def log_dataset(
         dataset = dl.dataset
         attrs = {
             f"prov:type": "provml:Dataset", 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_batch_size": _log_param_value(dl.batch_size, "xsd:int"), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_num_workers": _log_param_value(dl.num_workers, "xsd:int"), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_shuffle": isinstance(dl.sampler, RandomSampler), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": _log_param_value(len(dl), "xsd:int"), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": _log_param_value(len(dataset) * dl.batch_size, "xsd:int"),
-            f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_batches": _log_param_value(len(dataset), "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatBatchSize": _log_param_value(dl.batch_size, "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatNumWorkers": _log_param_value(dl.num_workers, "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatShuffle": isinstance(dl.sampler, RandomSampler), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSteps": _log_param_value(len(dl), "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": _log_param_value(len(dataset) * dl.batch_size, "xsd:int"),
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalBatches": _log_param_value(len(dataset), "xsd:int"), 
         }
         e.add_attributes(attrs)
 
     elif isinstance(dataset, Subset):
         dl = dataset
         dataset = dl.dataset
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_steps": _log_param_value(len(dl), "xsd:int")})
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": _log_param_value(len(dataset), "xsd:int")})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSteps": _log_param_value(len(dl), "xsd:int")})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": _log_param_value(len(dataset), "xsd:int")})
         
     elif isinstance(dataset, Dataset): 
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:{dataset_label}_stat_total_samples": _log_param_value(len(dataset), "xsd:int")})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": _log_param_value(len(dataset), "xsd:int")})
 
 def log_execution_command(cmd: str, path : str) -> None:
     path = os.path.join("/workspace", f"{PROV4ML_DATA.CLEAN_EXPERIMENT_NAME}_{PROV4ML_DATA.RUN_ID}", "artifacts", path)

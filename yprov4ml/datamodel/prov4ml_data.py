@@ -37,7 +37,7 @@ class Prov4MLData:
         self.PROV_PREFIX = "prov"
         self.XSD_PREFIX = "xsd"
         self.PROVML_PREFIX = "provml"
-        self.yProv_PREFIX = "yprov"
+        self.yProv_PREFIX = "yprov4ml"
         self.RDF_PREFIX = "dcterms"
 
         self.RUN_ID = 0
@@ -137,9 +137,7 @@ class Prov4MLData:
         c, created = get_or_create_activity(self.root_provenance_doc, context_name)
         if created:         
             d = get_time()
-            # TEST
-            # d = {"$": get_time(), "type": "xsd:dateTime"}
-            c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": f"{d}"})
+            c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": str(d)})
             if source is not None: 
                 c.wasInformedBy(maybe_src_context)
             else: 
@@ -151,7 +149,7 @@ class Prov4MLData:
 
     def _init_root_context(self): 
         self.root_provenance_doc = prov.ProvDocument()
-        self.root_provenance_doc.add_namespace(self.yProv_PREFIX, "https://github.com/HPCI-Lab/yProv4ML")
+        self.root_provenance_doc.add_namespace(self.yProv_PREFIX, "https://hpci-lab.github.io/yProv4ML/ontology.html")
         self.root_provenance_doc.set_default_namespace(self.PROV_JSON_NAME)
         self.root_provenance_doc.add_namespace(self.PROV_PREFIX, "http://www.w3.org/ns/prov#")
         self.root_provenance_doc.add_namespace(self.XSD_PREFIX,'http://www.w3.org/2000/10/XMLSchema#')
@@ -163,15 +161,15 @@ class Prov4MLData:
         hostname = socket.gethostname()
         timezone = get_local_timezone_info()
         rootstr.add_attributes({
-            f"{self.yProv_PREFIX}:provenance_path":self.PROV_SAVE_PATH,
-            f"{self.yProv_PREFIX}:artifact_uri":self.ARTIFACTS_DIR,
-            f"{self.yProv_PREFIX}:experiment_dir":self.EXPERIMENT_DIR,
-            f"{self.yProv_PREFIX}:experiment_name":self.PROV_JSON_NAME,
-            f"{self.yProv_PREFIX}:run_id": _log_param_value(self.RUN_ID, "xsd:int"), #self.RUN_ID,
-            f"{self.yProv_PREFIX}:python_version":str(sys.version), 
+            f"{self.yProv_PREFIX}:provenancePath":self.PROV_SAVE_PATH,
+            f"{self.yProv_PREFIX}:artifactURI":self.ARTIFACTS_DIR,
+            f"{self.yProv_PREFIX}:experimentDirectory":self.EXPERIMENT_DIR,
+            f"{self.yProv_PREFIX}:experimentName":self.PROV_JSON_NAME,
+            f"{self.yProv_PREFIX}:runID": _log_param_value(self.RUN_ID, "xsd:int"), #self.RUN_ID,
+            f"{self.yProv_PREFIX}:pythonVersion":str(sys.version), 
             f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
-            f"{self.yProv_PREFIX}:host_name": hostname,
-            f"{self.yProv_PREFIX}:time_zone": timezone,
+            f"{self.yProv_PREFIX}:hostName": hostname,
+            f"{self.yProv_PREFIX}:timeZone": timezone,
         })
         rootstr.wasAssociatedWith(user_ag)
 
@@ -184,20 +182,20 @@ class Prov4MLData:
             jobid = os.getenv("SLURM_JOB_ID", None) 
             jobname = os.getenv("SLURM_JOB_NAME", None) 
             rootstr.add_attributes({
-                f"{self.yProv_PREFIX}:global_rank": _log_param_value(global_rank, "xsd:int"),
-                f"{self.yProv_PREFIX}:local_rank": _log_param_value(local_rank, "xsd:int"),
-                f"{self.yProv_PREFIX}:node_rank": _log_param_value(node_rank, "xsd:int"),
-                f"{self.yProv_PREFIX}:job_id": _log_param_value(jobid, "xsd:int"),
-                f"{self.yProv_PREFIX}:job_id": jobname,
+                f"{self.yProv_PREFIX}:globalRank": _log_param_value(global_rank, "xsd:int"),
+                f"{self.yProv_PREFIX}:localRank": _log_param_value(local_rank, "xsd:int"),
+                f"{self.yProv_PREFIX}:nodeRank": _log_param_value(node_rank, "xsd:int"),
+                f"{self.yProv_PREFIX}:jobID": _log_param_value(jobid, "xsd:int"),
+                f"{self.yProv_PREFIX}:jobName": jobname,
             })
         elif runtime_type == "single_core":
             rootstr.add_attributes({
-                f"{self.yProv_PREFIX}:global_rank":_log_param_value(global_rank, "xsd:int"),
+                f"{self.yProv_PREFIX}:globalRank":_log_param_value(global_rank, "xsd:int"),
             })
 
         rootstr.add_attributes({
-            f"{self.yProv_PREFIX}:runtime_type":str(runtime_type),
-            f"{self.yProv_PREFIX}:operating_system":str(platform.system()),
+            f"{self.yProv_PREFIX}:runtimeType":str(runtime_type),
+            f"{self.yProv_PREFIX}:operatingSystem":str(platform.system()),
             f"{self.yProv_PREFIX}:release":str(platform.release()),
             f"{self.yProv_PREFIX}:processor":str(platform.processor()),
             f"{self.yProv_PREFIX}:machine":str(platform.machine()),
@@ -340,7 +338,7 @@ class Prov4MLData:
 
         if artifact_path: 
             file_size = os.path.getsize(artifact_path)
-            local_attrs.setdefault(f'{self.yProv_PREFIX}:file_size',_log_param_value(file_size, "xsd:int"))
+            local_attrs.setdefault(f'{self.yProv_PREFIX}:fileSizeInBytes', _log_param_value(file_size, "xsd:int"))
 
         if is_input: 
             local_attrs.setdefault(f'{self.PROV_PREFIX}:role','input')
