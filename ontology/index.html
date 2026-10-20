@@ -1,0 +1,3666 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Ontospy > https://github.com/HPCI-Lab/yProv4ML</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+
+
+  <style type="text/css" media="screen">
+
+
+  body {
+	  margin-left: 6em;
+	  margin-right: 12em;
+	  text-align: justify;
+    padding: 2em 1em 2em 70px;
+    margin: 0;
+    font-family: sans-serif;
+    color: black;
+    background: white;
+    background-position: top left;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  :link { color: #00C; background: transparent }
+  :visited { color: #00C; background: transparent }
+  a:active { color: #C00; background: transparent }
+
+  a:link img, a:visited img { border-style: none } /* no border on img links */
+
+  a:hover {color: white; background: #00C; }
+  a.backlink:hover {color: white; background: grey; }
+  a.greylink:hover {color: white; background: grey; }
+
+  .margintop {
+  	 margin-top: 40px;
+  }
+
+
+  dt, dd { margin-top: 10px; margin-bottom: 0 } /* opera 3.50 */
+  dt { font-weight: bold }
+
+
+  h1, h2, h3, h4, h5, h6 { text-align: left }
+  /* background should be transparent, but WebTV has a bug */
+  h1, h2, h3, h4, h5 { color: #005A9C; background: white }
+  h1.title { font: 200% sans-serif }
+  h1 { font: 170% sans-serif }
+  h2 { font: 140% sans-serif }
+  h3 { font: 120% sans-serif }
+  h4 { font: bold 100% sans-serif }
+  h5 { font: italic 100% sans-serif }
+  h6 { font: small-caps 100% sans-serif }
+
+  .hide { display: none }
+
+
+  pre { margin-left: 2em }
+
+  pre, code { font-family: monospace } /* navigator 4 requires this */
+
+
+  .implementation {
+  	background: aliceblue;
+	padding: 10px;
+	margin-top: 5px;
+  }
+
+  fieldset {
+	  margin-top: 20px;
+	  padding: 13px;
+      text-align: left;
+  }
+
+  legend {
+	  text-transform: uppercase;
+  }
+
+  .entity-div {
+	  margin: 55px 10px 30px 10px;
+  }
+
+  .entity-section {
+	  margin-bottom: 0px;
+  }
+
+
+  a.backlink {
+	  font-size: 80%;
+	  color: grey;
+  }
+
+  a.greylink {
+	  color: grey;
+  }
+
+
+   .implementation_title {
+
+       font-weight: bold;
+       font-size: 100%;
+   }
+
+.section-desc {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+
+
+
+        table.shacl-constraints {
+            border-collapse: collapse;
+            margin: 8px 0px;
+            font-size: 90%;
+        }
+        table.shacl-constraints th, table.shacl-constraints td {
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        table.shacl-constraints th {
+            background: aliceblue;
+            font-size: 85%;
+        }
+        table.shacl-constraints .label {
+            font-weight: bold;
+            color: grey;
+        }
+
+
+
+        
+        .tree-container {
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+		.tree {margin: 10px 0px 30px -20px; padding: 0; display: inline-block; width: max-content;}
+
+		.tree ul {
+			padding-top: 20px; position: relative;
+
+			transition: all 0.5s;
+			-webkit-transition: all 0.5s;
+			-moz-transition: all 0.5s;
+		}
+
+		.tree li {
+			float: left; text-align: center;
+			list-style-type: none;
+			position: relative;
+			padding: 20px 5px 0 5px;
+
+			transition: all 0.5s;
+			-webkit-transition: all 0.5s;
+			-moz-transition: all 0.5s;
+		}
+
+		/*We will use ::before and ::after to draw the connectors*/
+
+		.tree li::before, .tree li::after{
+			content: '';
+			position: absolute; top: 0; right: 50%;
+			border-top: 1px solid #ccc;
+			width: 50%; height: 20px;
+		}
+		.tree li::after{
+			right: auto; left: 50%;
+			border-left: 1px solid #ccc;
+		}
+
+		/*We need to remove left-right connectors from elements without
+		any siblings*/
+		.tree li:only-child::after, .tree li:only-child::before {
+			display: none;
+		}
+
+		/*Remove space from the top of single children*/
+		.tree li:only-child{ padding-top: 0;}
+
+		/*Remove left connector from first child and
+		right connector from last child*/
+		.tree li:first-child::before, .tree li:last-child::after{
+			border: 0 none;
+		}
+		/*Adding back the vertical connector to the last nodes*/
+		.tree li:last-child::before{
+			border-right: 1px solid #ccc;
+			border-radius: 0 5px 0 0;
+			-webkit-border-radius: 0 5px 0 0;
+			-moz-border-radius: 0 5px 0 0;
+		}
+		.tree li:first-child::after{
+			border-radius: 5px 0 0 0;
+			-webkit-border-radius: 5px 0 0 0;
+			-moz-border-radius: 5px 0 0 0;
+		}
+
+		/*Time to add downward connectors from parents*/
+		.tree ul ul::before{
+			content: '';
+			position: absolute; top: 0; left: 50%;
+			border-left: 1px solid #ccc;
+			width: 0; height: 20px;
+		}
+
+		.tree li a{
+			border: 1px solid #ccc;
+			padding: 5px 10px;
+			text-decoration: none;
+			color: #666;
+			font-family: arial, verdana, tahoma;
+			font-size: 11px;
+			display: inline-block;
+
+			border-radius: 5px;
+			-webkit-border-radius: 5px;
+			-moz-border-radius: 5px;
+
+			transition: all 0.5s;
+			-webkit-transition: all 0.5s;
+			-moz-transition: all 0.5s;
+		}
+
+		/*Time for some hover effects*/
+		/*We will apply the hover effect the the lineage of the element also*/
+		.tree li a:hover, .tree li a:hover+ul li a {
+			background: #c8e4f8; color: #000; border: 1px solid #94a0b4;
+		}
+		/*Connector styles on hover*/
+		.tree li a:hover+ul li::after,
+		.tree li a:hover+ul li::before,
+		.tree li a:hover+ul::before,
+		.tree li a:hover+ul ul::before{
+			border-color:  #94a0b4;
+		}
+
+		/*Thats all. I hope you enjoyed it.
+		Thanks :)*/
+
+
+  </style>
+
+
+</head>
+
+
+<body>
+
+	
+	
+		
+			<h1 class="title"><a href="" target="_blank">https://github.com/HPCI-Lab/yProv4ML</a></h1>
+			<h3><p>Ontology defining machine learning execution provenance matching yProv schema patterns.</p></h3>
+		
+
+	
+		
+		
+
+
+	<p><small>Ontology documentation automatically generated by <a class="greylink" href="http://lambdamusic.github.io/Ontospy/">Ontospy</a> on Tue, 20 Oct 2026 08:59:16</small></p>
+
+
+
+	
+
+
+	<hr class="margintop">
+
+	<h1><a name="toc">&nbsp;</a>Table of Content</h1>
+
+	<ul>
+		<li><a href="#ontologies">Ontologies</a></li>
+		<li><a href="#a-z">A-Z of Terms</a></li>
+		<li><a href="#classes">Classes</a></li>
+		
+		
+		
+		<li><a href="#otherproperties">Other properties</a></li>
+		
+		
+		
+	</ul>
+
+
+
+	
+
+	
+
+	<hr class="margintop">
+
+	<h1><a name="ontologies"></a>Ontologies</h1>
+
+		
+
+
+			<fieldset> <legend><h3><a href="https://github.com/HPCI-Lab/yProv4ML" target="_blank">https://github.com/HPCI-Lab/yProv4ML</a></h3></legend>
+
+			<h4 style="margin-top: -20px;"><p>Ontology defining machine learning execution provenance matching yProv schema patterns.</p></h4>
+
+			
+			<dl>
+  <dt>owl:versionInfo</dt>
+  <dd><p>1.0</p></dd>
+  <dt>rdf:type</dt>
+  <dd><a href="http://www.w3.org/2002/07/owl#Ontology" target="_blank">http://www.w3.org/2002/07/owl#Ontology</a></dd>
+  <dt>rdfs:comment</dt>
+  <dd><p>Ontology defining machine learning execution provenance matching yProv schema patterns.</p></dd>
+  <dt>rdfs:label</dt>
+  <dd><p>yProv4ML Ontology</p></dd>
+</dl>
+
+			</fieldset>
+
+		
+
+	
+
+
+
+	
+
+	<hr class="margintop">
+	<h1><a  name="a-z">&nbsp;</a>A-Z of terms</h1>
+
+	<div id="azterms">
+
+	This is a complete alphabetical A-Z index of all terms, by main logical type.
+
+	
+		<fieldset> <legend>Classes (7)</legend>
+			<span><a href="#prov:Activity">prov:Activity</a></span>
+			|
+			<span><a href="#prov:Entity">prov:Entity</a></span>
+			|
+			<span><a href="#provml:Dataset">provml:Dataset</a></span>
+			|
+			<span><a href="#provml:HyperParameter">provml:HyperParameter</a></span>
+			|
+			<span><a href="#provml:Metric">provml:Metric</a></span>
+			|
+			<span><a href="#provml:Model">provml:Model</a></span>
+			|
+			<span><a href="#yprov:ExecutionActivity">yprov:ExecutionActivity</a></span>
+			
+			
+		</fieldset>
+	
+
+	
+
+	
+
+	
+
+	
+
+		<fieldset> <legend>Other Properties (37)</legend>
+			&nbsp;<a href="#yprov:PID">yprov:PID</a>
+			|  <a href="#yprov:artifact_uri">yprov:artifact_uri</a>
+			|  <a href="#yprov:context">yprov:context</a>
+			|  <a href="#yprov:experiment_dir">yprov:experiment_dir</a>
+			|  <a href="#yprov:experiment_name">yprov:experiment_name</a>
+			|  <a href="#yprov:file_size">yprov:file_size</a>
+			|  <a href="#yprov:fullLabel">yprov:fullLabel</a>
+			|  <a href="#yprov:global_rank">yprov:global_rank</a>
+			|  <a href="#yprov:host_name">yprov:host_name</a>
+			|  <a href="#yprov:machine">yprov:machine</a>
+			|  <a href="#yprov:operating_system">yprov:operating_system</a>
+			|  <a href="#yprov:parent_memory_of_model">yprov:parent_memory_of_model</a>
+			|  <a href="#yprov:parent_total_memory_load_of_model">yprov:parent_total_memory_load_of_model</a>
+			|  <a href="#yprov:parent_total_params">yprov:parent_total_params</a>
+			|  <a href="#yprov:processor">yprov:processor</a>
+			|  <a href="#yprov:provenance_path">yprov:provenance_path</a>
+			|  <a href="#yprov:python_version">yprov:python_version</a>
+			|  <a href="#yprov:release">yprov:release</a>
+			|  <a href="#yprov:run_id">yprov:run_id</a>
+			|  <a href="#yprov:runtime_type">yprov:runtime_type</a>
+			|  <a href="#yprov:source">yprov:source</a>
+			|  <a href="#yprov:time_zone">yprov:time_zone</a>
+			|  <a href="#yprov:training_data_stat_batch_size">yprov:training_data_stat_batch_size</a>
+			|  <a href="#yprov:training_data_stat_num_workers">yprov:training_data_stat_num_workers</a>
+			|  <a href="#yprov:training_data_stat_shuffle">yprov:training_data_stat_shuffle</a>
+			|  <a href="#yprov:training_data_stat_total_batches">yprov:training_data_stat_total_batches</a>
+			|  <a href="#yprov:training_data_stat_total_samples">yprov:training_data_stat_total_samples</a>
+			|  <a href="#yprov:training_data_stat_total_steps">yprov:training_data_stat_total_steps</a>
+			|  <a href="#yprov:validation_data_stat_batch_size">yprov:validation_data_stat_batch_size</a>
+			|  <a href="#yprov:validation_data_stat_num_workers">yprov:validation_data_stat_num_workers</a>
+			|  <a href="#yprov:validation_data_stat_shuffle">yprov:validation_data_stat_shuffle</a>
+			|  <a href="#yprov:validation_data_stat_total_batches">yprov:validation_data_stat_total_batches</a>
+			|  <a href="#yprov:validation_data_stat_total_samples">yprov:validation_data_stat_total_samples</a>
+			|  <a href="#yprov:validation_data_stat_total_steps">yprov:validation_data_stat_total_steps</a>
+			|  <a href="#yprov:weights_memory_of_model">yprov:weights_memory_of_model</a>
+			|  <a href="#yprov:weights_total_memory_load_of_model">yprov:weights_total_memory_load_of_model</a>
+			|  <a href="#yprov:weights_total_params">yprov:weights_total_params</a>
+			  
+		</fieldset>
+
+	
+
+	
+
+	
+
+	
+
+	</div>
+
+
+
+	
+
+
+	
+
+		<hr class="margintop">
+		<h1 class="margintop" ><a name="classes">&nbsp;</a>Classes</h1>
+
+			
+
+			<div class="entity-div">
+
+
+
+				<h3 class="entity-section">Class: <a name="prov:Activity" href="#prov:Activity">prov:Activity</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+
+                <div class="tree-container">
+                <div class="tree">
+                    <ul>
+                        
+
+                            <li href="#"><a>owl:Thing</a>
+
+                            <ul>
+                              <li><a style="font-weight: bold;">prov:Activity</a>
+
+                              
+                                  <ul>
+                                    <li><a href="#yprov:ExecutionActivity">yprov:ExecutionActivity</a></li>
+                                  </ul>
+                              
+                                </li>
+
+                            </ul>
+
+                            </li>
+                        
+
+                    </ul>
+                </div>
+                </div>
+
+
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+                    <p class="section-desc"><b>Inherits from:</b> <br />owl:Thing</p>
+				
+
+
+
+				
+					<p class="section-desc"><b>Property Domain of:</b>
+                        <br>
+                        <a href="#yprov:PID">yprov:PID</a> | <a href="#yprov:artifact_uri">yprov:artifact_uri</a> | <a href="#yprov:experiment_dir">yprov:experiment_dir</a> | <a href="#yprov:experiment_name">yprov:experiment_name</a> | <a href="#yprov:global_rank">yprov:global_rank</a> | <a href="#yprov:host_name">yprov:host_name</a> | <a href="#yprov:machine">yprov:machine</a> | <a href="#yprov:operating_system">yprov:operating_system</a> | <a href="#yprov:processor">yprov:processor</a> | <a href="#yprov:provenance_path">yprov:provenance_path</a> | <a href="#yprov:python_version">yprov:python_version</a> | <a href="#yprov:release">yprov:release</a> | <a href="#yprov:run_id">yprov:run_id</a> | <a href="#yprov:runtime_type">yprov:runtime_type</a> | <a href="#yprov:time_zone">yprov:time_zone</a>  
+                    </p>
+				
+
+				
+
+
+				
+
+				
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code></code>
+				</div>
+
+			</div>
+
+
+			
+
+			<div class="entity-div">
+
+
+
+				<h3 class="entity-section">Class: <a name="prov:Entity" href="#prov:Entity">prov:Entity</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+
+                <div class="tree-container">
+                <div class="tree">
+                    <ul>
+                        
+
+                            <li href="#"><a>owl:Thing</a>
+
+                            <ul>
+                              <li><a style="font-weight: bold;">prov:Entity</a>
+
+                              
+                                  <ul>
+                                    <li><a href="#provml:Dataset">provml:Dataset</a></li><li><a href="#provml:HyperParameter">provml:HyperParameter</a></li><li><a href="#provml:Metric">provml:Metric</a></li><li><a href="#provml:Model">provml:Model</a></li>
+                                  </ul>
+                              
+                                </li>
+
+                            </ul>
+
+                            </li>
+                        
+
+                    </ul>
+                </div>
+                </div>
+
+
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+                    <p class="section-desc"><b>Inherits from:</b> <br />owl:Thing</p>
+				
+
+
+
+				
+					<p class="section-desc"><b>Property Domain of:</b>
+                        <br>
+                        <a href="#yprov:file_size">yprov:file_size</a> | <a href="#yprov:fullLabel">yprov:fullLabel</a>  
+                    </p>
+				
+
+				
+
+
+				
+
+				
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code></code>
+				</div>
+
+			</div>
+
+
+			
+
+			<div class="entity-div">
+
+
+
+				<h3 class="entity-section">Class: <a name="provml:Dataset" href="#provml:Dataset">provml:Dataset</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+
+                <div class="tree-container">
+                <div class="tree">
+                    <ul>
+                        
+                            <li> <a href="#prov:Entity">prov:Entity</a>
+
+                            <ul>
+
+                              <li><a style="font-weight: bold;">provml:Dataset</a>
+
+                              
+                                </li>
+
+                            </ul>
+
+                            </li>
+                            
+
+                        
+
+                    </ul>
+                </div>
+                </div>
+
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> provml:Dataset is a leaf node.</p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+					<p class="section-desc"><b>Inherits from <small>(1)</small>:</b>
+                        <br />
+                        <a href="#prov:Entity">prov:Entity</a>  
+                    </p>
+				
+
+
+
+				
+					<p class="section-desc"><b>Property Domain of:</b>
+                        <br>
+                        <a href="#yprov:training_data_stat_batch_size">yprov:training_data_stat_batch_size</a> | <a href="#yprov:training_data_stat_num_workers">yprov:training_data_stat_num_workers</a> | <a href="#yprov:training_data_stat_shuffle">yprov:training_data_stat_shuffle</a> | <a href="#yprov:training_data_stat_total_batches">yprov:training_data_stat_total_batches</a> | <a href="#yprov:training_data_stat_total_samples">yprov:training_data_stat_total_samples</a> | <a href="#yprov:training_data_stat_total_steps">yprov:training_data_stat_total_steps</a> | <a href="#yprov:validation_data_stat_batch_size">yprov:validation_data_stat_batch_size</a> | <a href="#yprov:validation_data_stat_num_workers">yprov:validation_data_stat_num_workers</a> | <a href="#yprov:validation_data_stat_shuffle">yprov:validation_data_stat_shuffle</a> | <a href="#yprov:validation_data_stat_total_batches">yprov:validation_data_stat_total_batches</a> | <a href="#yprov:validation_data_stat_total_samples">yprov:validation_data_stat_total_samples</a> | <a href="#yprov:validation_data_stat_total_steps">yprov:validation_data_stat_total_steps</a>  
+                    </p>
+				
+
+				
+
+
+				
+
+				
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .</p>
+
+<p>provml:Dataset a rdfs:Class ;<br>
+    rdfs:label &#34;Dataset&#34; ;<br>
+    rdfs:subClassOf prov:Entity .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+
+			
+
+			<div class="entity-div">
+
+
+
+				<h3 class="entity-section">Class: <a name="provml:HyperParameter" href="#provml:HyperParameter">provml:HyperParameter</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+
+                <div class="tree-container">
+                <div class="tree">
+                    <ul>
+                        
+                            <li> <a href="#prov:Entity">prov:Entity</a>
+
+                            <ul>
+
+                              <li><a style="font-weight: bold;">provml:HyperParameter</a>
+
+                              
+                                </li>
+
+                            </ul>
+
+                            </li>
+                            
+
+                        
+
+                    </ul>
+                </div>
+                </div>
+
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> provml:HyperParameter is a leaf node.</p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+					<p class="section-desc"><b>Inherits from <small>(1)</small>:</b>
+                        <br />
+                        <a href="#prov:Entity">prov:Entity</a>  
+                    </p>
+				
+
+
+
+				
+
+				
+
+
+				
+
+				
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .</p>
+
+<p>provml:HyperParameter a rdfs:Class ;<br>
+    rdfs:label &#34;HyperParameter&#34; ;<br>
+    rdfs:subClassOf prov:Entity .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+
+			
+
+			<div class="entity-div">
+
+
+
+				<h3 class="entity-section">Class: <a name="provml:Metric" href="#provml:Metric">provml:Metric</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+
+                <div class="tree-container">
+                <div class="tree">
+                    <ul>
+                        
+                            <li> <a href="#prov:Entity">prov:Entity</a>
+
+                            <ul>
+
+                              <li><a style="font-weight: bold;">provml:Metric</a>
+
+                              
+                                </li>
+
+                            </ul>
+
+                            </li>
+                            
+
+                        
+
+                    </ul>
+                </div>
+                </div>
+
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> provml:Metric is a leaf node.</p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+					<p class="section-desc"><b>Inherits from <small>(1)</small>:</b>
+                        <br />
+                        <a href="#prov:Entity">prov:Entity</a>  
+                    </p>
+				
+
+
+
+				
+					<p class="section-desc"><b>Property Domain of:</b>
+                        <br>
+                        <a href="#yprov:context">yprov:context</a> | <a href="#yprov:source">yprov:source</a>  
+                    </p>
+				
+
+				
+
+
+				
+
+				
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .</p>
+
+<p>provml:Metric a rdfs:Class ;<br>
+    rdfs:label &#34;Metric&#34; ;<br>
+    rdfs:subClassOf prov:Entity .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+
+			
+
+			<div class="entity-div">
+
+
+
+				<h3 class="entity-section">Class: <a name="provml:Model" href="#provml:Model">provml:Model</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+
+                <div class="tree-container">
+                <div class="tree">
+                    <ul>
+                        
+                            <li> <a href="#prov:Entity">prov:Entity</a>
+
+                            <ul>
+
+                              <li><a style="font-weight: bold;">provml:Model</a>
+
+                              
+                                </li>
+
+                            </ul>
+
+                            </li>
+                            
+
+                        
+
+                    </ul>
+                </div>
+                </div>
+
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> provml:Model is a leaf node.</p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+					<p class="section-desc"><b>Inherits from <small>(1)</small>:</b>
+                        <br />
+                        <a href="#prov:Entity">prov:Entity</a>  
+                    </p>
+				
+
+
+
+				
+					<p class="section-desc"><b>Property Domain of:</b>
+                        <br>
+                        <a href="#yprov:parent_memory_of_model">yprov:parent_memory_of_model</a> | <a href="#yprov:parent_total_memory_load_of_model">yprov:parent_total_memory_load_of_model</a> | <a href="#yprov:parent_total_params">yprov:parent_total_params</a> | <a href="#yprov:weights_memory_of_model">yprov:weights_memory_of_model</a> | <a href="#yprov:weights_total_memory_load_of_model">yprov:weights_total_memory_load_of_model</a> | <a href="#yprov:weights_total_params">yprov:weights_total_params</a>  
+                    </p>
+				
+
+				
+
+
+				
+
+				
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .</p>
+
+<p>provml:Model a rdfs:Class ;<br>
+    rdfs:label &#34;Model&#34; ;<br>
+    rdfs:subClassOf prov:Entity .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+
+			
+
+			<div class="entity-div">
+
+
+
+				<h3 class="entity-section">Class: <a name="yprov:ExecutionActivity" href="#yprov:ExecutionActivity">yprov:ExecutionActivity</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+
+                <div class="tree-container">
+                <div class="tree">
+                    <ul>
+                        
+                            <li> <a href="#prov:Activity">prov:Activity</a>
+
+                            <ul>
+
+                              <li><a style="font-weight: bold;">yprov:ExecutionActivity</a>
+
+                              
+                                </li>
+
+                            </ul>
+
+                            </li>
+                            
+
+                        
+
+                    </ul>
+                </div>
+                </div>
+
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:ExecutionActivity is a leaf node.</p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+					<p class="section-desc"><b>Inherits from <small>(1)</small>:</b>
+                        <br />
+                        <a href="#prov:Activity">prov:Activity</a>  
+                    </p>
+				
+
+
+
+				
+
+				
+
+
+				
+
+				
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:ExecutionActivity a rdfs:Class ;<br>
+    rdfs:label &#34;Execution Activity&#34; ;<br>
+    rdfs:subClassOf prov:Activity .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+
+			
+
+	
+
+
+
+	
+
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+		<hr class="margintop">
+		<h1 class="margintop"><a name="otherproperties">&nbsp;</a>Other Properties</h1>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:PID" href="#yprov:PID">yprov:PID</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:PID is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:PID a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:artifact_uri" href="#yprov:artifact_uri">yprov:artifact_uri</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:artifact_uri is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:artifact_uri a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:context" href="#yprov:context">yprov:context</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:context is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Metric">provml:Metric</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:context a rdf:Property ;<br>
+    rdfs:domain provml:Metric ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:experiment_dir" href="#yprov:experiment_dir">yprov:experiment_dir</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:experiment_dir is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:experiment_dir a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:experiment_name" href="#yprov:experiment_name">yprov:experiment_name</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:experiment_name is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:experiment_name a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:file_size" href="#yprov:file_size">yprov:file_size</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:file_size is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Entity">prov:Entity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:file_size a rdf:Property ;<br>
+    rdfs:domain prov:Entity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:fullLabel" href="#yprov:fullLabel">yprov:fullLabel</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:fullLabel is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Entity">prov:Entity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:fullLabel a rdf:Property ;<br>
+    rdfs:domain prov:Entity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:global_rank" href="#yprov:global_rank">yprov:global_rank</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:global_rank is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:global_rank a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:host_name" href="#yprov:host_name">yprov:host_name</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:host_name is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:host_name a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:machine" href="#yprov:machine">yprov:machine</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:machine is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:machine a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:operating_system" href="#yprov:operating_system">yprov:operating_system</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:operating_system is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:operating_system a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:parent_memory_of_model" href="#yprov:parent_memory_of_model">yprov:parent_memory_of_model</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:parent_memory_of_model is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Model">provml:Model</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:double">xsd:double</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:parent_memory_of_model a rdf:Property ;<br>
+    rdfs:domain provml:Model ;<br>
+    rdfs:range xsd:double .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:parent_total_memory_load_of_model" href="#yprov:parent_total_memory_load_of_model">yprov:parent_total_memory_load_of_model</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:parent_total_memory_load_of_model is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Model">provml:Model</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:double">xsd:double</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:parent_total_memory_load_of_model a rdf:Property ;<br>
+    rdfs:domain provml:Model ;<br>
+    rdfs:range xsd:double .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:parent_total_params" href="#yprov:parent_total_params">yprov:parent_total_params</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:parent_total_params is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Model">provml:Model</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:int">xsd:int</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:parent_total_params a rdf:Property ;<br>
+    rdfs:domain provml:Model ;<br>
+    rdfs:range xsd:int .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:processor" href="#yprov:processor">yprov:processor</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:processor is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:processor a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:provenance_path" href="#yprov:provenance_path">yprov:provenance_path</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:provenance_path is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:provenance_path a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:python_version" href="#yprov:python_version">yprov:python_version</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:python_version is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:python_version a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:release" href="#yprov:release">yprov:release</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:release is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:release a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:run_id" href="#yprov:run_id">yprov:run_id</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:run_id is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:run_id a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:runtime_type" href="#yprov:runtime_type">yprov:runtime_type</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:runtime_type is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:runtime_type a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:source" href="#yprov:source">yprov:source</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:source is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Metric">provml:Metric</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:source a rdf:Property ;<br>
+    rdfs:domain provml:Metric ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:time_zone" href="#yprov:time_zone">yprov:time_zone</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:time_zone is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#prov:Activity">prov:Activity</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix prov: &lt;http://www.w3.org/ns/prov#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:time_zone a rdf:Property ;<br>
+    rdfs:domain prov:Activity ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:training_data_stat_batch_size" href="#yprov:training_data_stat_batch_size">yprov:training_data_stat_batch_size</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:training_data_stat_batch_size is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:training_data_stat_batch_size a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:training_data_stat_num_workers" href="#yprov:training_data_stat_num_workers">yprov:training_data_stat_num_workers</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:training_data_stat_num_workers is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:training_data_stat_num_workers a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:training_data_stat_shuffle" href="#yprov:training_data_stat_shuffle">yprov:training_data_stat_shuffle</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:training_data_stat_shuffle is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:boolean">xsd:boolean</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:training_data_stat_shuffle a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:boolean .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:training_data_stat_total_batches" href="#yprov:training_data_stat_total_batches">yprov:training_data_stat_total_batches</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:training_data_stat_total_batches is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:training_data_stat_total_batches a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:training_data_stat_total_samples" href="#yprov:training_data_stat_total_samples">yprov:training_data_stat_total_samples</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:training_data_stat_total_samples is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:training_data_stat_total_samples a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:training_data_stat_total_steps" href="#yprov:training_data_stat_total_steps">yprov:training_data_stat_total_steps</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:training_data_stat_total_steps is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:training_data_stat_total_steps a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:validation_data_stat_batch_size" href="#yprov:validation_data_stat_batch_size">yprov:validation_data_stat_batch_size</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:validation_data_stat_batch_size is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:validation_data_stat_batch_size a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:validation_data_stat_num_workers" href="#yprov:validation_data_stat_num_workers">yprov:validation_data_stat_num_workers</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:validation_data_stat_num_workers is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:validation_data_stat_num_workers a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:validation_data_stat_shuffle" href="#yprov:validation_data_stat_shuffle">yprov:validation_data_stat_shuffle</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:validation_data_stat_shuffle is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:boolean">xsd:boolean</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:validation_data_stat_shuffle a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:boolean .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:validation_data_stat_total_batches" href="#yprov:validation_data_stat_total_batches">yprov:validation_data_stat_total_batches</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:validation_data_stat_total_batches is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:validation_data_stat_total_batches a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:validation_data_stat_total_samples" href="#yprov:validation_data_stat_total_samples">yprov:validation_data_stat_total_samples</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:validation_data_stat_total_samples is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:validation_data_stat_total_samples a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:validation_data_stat_total_steps" href="#yprov:validation_data_stat_total_steps">yprov:validation_data_stat_total_steps</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:validation_data_stat_total_steps is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Dataset">provml:Dataset</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:string">xsd:string</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:validation_data_stat_total_steps a rdf:Property ;<br>
+    rdfs:domain provml:Dataset ;<br>
+    rdfs:range xsd:string .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:weights_memory_of_model" href="#yprov:weights_memory_of_model">yprov:weights_memory_of_model</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:weights_memory_of_model is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Model">provml:Model</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:double">xsd:double</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:weights_memory_of_model a rdf:Property ;<br>
+    rdfs:domain provml:Model ;<br>
+    rdfs:range xsd:double .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:weights_total_memory_load_of_model" href="#yprov:weights_total_memory_load_of_model">yprov:weights_total_memory_load_of_model</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:weights_total_memory_load_of_model is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Model">provml:Model</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:double">xsd:double</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:weights_total_memory_load_of_model a rdf:Property ;<br>
+    rdfs:domain provml:Model ;<br>
+    rdfs:range xsd:double .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+			<div class="entity-div">
+
+				<h3 class="entity-section">Property: <a name="yprov:weights_total_params" href="#yprov:weights_total_params">yprov:weights_total_params</a>
+					<small>&nbsp;&nbsp;<a href="#a-z" class="backlink">back to top</a></small>
+				</h3>
+				<hr>
+
+                
+                <p class="section-desc">
+                    <small>NOTE</small> yprov:weights_total_params is a leaf node.</p>
+                
+
+				
+				<p class="section-desc"><b>Type:</b>
+                    rdf:Property
+                </p>
+                
+
+				<p class="section-desc"><b>Description</b>
+                    <br>
+                    
+                </p>
+
+                
+
+
+                
+
+				
+
+
+
+				
+
+				
+
+				
+				
+					<p class="section-desc"><b>Class Domain for:</b>
+                        <br>
+                        <a href="#provml:Model">provml:Model</a>  </p>
+				
+
+				
+				
+					<p class="section-desc"><b>Class Range for:</b>
+                        <br>
+                        <a href="#xsd:int">xsd:int</a>  </p>
+				
+
+
+                <small class="implementation_title">Implementation:</small>
+				<div class="implementation">
+					<code><p>@prefix provml: &lt;https://w3id.org/provml#&gt; .<br>
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .<br>
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .<br>
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .<br>
+@prefix yprov: &lt;https://github.com/HPCI-Lab/yProv4ML#&gt; .</p>
+
+<p>yprov:weights_total_params a rdf:Property ;<br>
+    rdfs:domain provml:Model ;<br>
+    rdfs:range xsd:int .</p>
+
+<p></p></code>
+				</div>
+
+			</div>
+
+			
+
+	
+	
+
+
+
+	
+
+
+	
+
+
+
+
+
+
+
+
+	
+
+
+	
+
+
+
+
+
+	
+
+	
+
+
+	<hr>
+	<small>Ontology documentation automatically generated by <a class="greylink"  href="http://lambdamusic.github.io/Ontospy/">Ontospy</a> v2.6 on Tue, 20 Oct 2026 08:59:17</small>
+
+
+</body>
+</html>
