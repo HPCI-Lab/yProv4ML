@@ -17,15 +17,42 @@ from yprov4ml.utils.prov_utils import get_or_create_activity, _log_param_value
 from yprov4ml.utils.time_utils import get_time
 
 
-def get_metric_stats_from_file(metric_file_path : str): 
+import math
+import pandas as pd
+import xarray as xr
+
+def get_metric_stats_from_file(metric_file_path: str): 
+    # CSV Files
     if metric_file_path.endswith(".csv"): 
         data = pd.read_csv(metric_file_path)
-        mT, MT, mean, fin = data["timestep"].min(), data["timestep"].max(), data["value"].max(), data["value"].max() 
-        if math.isnan(mT): mT = ""
-        if math.isnan(MT): MT = ""
-        if math.isnan(mean): mean = ""
-        if math.isnan(fin): fin = ""
-        return mT, MT, mean, fin
+        mT = data["timestep"].min()
+        MT = data["timestep"].max()
+        mean = data["value"].max()
+        fin = data["value"].max() 
+    # NetCDF Files (.nc)
+    elif metric_file_path.endswith(".nc"):
+        ds = xr.open_dataset(metric_file_path)
+        mT = ds["timestep"].min().item()
+        MT = ds["timestep"].max().item()
+        mean = ds["value"].max().item()
+        fin = ds["value"].max().item()
+    # Zarr Files (.zarr)
+    elif metric_file_path.endswith(".zarr") or metric_file_path.endswith("/"):
+        ds = xr.open_zarr(metric_file_path)
+        mT = ds["timestep"].min().item()
+        MT = ds["timestep"].max().item()
+        mean = ds["value"].max().item()
+        fin = ds["value"].max().item()
+    
+    else:
+        raise ValueError(f"Unsupported file format: {metric_file_path}")
+    # Handle NaNs
+    if math.isnan(mT): mT = ""
+    if math.isnan(MT): MT = ""
+    if math.isnan(mean): mean = ""
+    if math.isnan(fin): fin = ""
+    
+    return mT, MT, mean, fin
 
 def create_prov_document() -> prov.ProvDocument:
     
