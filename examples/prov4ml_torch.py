@@ -38,13 +38,6 @@ class MNISTModel(nn.Module):
 
 tform = transforms.Compose([transforms.ToTensor()])
 
-yprov4ml.log_source_code(use_git=True)
-yprov4ml.log_execution_command()
-
-yprov4ml.log_context("www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
-yprov4ml.log_context("Training", "www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
-yprov4ml.log_context("Validation", "www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000")
-
 mnist_model = MNISTModel().to(DEVICE)
 yprov4ml.log_model("parent", mnist_model, context="Training", source="ri-scale/cellpose-sam", is_input=True)
 

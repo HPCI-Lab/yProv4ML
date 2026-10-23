@@ -110,8 +110,10 @@ def get_main_activity(yprov):
     return NF, {}
 
 def normalize_time(t):
+    if isinstance(t, str):
+        return t 
     if isinstance(t, dict): 
-        t = t["$"]
+        return t["$"]
     if isinstance(t, str): 
         return datetime.fromisoformat(t)
     else: 
@@ -126,8 +128,12 @@ def get_sub_activities(yprov, metrics_dir=None):
             if "prov:startedAtTime" in v: 
                 start_times.append(v["prov:startedAtTime"])
             else: 
-                file = Path(metrics_dir) / [f for f in os.listdir(metrics_dir) if k in f][0]
-                time = read_csv_column(file, col="timestep")["min"]
+                ls = [f for f in os.listdir(metrics_dir) if k in f]
+                if len(ls) > 0: 
+                    file = Path(metrics_dir) / ls[0]
+                    time = read_csv_column(file, col="timestep")["min"]
+                else: 
+                    time = NF
                 start_times.append(time)
 
     zipped = list(zip(start_times, acts))
@@ -377,7 +383,10 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
     mem_total = fmt_bytes(mem_agg.get("tot_utilization")) if mem_agg else NF
     field("memory", f"total: {mem_total}, avg utilization: {mem_agg.get('avg_utilization_pct', NF)}%" if mem_agg else f"total: {mem_total}")
     gpu_agg = agg.get("gpu", {})
-    gpu_agg["avg_temperature_c"] = gpu_agg["avg_temperature_c"] if gpu_agg["avg_temperature_c"] != 0.0 else NF
+    if "avg_temperature_c" in gpu_agg: 
+        gpu_agg["avg_temperature_c"] = gpu_agg["avg_temperature_c"] if gpu_agg["avg_temperature_c"] != 0.0 else NF
+    else: 
+        gpu_agg["avg_temperature_c"] = NF
     field("gpu", f"avg memory: {gpu_agg.get('avg_memory_mb', NF)} MB, avg temp: {gpu_agg.get('avg_temperature_c', NF)} °C" if gpu_agg else NF)
     disk_agg = agg.get("disk", {})
     disk_total = fmt_bytes(disk_agg.get("tot_utilization")) if disk_agg else NF
