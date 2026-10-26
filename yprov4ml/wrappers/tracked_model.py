@@ -131,5 +131,5 @@ class ProvenanceTrackedModel(nn.Module):
         return self.model(x)
 
     def close(self): 
-        PROV4ML_DATA.add_artifact(self.model_name, self.model_path, context=self.context, source="yProv4ML", is_input=False, log_copy_in_prov_directory=True, is_model=False)
+        PROV4ML_DATA.add_artifact(self.model_name, self.model_path, context=self.context, source="yProv4ML", is_model=False)
         shutil.rmtree(self.model_path)

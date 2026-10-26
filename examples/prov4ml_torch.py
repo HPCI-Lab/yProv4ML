@@ -5,6 +5,8 @@ from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
+import sys
+sys.path.append("yprov4ml")
 import yprov4ml
 
 PATH_DATASETS = "./data"
@@ -39,28 +41,29 @@ class MNISTModel(nn.Module):
 tform = transforms.Compose([transforms.ToTensor()])
 
 mnist_model = MNISTModel().to(DEVICE)
-yprov4ml.log_model("parent", mnist_model, context="Training", source="ri-scale/cellpose-sam", is_input=True)
+yprov4ml.log_model("parent", mnist_model, is_input_to="Training_0", is_output_to="Download", other_attrs={"dcterms:identifier": "ri-scale/cellpose-sam"})
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
 train_ds = Subset(train_ds, range(BATCH_SIZE*150))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
-yprov4ml.log_dataset("training_data", train_loader, context="Training", source="www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000", other_attrs={"dcterms:identifier": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000"})
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
 test_ds = Subset(test_ds, range(BATCH_SIZE*50))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
-yprov4ml.log_dataset("validation_data", test_loader, context="Validation", source="www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000", other_attrs={"dcterms:identifier": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000"})
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
-yprov4ml.log_param("optimizer", "Adam", is_input=True)
-yprov4ml.log_param("epochs", EPOCHS, is_input=True)
-yprov4ml.log_param("learning_rate", 1.0e-5, is_input=True)
-yprov4ml.log_param("batch_size", BATCH_SIZE, is_input=True)
+yprov4ml.log_param("optimizer", "Adam", is_input_to="Training_0")
+yprov4ml.log_param("epochs", EPOCHS, is_input_to="Training_0")
+yprov4ml.log_param("learning_rate", 1.0e-5, is_input_to="Training_0")
+yprov4ml.log_param("batch_size", BATCH_SIZE, is_input_to="Training_0")
 
 loss_fn = nn.MSELoss().to(DEVICE)
 
 losses = []
 for epoch in range(EPOCHS):
+    yprov4ml.log_dataset("validation_data", test_loader, is_input_to=f"Validation_{epoch}", is_output_to="Download", other_attrs={"dcterms:identifier": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000"})
+    yprov4ml.log_dataset("training_data", train_loader, is_input_to=f"Training_{epoch}", is_output_to="Download", other_attrs={"dcterms:identifier": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD0000"})
+    
     mnist_model.train()
     for x, y in tqdm(train_loader):
         x, y = x.to(DEVICE), y.to(DEVICE)
@@ -72,10 +75,11 @@ for epoch in range(EPOCHS):
         optim.step()
         losses.append(loss.item())
     
-        yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
-        yprov4ml.log_system_metrics("Training", step=epoch)
+        yprov4ml.log_metric(f"MSE_T_{epoch}", loss.item(), is_output_to=f"Training_{epoch}", step=epoch)
+        # yprov4ml.log_system_metrics(is_output_to=f"Training_{epoch}", step=epoch)
 
     mnist_model.eval()
+    yprov4ml.log_model(f"{yprov4ml.get_artifacts_dir()}/checkpoint_{epoch}", mnist_model, is_input_to=f"Validation_{epoch}")
     with torch.no_grad(): 
         # mnist_model.cpu()
         for (x, y) in tqdm(test_loader):
@@ -84,8 +88,13 @@ for epoch in range(EPOCHS):
             y2 = F.one_hot(y, 10).float()
             loss = loss_fn(y_hat, y2)
 
-            yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
+            yprov4ml.log_metric(f"MSE_V_{epoch}", loss.item(), is_output_to=f"Validation_{epoch}", step=epoch)
 
-yprov4ml.log_model("weights", mnist_model, context="Training", source="ri-scale/cellpose-sam")
+    if epoch+1 < EPOCHS: 
+        yprov4ml.log_model(f"{yprov4ml.get_artifacts_dir()}/checkpoint_{epoch}", mnist_model, is_input_to=f"Training_{epoch+1}", is_output_to=f"Training_{epoch}")
+    else: 
+        yprov4ml.log_model(f"{yprov4ml.get_artifacts_dir()}/checkpoint_{epoch}", mnist_model, is_output_to=f"Training_{epoch}")
+
+yprov4ml.log_model(f"{yprov4ml.get_artifacts_dir()}/weights", mnist_model, is_output_to=f"Training_{epoch}")
 
 yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=False, create_card=True)

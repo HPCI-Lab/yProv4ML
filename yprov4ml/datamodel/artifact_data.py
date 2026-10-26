@@ -9,15 +9,15 @@ class ArtifactInfo:
         name: str, 
         value: Any = None, 
         step: Optional[int] = None, 
-        context: Optional[str] = None, 
-        source: Optional[str] = None, 
+        is_input_to: Optional[str] = None, 
+        is_output_to: Optional[str] = None, 
         is_model : bool = False, 
     ) -> None:
         self.path = name
         self.value = value
         self.step = step
-        self.context = context
-        self.source = source
+        self.is_input_to = is_input_to
+        self.is_output_to = is_output_to
         self.creation_timestamp = get_current_time_millis()
         self.last_modified_timestamp = get_current_time_millis()
 
@@ -27,9 +27,11 @@ class ArtifactInfo:
         self, 
         value: Any = None, 
         step: Optional[int] = None, 
-        context: Optional[str] = None
+        is_input_to: Optional[str] = None, 
+        is_output_to: Optional[str] = None, 
     ) -> None:
         self.value = value if value is not None else self.value
         self.step = step if step is not None else self.step
-        self.context = context if context is not None else self.context
+        self.is_input_to = is_input_to if is_input_to is not None else self.is_input_to
+        self.is_output_to = is_output_to if is_output_to is not None else self.is_output_to
         self.last_modified_timestamp = get_current_time_millis()

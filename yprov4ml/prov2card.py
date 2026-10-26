@@ -122,22 +122,34 @@ def normalize_time(t):
 def get_sub_activities(yprov, metrics_dir=None):
     acts = []
     start_times = []
+    
     for k, v in yprov.get("activity", {}).items():
         if "/" not in k and f"{YPROV_PREFIX}:experimentName" not in (v or {}):
             acts.append(k)
+            
             if "prov:startedAtTime" in v: 
-                start_times.append(v["prov:startedAtTime"])
+                time_val = v["prov:startedAtTime"]
+                # Convert ISO string to datetime
+                dt = datetime.fromisoformat(time_val) if isinstance(time_val, str) else time_val
             else: 
-                ls = [f for f in os.listdir(metrics_dir) if k in f]
+                ls = [f for f in os.listdir(metrics_dir) if k in f] if metrics_dir else []
                 if len(ls) > 0: 
                     file = Path(metrics_dir) / ls[0]
-                    time = read_csv_column(file, col="timestep")["min"]
+                    raw_time = read_csv_column(file, col="timestep")["min"]
+                    
+                    # Convert numeric timestamp (assuming milliseconds if it's a large number)
+                    if isinstance(raw_time, (int, float)):
+                        dt = datetime.fromtimestamp(raw_time / 1000.0 if raw_time > 1e10 else raw_time)
+                    else:
+                        dt = datetime.fromisoformat(str(raw_time))
                 else: 
-                    time = NF
-                start_times.append(time)
+                    dt = datetime.min  # Fallback for missing times
+                    
+            start_times.append(dt)
 
     zipped = list(zip(start_times, acts))
-    zipped.sort(key=lambda pair: normalize_time(pair[0]))
+    zipped.sort(key=lambda pair: pair[0])
+    
     acts = [val for time, val in zipped]
     return acts
 
@@ -154,7 +166,7 @@ def get_entities_by_role(yprov, role):
     seen = set()
     results = []
     for k, v in yprov.get("entity", {}).items():
-        if isinstance(v, list) and len(v) == 1: 
+        if isinstance(v, list):# and len(v) == 1: 
             v = v[0]
         if v.get("prov:role") == role and "Metric" not in str(v.get("prov:type", "")):
             if v.get("prov:label", None): 
@@ -411,13 +423,22 @@ def build_card(wf_name, fc_lines, metrics_dir, artifacts_dir):
             act_ended = parse_ts(unwrap(ended_raw))
 
         act_metrics = get_metrics_summary(metrics_dir, activity_filter=act_name)
-        act_outputs = [
-            (k, v) for k, v in fc_lines.get("entity", {}).items()
-            if v.get(f"{YPROV_PREFIX}:context") == act_name and v.get("prov:role") == "output"
-        ]
-        act_inputs_via_used = [
-            v.get("prov:entity") for v in fc_lines.get("used", {}).values()
-        ]
+        act_outputs = []
+        for k, v in fc_lines.get("entity", {}).items():
+            # Handle cases where v is a list or a single dictionary
+            items = v if isinstance(v, list) else [v]
+            for item in items:
+                if isinstance(item, dict):
+                    if item.get(f"{YPROV_PREFIX}:context") == act_name and item.get("prov:role") == "output":
+                        act_outputs.append((k, item))
+
+        act_inputs_via_used = []
+        for v in fc_lines.get("used", {}).values(): 
+            if isinstance(v, list): 
+                for vs in v: 
+                    act_inputs_via_used.append(vs.get("prov:entity"))
+            else: 
+                act_inputs_via_used.append(v.get("prov:entity"))
 
 
         lines.append(f"\n#### Activity: `{act_name}`\n")

@@ -11,12 +11,12 @@ from yprov4ml.utils.time_utils import get_time
 ZARR_CHUNK_SIZE = 1000
 
 class MetricInfo:
-    __slots__ = ['name', 'context', 'source', 'total_metric_values', 'use_compressor', "generation_time", 'epochDataList']
+    __slots__ = ['name', 'is_input_to', 'is_output_to', 'total_metric_values', 'use_compressor', "generation_time", 'epochDataList']
     
-    def __init__(self, name: str, context: str, source=str, use_compressor : Optional[str] = None) -> None:
+    def __init__(self, name: str, is_input_to: str, is_output_to=str, use_compressor : Optional[str] = None) -> None:
         self.name = name
-        self.context = context
-        self.source = source
+        self.is_input_to = is_input_to
+        self.is_output_to = is_output_to
         self.total_metric_values = 0
         self.use_compressor = use_compressor
         self.generation_time = get_time()
@@ -38,7 +38,7 @@ class MetricInfo:
         ) -> None:
 
         process = process if process is not None else 0
-        file = os.path.join(path, f"{self.name}_{self.context}_{self.source}_GR{process}")
+        file = os.path.join(path, f"{self.name}_{self.is_input_to}_{self.is_output_to}_GR{process}")
 
         ft = f"{file}.{file_type}"
         if file_type == "zarr":
@@ -59,8 +59,8 @@ class MetricInfo:
         else:
             dataset = nc.Dataset(netcdf_file, mode='w', format='NETCDF4')
             dataset._name = self.name
-            dataset._context = str(self.context)
-            dataset._source = str(self.source)
+            dataset._is_input_to = str(self.is_input_to)
+            dataset._is_output_to = str(self._is_output_to)
 
             compression = 'zlib' if self.use_compressor else None
             dataset.createDimension('time', None)
@@ -94,8 +94,8 @@ class MetricInfo:
         else:
             dataset = zarr.open(zarr_file, mode='w')
             dataset.attrs['name'] = self.name
-            dataset.attrs['context'] = str(self.context)
-            dataset.attrs['source'] = str(self.source)
+            dataset.attrs['is_input_to'] = str(self.is_input_to)
+            dataset.attrs['is_output_to'] = str(self.is_output_to)
 
         epochs = []
         values = []

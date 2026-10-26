@@ -178,8 +178,6 @@ class WeightDistributionTrackedModel(nn.Module):
             self.model_path,
             context=self.context,
             source="yProv4ML",
-            is_input=False,
-            log_copy_in_prov_directory=True,
             is_model=False,
         )
         shutil.rmtree(self.model_path)
