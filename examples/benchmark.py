@@ -88,8 +88,6 @@ def run(mode):
                 yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
             if "SYSTEM" in mode: 
                 yprov4ml.log_system_metrics("Training", step=epoch)
-            if "CARBON" in mode: 
-                yprov4ml.log_carbon_metrics("Training", step=epoch)
             # yprov4ml.log_flops_per_batch("test", mnist_model, (x, y), "Training", step=epoch)
         # save incremental model versions
         if mode != "WITHOUT": 
@@ -101,7 +99,7 @@ def run(mode):
     print(f"Time for {mode}: {end-start}")
 
 def main(): 
-    MODES = ["WITHOUT", "PROV_ONLY", "PROV+1METRIC", "PROV+SYSTEM", "PROV+CARBON", "PROV+SYSTEM+CARBON"]
+    MODES = ["WITHOUT", "PROV_ONLY", "PROV+1METRIC", "PROV+SYSTEM"]
     for mode in MODES: 
         run(mode)
 

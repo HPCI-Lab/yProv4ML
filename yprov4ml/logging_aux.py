@@ -4,24 +4,24 @@ import json
 import warnings
 import prov.model as prov
 import shlex
+from pathlib import Path
 
 from torch.utils.data import DataLoader, Subset, Dataset, RandomSampler
 from typing import Any, Optional, Union
 
 from yprov4ml.utils import flops_utils, time_utils, funcs
-from yprov4ml.utils.prov_utils import _log_param_value
-from yprov4ml.constants import PROV4ML_DATA, VERBOSE
+from yprov4ml.constants import PROV4ML_DATA
 
-def log_metric(key: str, value: float, context: Optional[str] = None, step: int = 0, source: Optional[str] = None, timestamp : Optional[int] = None) -> None:
-    PROV4ML_DATA.add_metric(key, value, step, context=context, source=source, timestamp=timestamp)
+def log_metric(key: str, value: float, is_input_to: Optional[str] = None, step: int = 0, is_output_to: Optional[str] = None, timestamp : Optional[int] = None) -> None:
+    PROV4ML_DATA.add_metric(key, value, step, is_input_to=is_input_to, is_output_to=is_output_to, timestamp=timestamp)
 
-def log_current_execution_time(label: str, context : Optional[str] = None, step: Optional[int] = None) -> None:
-    return log_metric(label, time_utils.get_time(), context=context, step=step, source='std.time', is_input=False)
+def log_current_execution_time(label: str, is_input_to: Optional[str] = None, is_output_to: Optional[str] = 'std.time', step: Optional[int] = None) -> None:
+    return log_metric(label, time_utils.get_time(), is_input_to=is_input_to, is_output_to=is_output_to, step=step)
 
-def log_param(key: str, value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input=False) -> None:
-    PROV4ML_DATA.add_parameter(key, value, context, source, is_input=is_input)
+def log_param(key: str, value: Any, is_input_to : Optional[str] = None, is_output_to : Optional[str] = None) -> None:
+    PROV4ML_DATA.add_parameter(key, value, is_input_to, is_output_to)
 
-def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, Any]) -> dict:
+def _get_model_memory_footprint(model: Union[torch.nn.Module, Any]) -> dict:
 
     total_params = sum(p.numel() for p in model.parameters())
     try: 
@@ -34,8 +34,7 @@ def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, A
         else: 
             precision = 32
     except RuntimeError: 
-        if VERBOSE: 
-            warnings.warn("Could not determine precision, defaulting to 32 bits. Please make sure to provide a model with a trainer attached, this is often due to calling this before the trainer.fit() method")
+        warnings.warn("Could not determine precision, defaulting to 32 bits. Please make sure to provide a model with a trainer attached, this is often due to calling this before the trainer.fit() method")
         precision = 32
     
     precision_megabytes = precision / 8 / 1e6
@@ -45,9 +44,9 @@ def _get_model_memory_footprint(model_name: str, model: Union[torch.nn.Module, A
     memory_per_optim = total_params * 4 * 1e-6
     
     ret = {}
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}TotalParameters"] = total_params
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}WeightsMemoryLoad"] = memory_per_model
-    ret[f"{PROV4ML_DATA.yProv_PREFIX}:{model_name}ModelTotalMemoryLoad"] = memory_per_model + memory_per_grad + memory_per_optim
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:TotalParameters"] = total_params
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:WeightsMemoryLoad"] = memory_per_model
+    ret[f"{PROV4ML_DATA.yProv_PREFIX}:ModelTotalMemoryLoad"] = memory_per_model + memory_per_grad + memory_per_optim
 
     return ret
 
@@ -86,90 +85,87 @@ def _get_model_layers_description(model_name : str, model: Union[torch.nn.Module
 def log_model(
         model_name: str, 
         model: Union[torch.nn.Module, Any], 
-        context : Optional[str] = None, 
-        source : Optional[str] = None, 
+        is_input_to : Optional[str] = None, 
+        is_output_to : Optional[str] = None, 
         log_model_info: bool = True, 
         log_model_layers : bool = False,
-        log_copy_in_prov_directory : bool = True, 
-        is_input: bool = False,
         other_attrs : Optional[bool] = None
     ) -> None:      
-    e = save_model_version(model_name, model, context=context, source=source, incremental=False, is_input=is_input, log_copy_in_prov_directory=log_copy_in_prov_directory, other_attrs=other_attrs)
+    e = save_model_version(model_name, model, is_input_to=is_input_to, is_output_to=is_output_to, other_attrs=other_attrs)
 
     if log_model_info:
-        d = _get_model_memory_footprint(model_name, model)
+        d = _get_model_memory_footprint(model)
         e.add_attributes(d)
 
     if log_model_layers: 
         d = _get_model_layers_description(model_name, model)
         e.add_attributes(d)
     
-def log_flops_per_epoch(label: str, model: Any, dataset: Any, context: Optional[str] = None, step: Optional[int] = None) -> None:
-    return log_metric(label, flops_utils.get_flops_per_epoch(model, dataset), context, step=step, source='fvcore.nn.FlopCountAnalysis')
+def log_flops_per_epoch(label: str, model: Any, dataset: Any, is_input_to : Optional[str] = None, is_output_to: Optional[str] = 'fvcore.nn.FlopCountAnalysis', step: int = 0) -> None:
+    return log_metric(label, flops_utils.get_flops_per_epoch(model, dataset), is_input_to=is_input_to, is_output_to=is_output_to, step=step)
 
-def log_flops_per_batch(label: str, model: Any, batch: Any, context: Optional[str] = None, step: Optional[int] = None) -> None:
-    return log_metric(label, flops_utils.get_flops_per_batch(model, batch), context, step=step, source='fvcore.nn.FlopCountAnalysis')
+def log_flops_per_batch(label: str, model: Any, batch: Any, is_input_to : Optional[str] = None, is_output_to: Optional[str] = 'fvcore.nn.FlopCountAnalysis', step: int = 0) -> None:
+    return log_metric(label, flops_utils.get_flops_per_batch(model, batch), is_input_to=is_input_to, is_output_to=is_output_to, step=step)
 
-def log_system_metrics(context: Optional[str] = None, step: int = 0) -> None:
+def log_system_metrics(is_input_to : Optional[str] = None, is_output_to: Optional[str] = None, step: int = 0) -> None:
     data = PROV4ML_DATA.tracker.checkpoint()
-    src = data["hardware_access_mode"]
+    is_output_to = is_output_to or data["hardware_access_mode"]
     timestamp = funcs.get_current_time_millis()
-    log_metric("cpu_usage_pct", data["cpu_utilization_pct"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("cpu_power", data["cpu_power_watts"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("cpu_energy", data["cpu_energy_delta_joules"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("ram_usage_pct", data["ram_used_pct"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("ram_usage_gb", data["ram_used_gb"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("ram_power", data["ram_power_watts"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("ram_energy", data["ram_energy_delta_joules"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("disk_usage_gb", data["disk_used_gb"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("disk_usage_pct", data["disk_used_pct"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_usage_pct", data["gpu_utilization_pct"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_power", data["gpu_power_watts"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_energy", data["gpu_energy_delta_joules"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_memory_usage_gb", data["gpu_memory_used_gb"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_memory_usage_pct", data["gpu_memory_used_pct"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_memory_power", data["gpu_memory_power_watts"], context, step=step, source=src, timestamp=timestamp)
-    log_metric("gpu_temperature_c", data["gpu_temperature_c"], context, step=step, source=src, timestamp=timestamp)
+    log_metric("cpu_usage_pct", data["cpu_utilization_pct"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("cpu_power", data["cpu_power_watts"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("cpu_energy", data["cpu_energy_delta_joules"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("ram_usage_pct", data["ram_used_pct"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("ram_usage_gb", data["ram_used_gb"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("ram_power", data["ram_power_watts"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("ram_energy", data["ram_energy_delta_joules"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("disk_usage_gb", data["disk_used_gb"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("disk_usage_pct", data["disk_used_pct"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("gpu_usage_pct", data["gpu_utilization_pct"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("gpu_power", data["gpu_power_watts"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("gpu_energy", data["gpu_energy_delta_joules"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("gpu_memory_usage_gb", data["gpu_memory_used_gb"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("gpu_memory_usage_pct", data["gpu_memory_used_pct"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("gpu_memory_power", data["gpu_memory_power_watts"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
+    log_metric("gpu_temperature_c", data["gpu_temperature_c"], is_input_to=is_input_to, is_output_to=is_output_to, step=step, timestamp=timestamp)
 
 def log_artifact(
         artifact_name : str, 
         artifact_path : str, 
-        context: Optional[str] = None,
-        source : Optional[str] = None, 
+        is_input_to : Optional[str] = None, 
+        is_output_to : Optional[str] = None, 
         step: int = 0, 
-        log_copy_in_prov_directory : bool = True, 
-        log_copy_subdirectory : Optional[str] = None, 
         is_model : bool = False, 
-        is_input : bool = False, 
         other_attrs : Optional[dict] = None, 
     ) -> prov.ProvEntity:
     return PROV4ML_DATA.add_artifact(
         artifact_name=artifact_name, 
         artifact_path=artifact_path, 
         step=step, 
-        context=context, 
-        source=source, 
-        log_copy_in_prov_directory=log_copy_in_prov_directory, 
-        log_copy_subdirectory=log_copy_subdirectory,
+        is_input_to=is_input_to, 
+        is_output_to=is_output_to, 
         is_model=is_model, 
-        is_input=is_input, 
         attributes=other_attrs, 
     )
 
 def save_model_version(
-        model_name: str, 
-        model: Union[torch.nn.Module, Any], 
-        context: Optional[str] = None, 
-        source: Optional[str] = None, 
-        step: Optional[int] = None, 
-        incremental : bool = True, 
-        is_input : bool =False, 
-        log_copy_in_prov_directory : bool = True, 
-        other_attrs : Optional[dict] = None, 
-    ) -> prov.ProvEntity:
+    model_name: Union[str, Path], 
+    model: Union[torch.nn.Module, Any], 
+    is_input_to : Optional[str] = None, 
+    is_output_to : Optional[str] = None, 
+    step: Optional[int] = None, 
+    other_attrs : Optional[dict] = None, 
+) -> prov.ProvEntity:
+
+    model_path = Path(model_name)
+    if model_path.parent != Path('.'):
+        model_path.parent.mkdir(parents=True, exist_ok=True)
+    if model_path.suffix != '.pt':
+        file_name = str(model_path.with_suffix('.pt'))
+    else:
+        file_name = str(model_path)
+    state_dict = model.state_dict() if isinstance(model, torch.nn.Module) else model
 
     buffer = io.BytesIO()
-    state_dict = model.state_dict() if isinstance(model, torch.nn.Module) else model
     torch.save(state_dict, buffer)
     model_bytes = buffer.getvalue()
     model_hash = hashlib.sha256(model_bytes).hexdigest()
@@ -178,32 +174,12 @@ def save_model_version(
         other_attrs = {}
     other_attrs[f"{PROV4ML_DATA.yProv_PREFIX}:checksum"] = model_hash
 
-    if incremental: 
-        path = os.path.join(PROV4ML_DATA.ARTIFACTS_DIR, model_name)
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-        num_files = len([file for file in os.listdir(path) if str(file).startswith(model_name)])
-        file_name = f"{model_name}_{num_files}.pt"
-        
-        torch.save(model.state_dict(), file_name)
-        return log_artifact(
-            f"{model_name}_{num_files}", file_name, 
-            context=context, source=source, step=step, 
-            log_copy_in_prov_directory=log_copy_in_prov_directory, 
-            log_copy_subdirectory=model_name, 
-            is_model=True, is_input=is_input, 
-            other_attrs=other_attrs,  
-        )
-    else: 
-        file_name = f"{model_name}.pt"
-        torch.save(model.state_dict(), file_name)
-        return log_artifact(
-            model_name, file_name, 
-            context=context, source=source, step=step, 
-            log_copy_in_prov_directory=log_copy_in_prov_directory, 
-            log_copy_subdirectory=model_name, 
-            is_model=True, is_input=is_input
-        )
+    torch.save(state_dict, file_name)
+    return log_artifact(
+        model_path.name, file_name, 
+        is_input_to=is_input_to, is_output_to=is_output_to, step=step, 
+        is_model=True
+    )
     
 def compute_dataset_checksum(dataset: Union[DataLoader, Subset, Dataset]) -> str:
     hasher = hashlib.sha256()
@@ -229,14 +205,14 @@ def compute_dataset_checksum(dataset: Union[DataLoader, Subset, Dataset]) -> str
 def log_dataset(
         dataset_label : str, 
         dataset : Union[DataLoader, Subset, Dataset], 
-        context : Optional[str] = None, 
-        source : Optional[str] = None, 
+        is_input_to : Optional[str] = None, 
+        is_output_to : Optional[str] = None, 
         log_dataset_info : bool = True, 
-        other_attrs: Optional[dict] = None
+        other_attrs: dict = {}
         ): 
 
     other_attrs[f"{PROV4ML_DATA.yProv_PREFIX}:checksum"] = compute_dataset_checksum(dataset)
-    e = log_artifact(dataset_label, "", context=context, log_copy_in_prov_directory=False, is_model=False, is_input=True, source=source, other_attrs=other_attrs)
+    e = log_artifact(dataset_label, "", is_input_to=is_input_to, is_model=False, is_output_to=is_output_to, other_attrs=other_attrs)
     
     if not log_dataset_info: return
 
@@ -245,23 +221,23 @@ def log_dataset(
         dataset = dl.dataset
         attrs = {
             f"prov:type": "provml:Dataset", 
-            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatBatchSize": _log_param_value(dl.batch_size, "xsd:int"), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatNumWorkers": _log_param_value(dl.num_workers, "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatBatchSize": dl.batch_size, 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatNumWorkers": dl.num_workers, 
             f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatShuffle": isinstance(dl.sampler, RandomSampler), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSteps": _log_param_value(len(dl), "xsd:int"), 
-            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": _log_param_value(len(dataset) * dl.batch_size, "xsd:int"),
-            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalBatches": _log_param_value(len(dataset), "xsd:int"), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSteps": len(dl), 
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": len(dataset) * dl.batch_size,
+            f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalBatches": len(dataset), 
         }
         e.add_attributes(attrs)
 
     elif isinstance(dataset, Subset):
         dl = dataset
         dataset = dl.dataset
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSteps": _log_param_value(len(dl), "xsd:int")})
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": _log_param_value(len(dataset), "xsd:int")})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSteps": len(dl)})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": len(dataset)})
         
     elif isinstance(dataset, Dataset): 
-        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": _log_param_value(len(dataset), "xsd:int")})
+        e.add_attributes({f"{PROV4ML_DATA.yProv_PREFIX}:datasetStatTotalSamples": len(dataset)})
 
 def log_execution_command(full_command_str: Optional[str] = None, path : Optional[str] = None) -> None:
     if not full_command_str:
@@ -279,13 +255,13 @@ def log_execution_command(full_command_str: Optional[str] = None, path : Optiona
         path
     )
     
-    log_param("execution_executable", sys.executable, is_input=True)
-    log_param("reproducibility_command", full_path, is_input=False)
-    log_param("execution_arguments", " ".join(raw_args), is_input=True)
-    log_param("execution_command", full_command_str, is_input=True)
+    log_param("execution_executable", sys.executable)
+    log_param("reproducibility_command", full_path)
+    log_param("execution_arguments", " ".join(raw_args))
+    log_param("execution_command", full_command_str)
 
 def log_source_code(use_git : bool = False) -> None:
     PROV4ML_DATA.request_source_code(use_git=use_git)
 
-def log_context(context : str, is_subcontext_of : Optional[str] = None, source_of_data : Optional[str] = None): 
-    PROV4ML_DATA._add_ctx(is_subcontext_of, context, source=source_of_data)
+# def log_context(context : str, is_subcontext_of : Optional[str] = None, source_of_data : Optional[str] = None): 
+#     PROV4ML_DATA._add_ctx(is_subcontext_of, context, source=source_of_data)

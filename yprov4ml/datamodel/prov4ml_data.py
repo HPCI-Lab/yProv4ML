@@ -2,25 +2,28 @@
 import os
 import sys
 import time
-import shutil
-from pathlib import Path
 from typing import Any, Dict, Optional, Union
 import prov.model as prov
 import pwd
 import warnings
-import uuid
-import platform
-import socket
+import platform, threading, socket
+from datetime import datetime
 
 from yprov4ml.datamodel.artifact_data import ArtifactInfo
 from yprov4ml.datamodel.metric_data import MetricInfo
 from yprov4ml.datamodel.compressor_type import CompressorType, COMPRESSORS_FOR_ZARR
 from yprov4ml.utils import funcs
-from yprov4ml.utils.prov_utils import get_or_create_activity, _log_param_value
+from yprov4ml.utils.prov_utils import get_or_create_activity
 from yprov4ml.utils.funcs import get_global_rank, get_runtime_type, get_local_timezone_info
 from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
 from yprov4ml.utils.time_utils import get_time
 from yprov4ml.utils.system_utils import Tracker
+
+_RUN_ID_LOCK = threading.Lock()
+_RUN_ID_CACHE = {}
+
+def _new_run_id() -> int:
+        return int(datetime.now().strftime("%Y%m%d%H%M%S"))
 
 class Prov4MLData:
     def __init__(self) -> None:
@@ -47,6 +50,12 @@ class Prov4MLData:
 
         self.save_metrics_after_n_logs = 100
         self.csv_separator = ","
+
+        self.entities = {}
+        self.contexts = {}
+        self.context_timestamps = {}
+        self.used_edges = set()
+        self.gen_edges = set()
 
     def start_run(
             self, 
@@ -89,17 +98,22 @@ class Prov4MLData:
         if not use_compressor: 
             use_compressor = CompressorType.NONE
 
-        # look at PROV dir how many experiments are there with the same name
         if use_run_id is not None: 
             self.RUN_ID = use_run_id
         else:
-            if not os.path.exists(self.PROV_SAVE_PATH):
-                os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
-                self.RUN_ID = 0
-            else: 
-                prev_exps = os.listdir(self.PROV_SAVE_PATH) 
-                matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
-                self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
+            # if not os.path.exists(self.PROV_SAVE_PATH):
+            #     os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
+            #     self.RUN_ID = 0
+            # else: 
+            #     prev_exps = os.listdir(self.PROV_SAVE_PATH) 
+            #     matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
+            #     self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
+            key = (self.PROV_SAVE_PATH, experiment_name)
+            with _RUN_ID_LOCK:
+                if use_run_id is not None:
+                    self.RUN_ID = use_run_id
+                else:
+                    self.RUN_ID = _RUN_ID_CACHE.setdefault(key, _new_run_id())
 
         self.CLEAN_EXPERIMENT_NAME = experiment_name
         self.PROV_JSON_NAME = self.CLEAN_EXPERIMENT_NAME + f"_GR{self.global_rank}" if self.global_rank else experiment_name + f"_GR0"
@@ -115,7 +129,8 @@ class Prov4MLData:
         self.tracker = Tracker()
         self.source_code_required = False
 
-        self._init_root_context()
+        self._init_provenance_doc()
+        self._init_agent_context()
 
         # necessary when spawning threads, 
         # otherwise they get counted as different runs
@@ -125,29 +140,7 @@ class Prov4MLData:
         os.makedirs(self.ARTIFACTS_DIR, exist_ok=True)
         os.makedirs(self.METRIC_DIR, exist_ok=True)
 
-    def _add_ctx(self, rootstr : str, ctx : str, source : Optional[str] = None):
-        rootstr = self._format_activity_name(rootstr)
-        if source is not None: 
-            src_context_name = self._format_activity_name(context=ctx, source=None)
-            maybe_src_context, created = get_or_create_activity(self.root_provenance_doc, src_context_name)
-            if created: 
-                maybe_src_context.wasInformedBy(rootstr)
-
-        context_name = self._format_activity_name(context=ctx, source=source)
-        c, created = get_or_create_activity(self.root_provenance_doc, context_name)
-        if created:         
-            d = get_time()
-            c.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": str(d)})
-            if source is not None: 
-                c.wasInformedBy(maybe_src_context)
-            else: 
-                c.wasInformedBy(rootstr)
-        return c
-
-    def _set_ctx_or_default(self, ctx : str): 
-        return ctx or self.PROV_JSON_NAME
-
-    def _init_root_context(self): 
+    def _init_provenance_doc(self): 
         self.root_provenance_doc = prov.ProvDocument()
         self.root_provenance_doc.add_namespace(self.yProv_PREFIX, "https://hpci-lab.github.io/yProv4ML/ontology.html")
         self.root_provenance_doc.set_default_namespace(self.PROV_JSON_NAME)
@@ -156,75 +149,121 @@ class Prov4MLData:
         self.root_provenance_doc.add_namespace(self.PROVML_PREFIX, 'prov-ml')
         self.root_provenance_doc.add_namespace(self.RDF_PREFIX, 'http://purl.org/dc/terms/')
 
-        user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
-        rootstr, _ = get_or_create_activity(self.root_provenance_doc, self.PROV_JSON_NAME)
+    def get_activity_attributes(self): 
         hostname = socket.gethostname()
         timezone = get_local_timezone_info()
-        rootstr.add_attributes({
-            f"{self.yProv_PREFIX}:provenancePath":self.PROV_SAVE_PATH,
-            f"{self.yProv_PREFIX}:artifactURI":self.ARTIFACTS_DIR,
-            f"{self.yProv_PREFIX}:experimentDirectory":self.EXPERIMENT_DIR,
-            f"{self.yProv_PREFIX}:experimentName":self.PROV_JSON_NAME,
-            f"{self.yProv_PREFIX}:runID": _log_param_value(self.RUN_ID, "xsd:int"), #self.RUN_ID,
-            f"{self.yProv_PREFIX}:pythonVersion":str(sys.version), 
-            f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
-            f"{self.yProv_PREFIX}:hostName": hostname,
-            f"{self.yProv_PREFIX}:timeZone": timezone,
-        })
-        rootstr.wasAssociatedWith(user_ag)
-
-        
         global_rank = get_global_rank()
         runtime_type = get_runtime_type()
-        if runtime_type == "slurm":
-            node_rank = os.getenv("SLURM_NODEID", None)
-            local_rank = os.getenv("SLURM_LOCALID", None) 
-            jobid = os.getenv("SLURM_JOB_ID", None) 
-            jobname = os.getenv("SLURM_JOB_NAME", None) 
-            rootstr.add_attributes({
-                f"{self.yProv_PREFIX}:globalRank": _log_param_value(global_rank, "xsd:int"),
-                f"{self.yProv_PREFIX}:localRank": _log_param_value(local_rank, "xsd:int"),
-                f"{self.yProv_PREFIX}:nodeRank": _log_param_value(node_rank, "xsd:int"),
-                f"{self.yProv_PREFIX}:jobID": _log_param_value(jobid, "xsd:int"),
-                f"{self.yProv_PREFIX}:jobName": jobname,
-            })
-        elif runtime_type == "single_core":
-            rootstr.add_attributes({
-                f"{self.yProv_PREFIX}:globalRank":_log_param_value(global_rank, "xsd:int"),
-            })
+        node_rank = os.getenv("SLURM_NODEID", None)
+        local_rank = os.getenv("SLURM_LOCALID", None) 
+        jobid = os.getenv("SLURM_JOB_ID", None) 
+        jobname = os.getenv("SLURM_JOB_NAME", None) 
 
-        rootstr.add_attributes({
+        d = {
+            f"{self.yProv_PREFIX}:hostName": hostname,
+            f"{self.yProv_PREFIX}:timeZone": timezone,
+            f"{self.yProv_PREFIX}:runID": self.RUN_ID, 
+            f"{self.yProv_PREFIX}:pythonVersion":str(sys.version), 
             f"{self.yProv_PREFIX}:runtimeType":str(runtime_type),
             f"{self.yProv_PREFIX}:operatingSystem":str(platform.system()),
             f"{self.yProv_PREFIX}:release":str(platform.release()),
             f"{self.yProv_PREFIX}:processor":str(platform.processor()),
             f"{self.yProv_PREFIX}:machine":str(platform.machine()),
+        }
+
+        if global_rank: d[f"{self.yProv_PREFIX}:globalRank"] = global_rank
+        if local_rank: d[f"{self.yProv_PREFIX}:localRank"] = local_rank
+        if node_rank: d[f"{self.yProv_PREFIX}:nodeRank"] = node_rank
+        if jobid: d[f"{self.yProv_PREFIX}:jobID"] = jobid
+        if jobname: d[f"{self.yProv_PREFIX}:jobName"] = jobname
+        if global_rank: d[f"{self.yProv_PREFIX}:globalRank"] = global_rank
+
+        return d
+
+
+
+    def _init_agent_context(self): 
+        user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
+        self.user_ag = user_ag
+        user_ag.add_attributes({
+            f"{self.yProv_PREFIX}:provenancePath":self.PROV_SAVE_PATH,
+            f"{self.yProv_PREFIX}:artifactURI":self.ARTIFACTS_DIR,
+            f"{self.yProv_PREFIX}:experimentDirectory":self.EXPERIMENT_DIR,
+            f"{self.yProv_PREFIX}:experimentName":self.PROV_JSON_NAME,
+            # f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
         })
+        user_ag.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": get_time()})
 
-        rootstr.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": _log_param_value(get_time(), "xsd:dateTime")})
+    def _add_ctx(self, ctx : str):
+        if not ctx:
+            return None
+            
+        if ctx in self.contexts:
+            context = self.contexts[ctx]
+            self.context_timestamps[ctx] = get_time()
+            return context, False
+        else:
+            context, ctx_created = get_or_create_activity(self.root_provenance_doc, ctx)
+            if ctx_created:         
+                context.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": str(get_time())})
+                context.add_attributes(self.get_activity_attributes())
 
-    def _format_activity_name(self, context : Optional[str] = None, source: Optional[str]=None): 
-        context = self._set_ctx_or_default(context)
-        source = source + "//" if source else ""
-        return f"{source}{context}"
+            self.contexts[ctx] = context
+            self.context_timestamps[ctx] = get_time()
+            context.wasAssociatedWith(self.user_ag)
+            return context, True
 
-    def _format_artifact_name(self, label : str, context : Optional[str] = None, source: Optional[str]=None): 
-        context = self._set_ctx_or_default(context)
-        source = source + "//" if source else ""
-        return f"{source}{label}//{context}"
+    def _add_entity(self, path: str, attributes: dict):
+        if path in self.entities:
+            entity = self.entities[path]
+            return entity, False
+        else:
+            entity = self.root_provenance_doc.entity(path, attributes)
+            self.entities[path] = entity
+            return entity, True
 
-    def _log_input(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
-        entity = self.root_provenance_doc.entity(path, attributes)
-        activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
-        activity.used(entity)
-        return entity
-    
-    def _log_output(self, path : str, context : str, source: Optional[str]=None, attributes : dict={}) -> prov.ProvEntity:
-        entity= self.root_provenance_doc.entity(path, attributes)
-        activity = self._add_ctx(self.PROV_JSON_NAME, context, source)
-        entity.wasGeneratedBy(activity)
-        return entity
-    
+    def _create_nodes(self, path : str, is_input_to : Optional[str] = None, is_output_to: Optional[str]=None, attributes : dict={}): 
+        entity, entity_created = self._add_entity(path, attributes)
+        if entity_created: 
+            entity.add_attributes({f'{self.PROV_PREFIX}:generatedAtTime': get_time()})
+
+        entity_id = str(entity.identifier) if hasattr(entity, 'identifier') else str(path)
+
+        if is_input_to: 
+            is_input_to_obj, _ = self._add_ctx(is_input_to)
+            ctx_id = str(is_input_to_obj.identifier) if hasattr(is_input_to_obj, 'identifier') else str(is_input_to)
+            edge_key = (ctx_id, entity_id)
+            if edge_key not in self.used_edges:
+                is_input_to_obj.used(entity)
+                self.used_edges.add(edge_key)
+
+        if is_output_to: 
+            is_output_to_obj, _ = self._add_ctx(is_output_to)
+            ctx_id = str(is_output_to_obj.identifier) if hasattr(is_output_to_obj, 'identifier') else str(is_output_to)
+            edge_key = (entity_id, ctx_id)
+            if edge_key not in self.gen_edges:
+                entity.wasGeneratedBy(is_output_to_obj)
+                self.gen_edges.add(edge_key)
+
+        role = None
+        if is_input_to and not is_output_to: 
+            role = "input"
+        if is_output_to and not is_input_to: 
+            role = "output"
+        if role and entity_created: 
+            entity.add_attributes({f"{self.PROV_PREFIX}:role": role})            
+        return entity, is_output_to, is_output_to
+
+
+    def finalize_activities(self):
+        if not hasattr(self, 'contexts') or not hasattr(self, 'context_timestamps'):
+            return
+
+        for ctx_name, context in self.contexts.items():
+            timestamps = self.context_timestamps.get(ctx_name, None)
+            if timestamps:
+                context.add_attributes({f"{self.PROV_PREFIX}:endedAtTime": str(timestamps)})
+
     def request_source_code(self, use_git : bool=False): 
         self.source_code_required = True
         self.use_git = use_git
@@ -239,116 +278,57 @@ class Prov4MLData:
             paths = _get_source_files()
             for path in paths: 
                 os.makedirs(os.path.join(self.ARTIFACTS_DIR, "src"), exist_ok=True)
-                self.add_artifact(path, path, log_copy_in_prov_directory=True, log_copy_subdirectory="src", is_model=False, is_input=True)
+                self.add_artifact(path, path, is_model=False, is_input=True)
 
-    def add_metric(self, metric: str, value: Any, step: int = 0, context: Optional[Any] = None, source: Optional[str] = None, timestamp: Optional[int] = None) -> None:
-        context = self._set_ctx_or_default(context)
+    def add_metric(self, metric: str, value: Any, step: int = 0, is_input_to: Optional[Any] = None, is_output_to: Optional[str] = None, timestamp: Optional[int] = None) -> None:
         timestamp = timestamp or funcs.get_current_time_millis()
 
-        if (metric, context) not in self.metrics:
-            self.metrics[(metric, context)] = MetricInfo(metric, context, source=source, use_compressor=self.use_compressor)
+        if (metric, is_output_to) not in self.metrics:
+            self.metrics[(metric, is_output_to)] = MetricInfo(metric, is_input_to=is_input_to, is_output_to=is_output_to, use_compressor=self.use_compressor)
         
-        self.metrics[(metric, context)].add_metric(value, step, timestamp)
+        self.metrics[(metric, is_output_to)].add_metric(value, step, timestamp)
 
-        total_metrics_values = self.metrics[(metric, context)].total_metric_values
+        total_metrics_values = self.metrics[(metric, is_output_to)].total_metric_values
         if total_metrics_values % self.save_metrics_after_n_logs == 0:
-            self.save_metric_to_file(self.metrics[(metric, context)])
+            self.save_metric_to_file(self.metrics[(metric, is_output_to)])
 
-    def add_parameter(self, parameter_name: str, parameter_value: Any, context : Optional[str] = None, source : Optional[str] = None, is_input : bool = True) -> None:
-        context = self._set_ctx_or_default(context)
-        act_name = parameter_name
-        parameter_name = self._format_artifact_name(parameter_name, context, source)
-
-        if is_input: 
-            e = self._log_input(parameter_name, context, source, {
-                f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
-            })
-        else: 
-            e = self._log_output(parameter_name, context, source, {
-                f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
-            })
-
-        e.add_attributes({
-            f"{self.PROV_PREFIX}:label": act_name,
-            f"{self.PROV_PREFIX}:generatedAtTime": get_time(),
-            f'{self.yProv_PREFIX}:fullLabel': str(parameter_name), 
+    def add_parameter(self, parameter_name: str, parameter_value: Any, is_input_to : Optional[str] = None, is_output_to : Optional[str] = None) -> prov.ProvEntity:
+        e, _, _ = self._create_nodes(parameter_name, is_input_to, is_output_to, {
+            f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
+            f"{self.PROV_PREFIX}:label": parameter_name,
             f"{self.PROV_PREFIX}:value": str(parameter_value),
-            f"{self.PROV_PREFIX}:role": "input" if is_input else "output", 
         })
-
-    def _log_artifact_copy(self, artifact_path_src : str, artifact_path_dst : str, is_input : bool, is_model : bool, context : str, source : str): 
-        try: 
-            path = Path(artifact_path_src)
-        except: 
-            Exception(f">_log_artifact_copy: log_copy_in_prov_directory was True but value is not a valid Path: {artifact_path_src}, {artifact_path_dst}")
-        
-        newart_path = os.path.join(self.ARTIFACTS_DIR, artifact_path_dst)
-        if path.is_file():
-            os.makedirs(os.path.dirname(newart_path), exist_ok=True)
-            try: 
-                shutil.copy(path, newart_path)
-            except shutil.SameFileError: 
-                pass
-
-        else:  
-            try: 
-                shutil.copytree(path, newart_path)
-            except shutil.SameFileError: 
-                pass
-
-        original = self.add_artifact("Original_" + path.name, str(path), log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input, source=source, context=context)
-        copied = self.add_artifact(path.name, newart_path, log_copy_in_prov_directory=False, is_model=is_model, is_input=is_input, source=source, context=context)
-        copied.wasDerivedFrom(original)
-        return copied
-
+        return e
 
     def add_artifact(
         self, 
         artifact_name: str, 
         artifact_path: str, 
         step: int = 0, 
-        context: Optional[Any] = None,
-        source: Optional[str] = None,
-        is_input : bool = False, 
-        log_copy_in_prov_directory : bool = True, 
-        log_copy_subdirectory : Optional[str] = None, 
+        is_input_to : Optional[str] = None, 
+        is_output_to : Optional[str] = None, 
         is_model : bool = False, 
         attributes : Optional[dict] = None, 
     ) -> prov.ProvEntity:
-        context = self._set_ctx_or_default(context)
 
-        if log_copy_in_prov_directory: 
-            new_path = os.path.join(log_copy_subdirectory, artifact_path) if log_copy_subdirectory else artifact_path
-            return self._log_artifact_copy(artifact_path, new_path, is_input, is_model, context, source)
+        e, is_input_to, is_output_to = self._create_nodes(artifact_name, is_input_to, is_output_to)
 
-        node_name = artifact_name
-        artifact_name = self._format_artifact_name(artifact_name, context, source)
-        self.artifacts[(artifact_name, context)] = ArtifactInfo(artifact_name, artifact_path, step, context=context, source=source, is_model=is_model)
+        self.artifacts[(artifact_name, is_input_to)] = ArtifactInfo(artifact_name, artifact_path, step, is_input_to=is_input_to, is_output_to=is_output_to, is_model=is_model)
         local_attrs = attributes.copy() if attributes else {}
         if f'{self.PROV_PREFIX}:label' not in local_attrs.keys(): 
-            local_attrs[f'{self.PROV_PREFIX}:label'] = node_name
+            local_attrs[f'{self.PROV_PREFIX}:label'] = artifact_name
         if f'{self.RDF_PREFIX}:identifier' not in local_attrs.keys(): 
             local_attrs[f'{self.RDF_PREFIX}:identifier'] = artifact_path
-        if f'{self.PROV_PREFIX}:generatedAtTime' not in local_attrs.keys(): 
-            local_attrs[f'{self.PROV_PREFIX}:generatedAtTime'] = _log_param_value(get_time(), "xsd:dateTime")
-        if f'{self.yProv_PREFIX}:fullLabel' not in local_attrs.keys(): 
-            local_attrs[f'{self.yProv_PREFIX}:fullLabel'] = artifact_name
 
         if is_model: 
             local_attrs.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")
 
         if artifact_path: 
             file_size = os.path.getsize(artifact_path)
-            local_attrs.setdefault(f'{self.yProv_PREFIX}:fileSizeInBytes', _log_param_value(file_size, "xsd:int"))
+            local_attrs.setdefault(f'{self.yProv_PREFIX}:fileSizeInBytes', file_size)
 
-        if is_input: 
-            local_attrs.setdefault(f'{self.PROV_PREFIX}:role','input')
-            e = self._log_input(artifact_name, context, source, local_attrs)
-            return e
-
-        else: 
-            local_attrs.setdefault(f'{self.PROV_PREFIX}:role', 'output')
-            return self._log_output(artifact_name, context, source, local_attrs)
+        e.add_attributes(local_attrs)
+        return e
 
 
     def save_metric_to_file(self, metric: MetricInfo) -> None:

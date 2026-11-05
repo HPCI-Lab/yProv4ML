@@ -36,7 +36,7 @@ class ProvMLItwinAILogger(Logger):
 
     #: Supported kinds in the ``log`` method
     supported_kinds: Tuple[str] = (
-        'metric', 'flops_pb', 'flops_pe', 'system', 'carbon',
+        'metric', 'flops_pb', 'flops_pe', 'system', 
         'execution_time', 'model', 'best_model',
         'torch')
 
@@ -83,7 +83,6 @@ class ProvMLItwinAILogger(Logger):
             experiment_name=self.name,
             provenance_save_dir=self.provenance_save_dir,
             save_after_n_logs=self.save_after_n_logs,
-            # This class will control which workers can log
             collect_all_processes=True,
             rank=rank
         )
@@ -106,7 +105,6 @@ class ProvMLItwinAILogger(Logger):
         if not self.should_log():
             return
 
-        # Save hyperparams
         for param_name, val in params.items():
             log_param(param_name, val)
 
@@ -140,8 +138,7 @@ class ProvMLItwinAILogger(Logger):
             return
 
         if kind == "metric":
-            log_metric(key=identifier, value=item,
-                               context=context, step=step)
+            log_metric(key=identifier, value=item, context=context, step=step)
         elif kind == "flops_pb":
             model, batch = item
             log_flops_per_batch(
@@ -154,8 +151,6 @@ class ProvMLItwinAILogger(Logger):
                 dataset=dataset, context=context, step=step)
         elif kind == "system":
             log_system_metrics(context=context, step=step)
-        elif kind == "carbon":
-            log_carbon_metrics(context=context, step=step)
         elif kind == "execution_time":
             log_current_execution_time(
                 label=identifier, context=context, step=step)

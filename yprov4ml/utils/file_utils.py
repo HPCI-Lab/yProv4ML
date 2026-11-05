@@ -123,7 +123,6 @@ def _generate_requirements(output_dir):
         return output_path
         
     except Exception as e:
-        print(f"Error generating requirements.txt: {e}", file=sys.stderr)
         return None
     
     

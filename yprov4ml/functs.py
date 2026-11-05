@@ -20,6 +20,7 @@ def start_run(
         use_compressor: Optional[Union[CompressorType, bool]] = None,
         use_run_id: Optional[int] = None, 
     ) -> None:
+    global PROV4ML_DATA
     PROV4ML_DATA.start_run(
         experiment_name=experiment_name, 
         prov_save_path=provenance_save_dir, 
@@ -43,14 +44,16 @@ def end_run(
     ):  
     if not PROV4ML_DATA.is_collecting: return
 
-    filename = _generate_requirements("./") or _requirements_lookup("./")
+    filename = _generate_requirements(f"./{get_artifacts_dir()}") or _requirements_lookup(f"./{get_artifacts_dir()}")
     if filename: 
-        PROV4ML_DATA.add_artifact("requirements", filename, step=0, context=None, is_input=True)
+        PROV4ML_DATA.add_artifact("Requirements", filename)
     
     if PROV4ML_DATA.source_code_required: 
         PROV4ML_DATA.add_source_code()
 
     PROV4ML_DATA.save_all_metrics()
+
+    PROV4ML_DATA.finalize_activities()
 
     doc = create_prov_document()
    
