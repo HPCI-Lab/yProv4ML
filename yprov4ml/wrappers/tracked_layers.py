@@ -41,14 +41,16 @@ class WeightDistributionTrackedModel(nn.Module):
         self,
         model_label: str,
         model: Any,
-        context: Optional[str] = None,
+        is_input_to: Optional[str] = None,
+        is_output_to: Optional[str] = None,
         chunk_size: int = 64,
     ):
         super().__init__()
         self.model = model
         self.model_name = model_label
         self.model_path = f"{model_label}_weight_dist.zarr"
-        self.context = context
+        self.is_input_to = is_input_to
+        self.is_output_to = is_output_to
         self.store = zarr.open(self.model_path, mode="w")
         self.chunk_size = chunk_size
         self.writer = ZarrWriterThread(self)
@@ -176,8 +178,8 @@ class WeightDistributionTrackedModel(nn.Module):
         PROV4ML_DATA.add_artifact(
             self.model_name,
             self.model_path,
-            context=self.context,
-            source="yProv4ML",
+            is_input_to=self.is_input_to,
+            is_output_to=self.is_output_to,
             is_model=False,
         )
         shutil.rmtree(self.model_path)

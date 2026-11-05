@@ -2,15 +2,12 @@
 import os
 import sys
 import time
-import shutil
-from pathlib import Path
 from typing import Any, Dict, Optional, Union
 import prov.model as prov
 import pwd
 import warnings
-import uuid
-import platform
-import socket
+import platform, threading, socket
+from datetime import datetime
 
 from yprov4ml.datamodel.artifact_data import ArtifactInfo
 from yprov4ml.datamodel.metric_data import MetricInfo
@@ -21,6 +18,12 @@ from yprov4ml.utils.funcs import get_global_rank, get_runtime_type, get_local_ti
 from yprov4ml.utils.file_utils import _get_git_remote_url, _get_git_revision_hash, _get_source_files
 from yprov4ml.utils.time_utils import get_time
 from yprov4ml.utils.system_utils import Tracker
+
+_RUN_ID_LOCK = threading.Lock()
+_RUN_ID_CACHE = {}
+
+def _new_run_id() -> int:
+        return int(datetime.now().strftime("%Y%m%d%H%M%S"))
 
 class Prov4MLData:
     def __init__(self) -> None:
@@ -95,17 +98,22 @@ class Prov4MLData:
         if not use_compressor: 
             use_compressor = CompressorType.NONE
 
-        # look at PROV dir how many experiments are there with the same name
         if use_run_id is not None: 
             self.RUN_ID = use_run_id
         else:
-            if not os.path.exists(self.PROV_SAVE_PATH):
-                os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
-                self.RUN_ID = 0
-            else: 
-                prev_exps = os.listdir(self.PROV_SAVE_PATH) 
-                matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
-                self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
+            # if not os.path.exists(self.PROV_SAVE_PATH):
+            #     os.makedirs(self.PROV_SAVE_PATH, exist_ok=True)
+            #     self.RUN_ID = 0
+            # else: 
+            #     prev_exps = os.listdir(self.PROV_SAVE_PATH) 
+            #     matching_files = [int(exp.split("_")[-1].split(".")[0]) for exp in prev_exps if funcs.prov4ml_experiment_matches(experiment_name, exp)]
+            #     self.RUN_ID = max(matching_files)+1  if len(matching_files) > 0 else 0
+            key = (self.PROV_SAVE_PATH, experiment_name)
+            with _RUN_ID_LOCK:
+                if use_run_id is not None:
+                    self.RUN_ID = use_run_id
+                else:
+                    self.RUN_ID = _RUN_ID_CACHE.setdefault(key, _new_run_id())
 
         self.CLEAN_EXPERIMENT_NAME = experiment_name
         self.PROV_JSON_NAME = self.CLEAN_EXPERIMENT_NAME + f"_GR{self.global_rank}" if self.global_rank else experiment_name + f"_GR0"
@@ -141,50 +149,49 @@ class Prov4MLData:
         self.root_provenance_doc.add_namespace(self.PROVML_PREFIX, 'prov-ml')
         self.root_provenance_doc.add_namespace(self.RDF_PREFIX, 'http://purl.org/dc/terms/')
 
-    def _init_agent_context(self): 
-        user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
-        self.user_ag = user_ag
+    def get_activity_attributes(self): 
         hostname = socket.gethostname()
         timezone = get_local_timezone_info()
-        user_ag.add_attributes({
-            f"{self.yProv_PREFIX}:provenancePath":self.PROV_SAVE_PATH,
-            f"{self.yProv_PREFIX}:artifactURI":self.ARTIFACTS_DIR,
-            f"{self.yProv_PREFIX}:experimentDirectory":self.EXPERIMENT_DIR,
-            f"{self.yProv_PREFIX}:experimentName":self.PROV_JSON_NAME,
-            f"{self.yProv_PREFIX}:runID": self.RUN_ID, 
-            f"{self.yProv_PREFIX}:pythonVersion":str(sys.version), 
-            f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
-            f"{self.yProv_PREFIX}:hostName": hostname,
-            f"{self.yProv_PREFIX}:timeZone": timezone,
-        })
-        
         global_rank = get_global_rank()
         runtime_type = get_runtime_type()
-        if runtime_type == "slurm":
-            node_rank = os.getenv("SLURM_NODEID", None)
-            local_rank = os.getenv("SLURM_LOCALID", None) 
-            jobid = os.getenv("SLURM_JOB_ID", None) 
-            jobname = os.getenv("SLURM_JOB_NAME", None) 
-            user_ag.add_attributes({
-                f"{self.yProv_PREFIX}:globalRank": global_rank, 
-                f"{self.yProv_PREFIX}:localRank": local_rank, 
-                f"{self.yProv_PREFIX}:nodeRank": node_rank, 
-                f"{self.yProv_PREFIX}:jobID": jobid, 
-                f"{self.yProv_PREFIX}:jobName": jobname,
-            })
-        elif runtime_type == "single_core":
-            user_ag.add_attributes({
-                f"{self.yProv_PREFIX}:globalRank": global_rank, 
-            })
+        node_rank = os.getenv("SLURM_NODEID", None)
+        local_rank = os.getenv("SLURM_LOCALID", None) 
+        jobid = os.getenv("SLURM_JOB_ID", None) 
+        jobname = os.getenv("SLURM_JOB_NAME", None) 
 
-        user_ag.add_attributes({
+        d = {
+            f"{self.yProv_PREFIX}:hostName": hostname,
+            f"{self.yProv_PREFIX}:timeZone": timezone,
+            f"{self.yProv_PREFIX}:runID": self.RUN_ID, 
+            f"{self.yProv_PREFIX}:pythonVersion":str(sys.version), 
             f"{self.yProv_PREFIX}:runtimeType":str(runtime_type),
             f"{self.yProv_PREFIX}:operatingSystem":str(platform.system()),
             f"{self.yProv_PREFIX}:release":str(platform.release()),
             f"{self.yProv_PREFIX}:processor":str(platform.processor()),
             f"{self.yProv_PREFIX}:machine":str(platform.machine()),
-        })
+        }
 
+        if global_rank: d[f"{self.yProv_PREFIX}:globalRank"] = global_rank
+        if local_rank: d[f"{self.yProv_PREFIX}:localRank"] = local_rank
+        if node_rank: d[f"{self.yProv_PREFIX}:nodeRank"] = node_rank
+        if jobid: d[f"{self.yProv_PREFIX}:jobID"] = jobid
+        if jobname: d[f"{self.yProv_PREFIX}:jobName"] = jobname
+        if global_rank: d[f"{self.yProv_PREFIX}:globalRank"] = global_rank
+
+        return d
+
+
+
+    def _init_agent_context(self): 
+        user_ag = self.root_provenance_doc.agent(f'{pwd.getpwuid(os.getuid())[0]}')
+        self.user_ag = user_ag
+        user_ag.add_attributes({
+            f"{self.yProv_PREFIX}:provenancePath":self.PROV_SAVE_PATH,
+            f"{self.yProv_PREFIX}:artifactURI":self.ARTIFACTS_DIR,
+            f"{self.yProv_PREFIX}:experimentDirectory":self.EXPERIMENT_DIR,
+            f"{self.yProv_PREFIX}:experimentName":self.PROV_JSON_NAME,
+            # f"{self.yProv_PREFIX}:PID":str(uuid.uuid4()), 
+        })
         user_ag.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": get_time()})
 
     def _add_ctx(self, ctx : str):
@@ -199,6 +206,8 @@ class Prov4MLData:
             context, ctx_created = get_or_create_activity(self.root_provenance_doc, ctx)
             if ctx_created:         
                 context.add_attributes({f"{self.PROV_PREFIX}:startedAtTime": str(get_time())})
+                context.add_attributes(self.get_activity_attributes())
+
             self.contexts[ctx] = context
             self.context_timestamps[ctx] = get_time()
             context.wasAssociatedWith(self.user_ag)
@@ -287,7 +296,6 @@ class Prov4MLData:
         e, _, _ = self._create_nodes(parameter_name, is_input_to, is_output_to, {
             f"{self.PROV_PREFIX}:type": f"{self.PROVML_PREFIX}:HyperParameter", 
             f"{self.PROV_PREFIX}:label": parameter_name,
-            f'{self.yProv_PREFIX}:fullLabel': str(parameter_name), 
             f"{self.PROV_PREFIX}:value": str(parameter_value),
         })
         return e
@@ -311,8 +319,6 @@ class Prov4MLData:
             local_attrs[f'{self.PROV_PREFIX}:label'] = artifact_name
         if f'{self.RDF_PREFIX}:identifier' not in local_attrs.keys(): 
             local_attrs[f'{self.RDF_PREFIX}:identifier'] = artifact_path
-        if f'{self.yProv_PREFIX}:fullLabel' not in local_attrs.keys(): 
-            local_attrs[f'{self.yProv_PREFIX}:fullLabel'] = artifact_name
 
         if is_model: 
             local_attrs.setdefault(f'{self.PROV_PREFIX}:type', f"{self.PROVML_PREFIX}:Model")

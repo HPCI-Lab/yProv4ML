@@ -6,7 +6,7 @@ from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 import sys
-sys.path.append("../yProv4ML")
+sys.path.append("./yProv4ML")
 
 import yprov4ml
 
@@ -58,7 +58,6 @@ class MNISTModel(LightningModule):
         yprov4ml.log_metric("epoch", self.current_epoch, "Training", step=self.current_epoch)
         yprov4ml.save_model_version(f"model_version_{self.current_epoch}", self, "Training", step=self.current_epoch)
         yprov4ml.log_system_metrics("Training",step=self.current_epoch)
-        yprov4ml.log_carbon_metrics("Training",step=self.current_epoch)
         yprov4ml.log_current_execution_time("train_epoch_time", "Training", self.current_epoch)
 
     def configure_optimizers(self):

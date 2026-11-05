@@ -16,7 +16,7 @@ def log_metric(key: str, value: float, is_input_to: Optional[str] = None, step: 
     PROV4ML_DATA.add_metric(key, value, step, is_input_to=is_input_to, is_output_to=is_output_to, timestamp=timestamp)
 
 def log_current_execution_time(label: str, is_input_to: Optional[str] = None, is_output_to: Optional[str] = 'std.time', step: Optional[int] = None) -> None:
-    return log_metric(label, time_utils.get_time(), is_input_to=is_input_to, is_output_to=is_output_to, step=step, is_input=False)
+    return log_metric(label, time_utils.get_time(), is_input_to=is_input_to, is_output_to=is_output_to, step=step)
 
 def log_param(key: str, value: Any, is_input_to : Optional[str] = None, is_output_to : Optional[str] = None) -> None:
     PROV4ML_DATA.add_parameter(key, value, is_input_to, is_output_to)
@@ -208,7 +208,7 @@ def log_dataset(
         is_input_to : Optional[str] = None, 
         is_output_to : Optional[str] = None, 
         log_dataset_info : bool = True, 
-        other_attrs: Optional[dict] = None
+        other_attrs: dict = {}
         ): 
 
     other_attrs[f"{PROV4ML_DATA.yProv_PREFIX}:checksum"] = compute_dataset_checksum(dataset)

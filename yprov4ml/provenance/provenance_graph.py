@@ -22,12 +22,15 @@ import xarray as xr
 
 def get_metric_stats_from_file(metric_file_path: str): 
     # CSV Files
+    mT, MT, mean, fin = "", "", "", ""
     if metric_file_path.endswith(".csv"): 
         data = pd.read_csv(metric_file_path)
-        mT = data["timestep"].min()
-        MT = data["timestep"].max()
-        mean = data["value"].max()
-        fin = data["value"].max() 
+        try: 
+            mT = data["timestep"].min()
+            MT = data["timestep"].max()
+            mean = data["value"].max()
+            fin = data["value"].max() 
+        except: pass
     # NetCDF Files (.nc)
     elif metric_file_path.endswith(".nc"):
         ds = xr.open_dataset(metric_file_path)
@@ -46,10 +49,10 @@ def get_metric_stats_from_file(metric_file_path: str):
     else:
         raise ValueError(f"Unsupported file format: {metric_file_path}")
     # Handle NaNs
-    if math.isnan(mT): mT = ""
-    if math.isnan(MT): MT = ""
-    if math.isnan(mean): mean = ""
-    if math.isnan(fin): fin = ""
+    if not isinstance(mT, float) or math.isnan(mT): mT = ""
+    if not isinstance(MT, float) or math.isnan(MT): MT = ""
+    if not isinstance(mean, float) or math.isnan(mean): mean = ""
+    if not isinstance(fin, float) or math.isnan(fin): fin = ""
     
     return mT, MT, mean, fin
 

@@ -42,26 +42,25 @@ tform = transforms.Compose([
 yprov4ml.log_param("dataset transformation", tform)
 
 mnist_model = MNISTModel().to(DEVICE)
-mnist_model = yprov4ml.WeightDistributionTrackedModel("mnist_model", mnist_model)
-yprov4ml.log_model("mnist_model", mnist_model, context="Training")
+mnist_model = yprov4ml.WeightDistributionTrackedModel("mnist_model", mnist_model, is_output_to="Training")
+yprov4ml.log_model("mnist_model", mnist_model, is_input_to="Training")
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
 train_ds = Subset(train_ds, range(BATCH_SIZE*150))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
-yprov4ml.log_dataset("train_dataset", train_loader, context="Training")
+yprov4ml.log_dataset("train_dataset", train_loader, is_input_to="Training")
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
 test_ds = Subset(test_ds, range(BATCH_SIZE*50))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
-yprov4ml.log_dataset("val_dataset", test_loader, context="Validation")
+yprov4ml.log_dataset("val_dataset", test_loader, is_input_to="Validation")
 
 optim = torch.optim.Adam(mnist_model.parameters(), lr=0.001)
-yprov4ml.log_param("optimizer", "Adam")
+yprov4ml.log_param("optimizer", "Adam", is_input_to="Training")
 
 loss_fn = nn.MSELoss().to(DEVICE)
-loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, context="Training")
-yprov4ml.log_context("TrainingButDifferent", "Training")
-val_loss_fn = yprov4ml.ProvenanceTrackedFunction(nn.MSELoss(), context="Validation")
+loss_fn = yprov4ml.ProvenanceTrackedFunction(loss_fn, is_input_to="Training")
+val_loss_fn = yprov4ml.ProvenanceTrackedFunction(nn.MSELoss(), is_input_to="Validation")
 
 losses = []
 for epoch in range(EPOCHS):
@@ -77,8 +76,8 @@ for epoch in range(EPOCHS):
         losses.append(loss.item())
     
         # log system and carbon metrics (once per epoch), as well as the execution time
-        yprov4ml.log_metric("MSE", loss.item(), context="Training", step=epoch)
-        yprov4ml.log_system_metrics("Training", step=epoch)
+        yprov4ml.log_metric("MSE", loss.item(), is_output_to="Training", step=epoch)
+        yprov4ml.log_system_metrics(is_output_to="Training", step=epoch)
 
     mnist_model.log_epoch(epoch)
 
@@ -91,6 +90,6 @@ for epoch in range(EPOCHS):
             y2 = F.one_hot(y, 10).float()
             loss = val_loss_fn(y_hat, y2)
 
-            yprov4ml.log_metric("MSE", loss.item(), context="Validation", step=epoch)
+            yprov4ml.log_metric("MSE", loss.item(), is_output_to="Validation", step=epoch)
 
 yprov4ml.end_run(create_graph=True, create_svg=True, crate_ro_crate=True)
