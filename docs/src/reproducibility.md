@@ -11,16 +11,16 @@ With workflow streamlined by yProv4ML, it is trivial to guarantee reproducibilit
 To guarantee the necessary amount of information are present in the prov.json file however, some calls to the library have to be executed. 
 
 ```python
-def log_execution_command(cmd : str, path : str): ...
+def log_execution_command(full_command_str : Optional[str] = None, path : Optional[str] = None): ...
 ```
 
-Simply logs the execution command for it to be retrieved by the reproduction script later. This is often a call to python3
+Logs the execution command for it to be retrieved by the reproduction script later. If omitted, the current interpreter and `sys.argv` are used.
 
 ```python
-def log_source_code(): ...
+def log_source_code(use_git : bool = False): ...
 ```
 
-Logs as an artifact a path to the source code. This could be a single python file (e.g. main.py), a repository link (if the path is not specified in the arguments), or an entire directory of source files. 
+Requests logging of the source code at `end_run`. With `use_git=True` the repository link and commit hash are logged as a parameter. This could be a single python file (e.g. main.py), a repository link (if the path is not specified in the arguments), or an entire directory of source files. 
 In case the source code is not on github, the source files are all copied inside the artifacts directory, and the path logged inside the provenance file will reference whis copy. 
 
 <div style="display: flex; align-items: center; background-color: #ffcc00; color: #333; border: 5px solid #ffcc00; font-weight: bold; border-radius: 5px; position: relative;">

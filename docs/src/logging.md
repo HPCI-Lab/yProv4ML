@@ -1,19 +1,18 @@
 
 # General Logging
 
-When logging parameters and metrics, the user must specify the context of the information (string indicating, for instance, "Training", "Validation", "Testing"). 
+In 4.0 the context of the information is expressed through the `is_input_to` and `is_output_to` arguments: strings naming the activities that consume or produce the item (for instance `"Training_0"`, `"Validation_0"`, `"Testing_0"`).
 
 ## Log Parameters
 
 To specify arbitrary training parameters used during the execution of the experiment, the user can call the following function. 
     
 ```python
-prov4ml.log_param(
+yprov4ml.log_param(
     key: str, 
     value: Any, 
-    context : Optional[str] = None, 
-    source : Optional[str] = None, 
-    is_input : Optional[bool] = False
+    is_input_to : Optional[str] = None, 
+    is_output_to : Optional[str] = None
 )
 ```
 
@@ -21,23 +20,22 @@ prov4ml.log_param(
 | :-------- | :------- | :------------------------- |
 | `key` | `string` | **Required**. Name of the parameter |
 | `value` | `string` | **Required**. Value of the parameter |
-| `context` | `Optional[str]` | **Optional**. Indicates which context to add the parameter to |
-| `source` | `Optional[str]` | **Optional**. Indicates the source of the coming information |
-| `is_input` | `Optional[bool]` | **Optional**. Indicates whether the parameter is an input |
+| `is_input_to` | `Optional[str]` | **Optional**. Activity that uses the parameter as input |
+| `is_output_to` | `Optional[str]` | **Optional**. Activity or tool that produced the parameter |
 
 ## Log Artifacts
 
 To log artifacts, the user can call the following function.
 
 ```python
-prov4ml.log_artifact(
+yprov4ml.log_artifact(
     artifact_name : str, 
     artifact_path : str, 
-    context: Optional[str] = None,
-    step: Optional[int] = None, 
-    log_copy_in_prov_directory : bool = True, 
+    is_input_to : Optional[str] = None, 
+    is_output_to : Optional[str] = None, 
+    step: int = 0, 
     is_model : bool = False, 
-    is_input : bool = False, 
+    other_attrs : Optional[dict] = None, 
 )
 ```
 
@@ -45,26 +43,27 @@ prov4ml.log_artifact(
 | :-------- | :------- | :------------------------- |
 | `artifact_name` | `string` | **Required**. Label to give to the artifact |
 | `artifact_path` | `string` | **Required**. Path to the artifact |
-| `context` | `Optional[prov4ml.str]` | **Required**. str of the artifact |
-| `step` | `Optional[int]` | **Optional**. Step of the artifact |
-| `log_copy_in_prov_directory` | `bool` | **Optional**. Copies file in artifact directory |
-| `is_input` | `bool` | **Optional**. Indicates that the artifact is used as input to the training process. |
+| `is_input_to` | `Optional[str]` | **Optional**. Activity that uses the artifact as input |
+| `is_output_to` | `Optional[str]` | **Optional**. Activity that generates the artifact |
+| `step` | `int` | **Optional**. Step of the artifact (default 0) |
+| `is_model` | `bool` | **Optional**. Whether the artifact is a model |
+| `other_attrs` | `Optional[dict]` | **Optional**. Extra PROV attributes to attach to the artifact entity |
 
 The function logs the artifact in the current experiment. The artifact can be a file or a directory. 
 All logged artifacts are saved in the artifacts directory of the current experiment, while the related information is saved in the PROV-JSON file, along with a reference to the file. 
-The *value* parameter can be any artifact, a file, a path, a value. yProv4ML identifies the correct way to store this parameter in memoty and connect it to the provenance file. 
-If *log_copy_in_prov_directory* is `True`, the file at the specified value parameter is copied inside the artefacts directory.  
-If *is_input* is `True`, the artifacts will be referenced as such in the W3C prov standard. An example of this would be pretrained model weights. 
+Use `is_input_to` for artifacts consumed by an activity (e.g. pretrained model weights) and `is_output_to` for artifacts it produces. 
 
 ## Log Models
 
 ```python
-prov4ml.log_model(
+yprov4ml.log_model(
     model_name: str, 
     model: Union[torch.nn.Module, Any], 
+    is_input_to : Optional[str] = None, 
+    is_output_to : Optional[str] = None, 
     log_model_info: bool = True, 
     log_model_layers : bool = False,
-    is_input: bool = False,
+    other_attrs : Optional[dict] = None,
 )
 ```
 
@@ -72,9 +71,11 @@ prov4ml.log_model(
 | :-------- | :------- | :------------------------- |
 | `model_name` | `string` | **Required**. Name of the model |
 | `model` | `Union[torch.nn.Module, Any]` | **Required**. The model to be logged |
+| `is_input_to` | `Optional[str]` | **Optional**. Activity that uses the model as input |
+| `is_output_to` | `Optional[str]` | **Optional**. Activity that produces the model |
 | `log_model_info` | `bool` | **Optional**. Whether to log model information |
 | `log_model_layers` | `bool` | **Optional**. Whether to log model layers |
-| `is_input` | `bool` | **Optional**. Indicates that the model is used as input to the training process |
+| `other_attrs` | `Optional[dict]` | **Optional**. Extra PROV attributes to attach to the model entity |
 
 It sets the model for the current experiment. It can be called anywhere before the end of the experiment. 
 The same call also logs some model information, such as the number of parameters and the model architecture memory footprint. 
@@ -83,13 +84,13 @@ The model layers details can be logged in an external .json file, which will be 
 The parameters saved for each layer depend on the type of the latter, but generally include input and output size, as well as dtype. 
 
 ```python
-prov4ml.save_model_version(
+yprov4ml.save_model_version(
     model_name: str, 
     model: Union[torch.nn.Module, Any], 
-    context: Optional[str] = None, 
+    is_input_to : Optional[str] = None, 
+    is_output_to : Optional[str] = None, 
     step: Optional[int] = None, 
-    incremental : bool = True, 
-    is_input : bool =False, 
+    other_attrs : Optional[dict] = None, 
 )
 ```
 
@@ -97,25 +98,27 @@ The save_model_version function saves the state of a PyTorch model and logs it a
 
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
-| `model_name`	| `str`|	**Required**. The name under which to save the model. | 
+| `model_name`	| `Union[str, Path]`|	**Required**. The name (or path) under which to save the model; a `.pt` suffix is added if missing. | 
 | `model`	| `torch.nn.Module` |	**Required**. The PyTorch model to be saved. |
-| `context`	| `Optional[str]` |	**Optional**. The context in which the model is saved. |
+| `is_input_to`	| `Optional[str]` |	**Optional**. Activity that uses the model as input. |
+| `is_output_to`	| `Optional[str]` |	**Optional**. Activity that produces the model. |
 | `step`	| `Optional[int]` |	**Optional**. The step or epoch number associated with the saved model. |
-| `incremental`	| `bool` |	**Optional**. Indicates whether there will be multiple versions of this model. |
-| `is_input`	| `bool` |	**Optional**. Indicates that the model is used as input to the training process. |
+| `other_attrs`	| `Optional[dict]` |	**Optional**. Extra PROV attributes to attach to the entity. |
 
-This function saves the model's state dictionary to a specified directory and logs the saved model file as an artifact for provenance tracking. It ensures that the directory for saving the model exists, creates it if necessary, and uses the `torch.save` method to save the model. It then logs the saved model file using `log_artifact`, associating it with the given context and optional step number. 
-If ```save_model_version``` is called several times with `incremental = True`, yProv4ML creates an incremental id for each model variation, and saves all in a sub-directory. 
+This function saves the model's state dictionary to a specified directory and logs the saved model file as an artifact for provenance tracking. It then logs the saved model file using `log_artifact`.
 
 ## Log Datasets
 
 yProv4ML offers helper functions to log information and stats on specific datasets.  
 
 ```python
-prov4ml.log_dataset(
+yprov4ml.log_dataset(
     dataset_label : str, 
     dataset : Union[DataLoader, Subset, Dataset], 
-    log_dataset_info : bool = True
+    is_input_to : Optional[str] = None, 
+    is_output_to : Optional[str] = None, 
+    log_dataset_info : bool = True, 
+    other_attrs : dict = {}
 )
 ```
 
@@ -123,10 +126,13 @@ prov4ml.log_dataset(
 | :-------- | :------- | :------------------------- |
 | `dataset_label` | `string` | **Required**. The label of the dataset |
 | `dataset` | `Union[DataLoader, Subset, Dataset]` | **Required**. The dataset to be logged |
+| `is_input_to` | `Optional[str]` | **Optional**. Activity that uses the dataset as input |
+| `is_output_to` | `Optional[str]` | **Optional**. Activity that produces the dataset |
 | `log_dataset_info` | `bool` | **Optional**. Whether to log the dataset information |
+| `other_attrs` | `dict` | **Optional**. Extra PROV attributes to attach to the dataset entity |
 
 The function logs the dataset in the current experiment. The dataset can be a DataLoader, a Subset, or a Dataset class from pytorch.
-Parameters which are logged include batch size, number of workers, whether the dataset is shuffled, the number of batches and the number of total samples. 
+A SHA-256 checksum of the dataset is always recorded. Parameters which are logged include batch size, number of workers, whether the dataset is shuffled, the number of batches and the number of total samples. 
 
 # Logging through Wrappers
 
@@ -144,7 +150,8 @@ yProv4ML offers helper wrappers to log information automatically.
 class ProvenanceTrackedFunction:
     def __init__(self, 
         func : Any, 
-        context : Optional[str] = None
+        is_input_to : Optional[str] = None, 
+        is_output_to : Optional[str] = None
     )
 ```
 
@@ -152,8 +159,24 @@ class ProvenanceTrackedFunction:
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | func	  | Any	          |  Required	| The target callable function or object to wrap (e.g., PyTorch loss function or metric evaluator). |
-| context |	Optional[str]|	None	    | Optional execution context or stage name (e.g. "training", "validation"). |
+| is_input_to |	Optional[str]|	None	    | Activity the call is an input to; defaults to the wrapped object's type name. |
+| is_output_to |	Optional[str]|	None	    | Activity or tool that produces the output. |
 
+
+## WeightDistributionTrackedModel
+
+```python
+class WeightDistributionTrackedModel(nn.Module):
+    def __init__(self, 
+        model_label : str, 
+        model : Any, 
+        is_input_to : Optional[str] = None, 
+        is_output_to : Optional[str] = None, 
+        chunk_size : int = 64
+    )
+```
+
+Tracks per-layer weight statistics per epoch. Arguments follow the same convention as the other 4.0 logging calls.
 
 ## ProvenanceTrackedModel
 

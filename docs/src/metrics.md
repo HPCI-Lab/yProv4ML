@@ -6,13 +6,12 @@ This section covers the different types of metrics which can be collected using 
 - [General Metrics](./custom_metrics.md): Covers customized, user-defined metrics
 - [System Metrics](./system.md): Covers performance-related metrics such as CPU usage, memory consumption, and GPU stats.
 - [Time Metrics](./time.md): Offers directives for time-based measurements.
-- [Registering Metrics](./registering_metrics.md): Offers the ability to pre-process data "in-situ".
 
 Each subsection provides detailed explanations and methodologies for tracking and interpreting these metrics.
 
 <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
     <a href="prov_collection.md" style="text-decoration: none; background-color: #006269; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; transition: 0.3s;">← Prev</a>
     <a href="." style="text-decoration: none; background-color: #006269; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; transition: 0.3s;">🏠 Home</a>
-    <a href="carbon.md" style="text-decoration: none; background-color: #006269; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; transition: 0.3s;">Next →</a>
+    <a href="custom_metrics.md" style="text-decoration: none; background-color: #006269; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; transition: 0.3s;">Next →</a>
 </div>
 

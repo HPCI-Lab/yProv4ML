@@ -16,14 +16,16 @@ yProv4ml offers a set of directives to easily extract the information logged fro
 </div>
 
 ```python
-from yprov4ml import (
+from yprov4ml.getters import (
     list_activities, 
     list_entities, 
     get_parameter, 
     list_parameters,
     list_metrics, 
     list_metric_paths, 
-    get_metric
+    get_metric, 
+    list_runs_in_proj, 
+    list_provjson_in_proj
 )
 
 import json
@@ -112,8 +114,8 @@ def list_provjson_in_proj(path : str | Path) -> list[Path]
     <span style="position: absolute; left: 10px; font-size: 20px;">⚠</span>
     <span style="margin-left: 55px; padding: 5px; background-color: white; border-radius: 5px; width:100%">
     Viewing metrics data depends on the way it is saved in the experiment. 
-    - If CSV format is used, we suggest opening it with [pandas](https://pandas.pydata.org/)
-    - If ZARR or NETCDF are used, then either [xarray](https://docs.xarray.dev/en/stable/index.html) or an ad-hoc library ([zarr-python](https://zarr.readthedocs.io/en/stable/) and [netcdf4](https://pypi.org/project/netCDF4/)) can be used. 
+    - If `"csv"` is used, we suggest opening it with [pandas](https://pandas.pydata.org/)
+    - If `"zarr"` or `"netcdf"` are used, then either [xarray](https://docs.xarray.dev/en/stable/index.html) or an ad-hoc library ([zarr-python](https://zarr.readthedocs.io/en/stable/) and [netcdf4](https://pypi.org/project/netCDF4/)) can be used. 
     </span>
 </div>
 

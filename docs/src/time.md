@@ -3,9 +3,10 @@
 # Execution Time
 
 ```python
-prov4ml.log_current_execution_time(
+yprov4ml.log_current_execution_time(
     label: str, 
-    context: Context, 
+    is_input_to: Optional[str] = None, 
+    is_output_to: Optional[str] = 'std.time', 
     step: Optional[int] = None
 )
 ```
@@ -13,7 +14,8 @@ prov4ml.log_current_execution_time(
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
 | `label` | `string` | **Required**. Label of the code portion |
-| `context` | `prov4ml.Context` | **Required**. Context of the metric |
+| `is_input_to` | `Optional[str]` | **Optional**. Activity that consumes the metric |
+| `is_output_to` | `Optional[str]` | **Optional**. Producer of the metric (default `std.time`) |
 | `step` | `int` | **Optional**. Step of the metric |
 
 <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">

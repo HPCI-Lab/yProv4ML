@@ -10,7 +10,7 @@ include = [
 
 [project]
 name = "yprov4ml"
-version = "3.2.8"
+version = "4.0.0"
 authors = [
   { name="Gabriele Padovani", email="gabriele.padovani@unitn.it" },
 ]

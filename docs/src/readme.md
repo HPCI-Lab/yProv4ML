@@ -8,7 +8,7 @@ It allows users to create provenance graphs from the logged information, and sav
 
 ## Data Model
 
-![Data Model](./assets/prov4ml.datamodel.png)
+![Data Model](./assets/yprov4ml.datamodel.png)
 
 ## Example
 

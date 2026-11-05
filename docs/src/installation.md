@@ -28,7 +28,7 @@ Installers are at the [Download page of GraphViz](https://graphviz.org/download/
 
 Install from pip: 
 ```bash
-pip install yprov4ml
+pip install 'yprov4ml==4.0'
 
 # Or for the legacy version
 pip install 'yprov4ml==1.0'

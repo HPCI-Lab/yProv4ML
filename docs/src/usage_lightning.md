@@ -17,8 +17,8 @@ def training_step(self, batch, batch_idx):
     x, y = batch
     y_hat = self(x)
     loss = self.loss(y_hat, y)
-    prov4ml.log_metric("MSE_train", loss, prov4ml.Context.TRAINING, step=self.current_epoch)
-    prov4ml.log_flops_per_batch("train_flops", self, batch, prov4ml.Context.TRAINING,step=self.current_epoch)
+    yprov4ml.log_metric("MSE_train", loss.item(), is_input_to="Training_0", step=self.current_epoch)
+    yprov4ml.log_flops_per_batch("train_flops", self, batch, is_input_to="Training_0", step=self.current_epoch)
     return loss
 ```
 
@@ -43,7 +43,8 @@ import torch.nn.functional as F
 from torchvision.datasets import MNIST
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
-import prov4ml
+import yprov4ml
+from yprov4ml import yProvMLLogger
 
 PATH_DATASETS = "./data"
 BATCH_SIZE = 64
@@ -62,39 +63,38 @@ class MNISTModel(LightningModule):
     def training_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        # Log the training loss through the ProvMLLogger automatically
-        # In this case the Context parameter is lost. 
-        # To be able to log also the context and step, 
-        # use the standard prov4ml.log_metric() call
+        # Log the training loss through the yProvMLLogger automatically
+        # In this case is_input_to/is_output_to are set by the logger. 
+        # For finer control, 
+        # use the standard yprov4ml.log_metric() call
         self.log("MSE_train", loss.item(), on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
         return loss
     
     def validation_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        # Log the validation loss through the ProvMLLogger automatically
+        # Log the validation loss through the yProvMLLogger automatically
         self.log("MSE_val", loss)
         return loss
     
     def test_step(self, batch, _):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
-        # Log the testing loss through the ProvMLLogger automatically
+        # Log the testing loss through the yProvMLLogger automatically
         self.log("MSE_test",loss)
         return loss
     
     def on_train_epoch_end(self) -> None:
         # All standard prov4ml directives work the same way as before, 
         # the whole context is set up by the logger.
-        prov4ml.log_metric("epoch", self.current_epoch, prov4ml.Context.TRAINING, step=self.current_epoch)
-        prov4ml.save_model_version(f"model_version_{self.current_epoch}", self, prov4ml.Context.TRAINING, step=self.current_epoch)
-        prov4ml.log_system_metrics(prov4ml.Context.TRAINING, step=self.current_epoch)
-        prov4ml.log_carbon_metrics(prov4ml.Context.TRAINING, step=self.current_epoch)
-        prov4ml.log_current_execution_time("train_epoch_time", prov4ml.Context.TRAINING, self.current_epoch)
+        yprov4ml.log_metric("epoch", self.current_epoch, is_input_to="Training_0", step=self.current_epoch)
+        yprov4ml.save_model_version(f"model_version_{self.current_epoch}", self, is_output_to="Training_0", step=self.current_epoch)
+        yprov4ml.log_system_metrics(is_input_to="Training_0", step=self.current_epoch)
+        yprov4ml.log_current_execution_time("train_epoch_time", is_input_to="Training_0", step=self.current_epoch)
 
     def configure_optimizers(self):
         optim = torch.optim.Adam(self.parameters(), lr=0.0002)
-        prov4ml.log_param("optimizer", optim)
+        yprov4ml.log_param("optimizer", optim)
         return optim
 
 
@@ -108,8 +108,8 @@ tform = transforms.Compose([
 ])
 # Log the dataset transformation as one-time parameter
 # This works even when not calling start_run(), 
-# as long as a ProvMLLogger is added to the training
-prov4ml.log_param("dataset_transformation", tform)
+# as long as a yProvMLLogger is added to the training
+yprov4ml.log_param("dataset_transformation", tform)
 
 train_ds = MNIST(PATH_DATASETS, train=True, download=True, transform=tform)
 val_ds = Subset(train_ds, range(BATCH_SIZE * 1))
@@ -117,27 +117,27 @@ train_ds = Subset(train_ds, range(BATCH_SIZE * 10))
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE)
 
-prov4ml.log_dataset("train_dataset", train_loader)
-prov4ml.log_dataset("val_dataset", val_loader)
+yprov4ml.log_dataset("train_dataset", train_loader)
+yprov4ml.log_dataset("val_dataset", val_loader)
 
 trainer = L.Trainer(
     accelerator="cuda",
     devices=1,
     max_epochs=EPOCHS,
     # The logger has to be added to the corresponding parameter in pytorch lightning
-    logger=[prov4ml.ProvMLLogger()],
+    logger=[yProvMLLogger()],
     enable_checkpointing=False, 
     log_every_n_steps=1
 )
 
 trainer.fit(mnist_model, train_loader, val_dataloaders=val_loader)
-prov4ml.log_model("model_version_final", mnist_model)
+yprov4ml.log_model("model_version_final", mnist_model)
 
 test_ds = MNIST(PATH_DATASETS, train=False, download=True, transform=tform)
 test_ds = Subset(test_ds, range(BATCH_SIZE * 2))
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 
-prov4ml.log_dataset("test_dataset", test_loader)
+yprov4ml.log_dataset("test_dataset", test_loader)
 
 result = trainer.test(mnist_model, test_loader)
 ```
@@ -153,7 +153,7 @@ result = trainer.test(mnist_model, test_loader)
 
 # Example of usage with PyTorch Lightning Logger
 
-When integrating with lightning, a much easier way to produce the provenance graph is through the ProvMLLogger. 
+When integrating with lightning, a much easier way to produce the provenance graph is through the `yProvMLLogger`, optionally paired with `yProvMLCallback` (which logs models, datasets and checkpoints).
 
 <div style="display: flex; align-items: center; margin: 20px 0;">
     <hr style="flex-grow: 0.05; border: 2px solid #009B77; margin: 0;">
@@ -163,13 +163,16 @@ When integrating with lightning, a much easier way to produce the provenance gra
 
 
 ```python
+from yprov4ml import yProvMLLogger, yProvMLCallback
+
 trainer = L.Trainer(
     accelerator="cuda",
     devices=1,
     max_epochs=EPOCHS,
     enable_checkpointing=False, 
     log_every_n_steps=1, 
-    logger=[prov4ml.ProvMLLogger()],
+    logger=[yProvMLLogger()],
+    callbacks=[yProvMLCallback()],
 )
 ```
 

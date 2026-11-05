@@ -3,7 +3,7 @@
 
 <div style="display: flex; align-items: center; background-color: #cc3300; color: #333; border: 5px solid #cc3300; font-weight: bold; border-radius: 5px; position: relative;">
     <span style="position: absolute; left: 10px; font-size: 20px;">‼</span>
-    <span style="margin-left: 35px; padding: 5px; background-color: white; border-radius: 5px; width: 100%">The ItwinAI logger is supported only by yProv4ML version 1.0, check the installation process. </span>
+    <span style="margin-left: 35px; padding: 5px; background-color: white; border-radius: 5px; width: 100%">The ItwinAI logger must be imported from `yprov4ml.loggers.prov4ml_itwinai_logger`; it is not exported at the top level.</span>
 </div>
 
 This section provides an example of how to use Prov4ML with PyTorch Lightning.
@@ -17,13 +17,15 @@ In any lightning module the calls to `train_step`, `validation_step`, and `test_
 </div>
 
 ```python
+from yprov4ml.loggers.prov4ml_itwinai_logger import ProvMLItwinAILogger
+
 trainer = L.Trainer(
     accelerator="cuda",
     devices=1,
     max_epochs=EPOCHS,
     enable_checkpointing=False, 
     log_every_n_steps=1, 
-    logger=[prov4ml.ProvMLItwinAILogger()],
+    logger=[ProvMLItwinAILogger()],
 )
 ```
 

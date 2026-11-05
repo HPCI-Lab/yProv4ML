@@ -13,9 +13,9 @@
 </div>
 
 ```python
-import prov4ml
+import yprov4ml
 
-prov4ml.start_run(
+yprov4ml.start_run(
     prov_user_namespace="www.example.org",
     experiment_name="reproducible_example", 
     provenance_save_dir="prov",
@@ -23,18 +23,18 @@ prov4ml.start_run(
     collect_all_processes=True, 
 )
 
-prov4ml.log_source_code()
-prov4ml.log_execution_command("python3 examples/reproducibility_example.py")
+yprov4ml.log_source_code()
+yprov4ml.log_execution_command()
 
 def square(x): 
     return x**2
 
 for i in range(1, 10): 
-    prov4ml.log_input(i)
+    yprov4ml.log_param(f"input_{i}", i, is_input_to="square")
     o = square(i)
-    prov4ml.log_output(o)
+    yprov4ml.log_param(f"output_{i}", o, is_output_to="square")
 
-prov4ml.end_run(True, True)
+yprov4ml.end_run(create_graph=True, create_svg=True)
 ```
 
 <hr style="border: 2px solid #009B77; margin: 20px 0;">

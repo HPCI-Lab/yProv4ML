@@ -33,10 +33,10 @@ yProv4ML additionally has a built-in script to convert run directories (or PROV-
 To convert a run directory, the user can run: 
 
 ```bash
-python -m yprov4ml.prov2card --path **<path to jsonl or run_dir>**
+python -m yprov4ml.prov2card --path <path to jsonl or run_dir>
 ```
 
-specifying either the desired run directory (i.e. `example_0`) or a JSONL file (i.e. `flowcept_buffer.jsonl`). 
+specifying either the desired run directory (i.e. `example_0`) or a JSONL file (i.e. `flowcept_buffer.jsonl`). The optional `--output_dir` argument sets where the card is written. Cards can also be created directly with `end_run(create_card=True)`. 
 
 
 <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">

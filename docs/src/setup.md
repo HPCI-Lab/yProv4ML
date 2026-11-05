@@ -4,7 +4,7 @@
 Before using the library, the user must set up the yProv4ML execution, as well as library specific configurations: 
 
 ```python
-prov4ml.start_run(
+yprov4ml.start_run(
     experiment_name: str,
     prov_user_namespace: Optional[str] = None,
     provenance_save_dir: Optional[str] = None,
@@ -13,7 +13,7 @@ prov4ml.start_run(
     rank : Optional[int] = None, 
     metrics_file_type: str = "csv",
     csv_separator : str = ",", 
-    use_compressor: Optional[Union[str, bool]] = None,
+    use_compressor: Optional[Union[CompressorType, bool]] = None,
     use_run_id: Optional[int] = None, 
 )
 ```
@@ -24,14 +24,14 @@ The parameters are as follows:
 | :-------- | :------- | :------------------------- |
 | `experiment_name` | `string` | **Required**. Name of the experiment |
 | `prov_user_namespace` | `string` | **Optional**. User namespace for the provenance graph |
-| `prov_save_path` | `string` | **Optional**. Directory to save the provenance graph |
+| `provenance_save_dir` | `string` | **Optional**. Directory to save the provenance graph |
 | `collect_all_processes` | `bool` | **Optional**. Whether to collect all processes |
 | `save_after_n_logs` | `int` | **Optional**. Save the graph after n logs |
 | `rank` | `int` | **Optional**. Rank of the process |
-| `metrics_file_type` | `MetricsType` | **Optional**. File format in which to save metrics, can be MetricsType.ZARR, MetricsType.CSV, MetricsType.NETCDF |
+| `metrics_file_type` | `str` | **Optional**. File format in which to save metrics: `"csv"` (default), `"zarr"` or `"netcdf"` |
 | `csv_separator` | `str` | **Optional**. Separator used if `metrics_file_type` is MetricsType.CSV. |
-| `disable_codecarbon` | `Optional[bool]` | **Optional**. Whether to use codecarbon to calculate stats. |
-| `use_compressor` | `Optional[CompressorType]` | **Optional**. Type of compressor used to create the run zip. If None, then no compression is applied. |
+| `use_compressor` | `Optional[Union[CompressorType, bool]]` | **Optional**. Compressor used for the run (`CompressorType.ZIP`, `BLOSC_ZSTD`, `LZ4`). `BLOSC_ZSTD` and `LZ4` only apply to `"zarr"` metrics. If None, no compression is applied. |
+| `use_run_id` | `Optional[int]` | **Optional**. Explicit run id to use instead of an auto-incremented one. |
 
 `prov_user_namespace` is a required string that defines the namespace under which all provenance data will be grouped. It helps in logically separating and organizing data across different users or projects, ensuring that the provenance graph remains structured and easily navigable. 
 
@@ -41,17 +41,18 @@ The parameters are as follows:
 
 `rank`: This optional integer is used in distributed settings to specify the rank or ID of the currently collecting process. Leaving this parameter empty and `collect_all_processes` to `False` implies that only the process at `rank` 0 will collect data. 
 
-`disable_codecarbon`: An optional boolean that controls whether the CodeCarbon tool is used for tracking the environmental impact of the experiment (e.g., carbon emissions). Setting this to True disables CodeCarbon integration, which can be useful in environments where this measurement is not needed or supported.
+> **Note (4.0):** `disable_codecarbon` and `unify_experiments` were removed, and `log_carbon_metrics` no longer exists. Energy and power are reported by [`log_system_metrics`](./system.md).
 
 ---
 
 At the end of the experiment, the user must end the run:
 
 ```python
-prov4ml.end_run(
+yprov4ml.end_run(
     create_graph: Optional[bool] = False, 
     create_svg: Optional[bool] = False, 
-    crate_ro_crate: Optional[bool]=False,
+    crate_ro_crate: Optional[bool] = False,
+    create_card: Optional[bool] = False,
 )
 ```
 
@@ -60,7 +61,7 @@ prov4ml.end_run(
 | `create_graph` | `Optional[bool]` | **Optional**. Whether to create the graph |
 | `create_svg` | `Optional[bool]` | **Optional**. Whether to create the svg |
 | `crate_ro_crate` | `Optional[bool]` | **Optional**. Indicates whether to pack the experiment in a ro-crate zip, containing all the run's information. |
-| `crate_card` | `Optional[bool]` | **Optional**. Indicates whether to convert the created run directory to [Workflow cards](https://arxiv.org/abs/2608.11022) format. |
+| `create_card` | `Optional[bool]` | **Optional**. Indicates whether to convert the created run directory to [Workflow cards](https://arxiv.org/abs/2608.11022) format. |
 
 This call allows the library to save the provenance graph in the specified directory. 
 
